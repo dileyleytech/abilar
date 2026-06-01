@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { CATEGORIES, formatCm, dimensionCmError, type Category } from '@abilar/shared';
 import { addModule, deleteModule, registerProjectPhoto } from '@/lib/projects/actions';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { downscaleImage } from '@/lib/image';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
 
 export type ModuleView = {
@@ -20,10 +21,11 @@ export type ModuleView = {
 
 /** Sobe 1 foto para um módulo (path "<projectId>/<moduleId>/...") e registra. */
 async function uploadModulePhoto(projectId: string, moduleId: string, file: File) {
+  const toUpload = await downscaleImage(file); // comprime no navegador (upload rápido)
   const supabase = createSupabaseBrowserClient();
-  const safe = file.name.replace(/[^\w.-]/g, '_');
+  const safe = toUpload.name.replace(/[^\w.-]/g, '_');
   const path = `${projectId}/${moduleId}/${Date.now()}-${safe}`;
-  const up = await supabase.storage.from('project-photos').upload(path, file, { upsert: true });
+  const up = await supabase.storage.from('project-photos').upload(path, toUpload, { upsert: true });
   if (!up.error) await registerProjectPhoto(projectId, { kind: 'REFERENCE', path, moduleId });
 }
 

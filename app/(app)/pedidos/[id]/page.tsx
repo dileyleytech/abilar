@@ -61,13 +61,11 @@ export default async function PedidoDetailPage({ params }: { params: Promise<{ i
           <ModulesSection projectId={project.id} modules={moduleViews} editable={editable} />
         </div>
 
-        {/* Aside: fotos do ambiente + ações */}
+        {/* Aside: documentos do projeto (PDF de arquiteto) + ações */}
         <aside className="flex flex-col gap-6">
-          <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
-            <h2 className="mb-3 text-lg font-semibold text-charcoal">Fotos do ambiente</h2>
-            {roomPhotos.length === 0 ? (
-              <p className="text-sm text-muted">Nenhuma foto do ambiente.</p>
-            ) : (
+          {roomPhotos.length > 0 && (
+            <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
+              <h2 className="mb-3 text-lg font-semibold text-charcoal">Documentos do projeto</h2>
               <div className="grid grid-cols-2 gap-2">
                 {roomPhotos.map((p) =>
                   p.url ? (
@@ -86,15 +84,15 @@ export default async function PedidoDetailPage({ params }: { params: Promise<{ i
                       <img
                         key={p.id}
                         src={p.url}
-                        alt="Foto do ambiente"
+                        alt="Documento do projeto"
                         className="aspect-square w-full rounded-xl border border-subtle object-cover"
                       />
                     )
                   ) : null,
                 )}
               </div>
-            )}
-          </section>
+            </section>
+          )}
 
           <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
             <h2 className="mb-3 text-lg font-semibold text-charcoal">Ações</h2>

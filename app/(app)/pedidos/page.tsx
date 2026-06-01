@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { isTerminalProjectStatus, type Category } from '@abilar/shared';
 import { requireUserId } from '@/lib/auth/session';
-import { listMyProjects } from '@/lib/projects/queries';
+import { listMyProjectsWithCover } from '@/lib/projects/queries';
+import { signedProjectPhotoUrl } from '@/lib/storage';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
 import { StatusBadge } from '@/components/StatusBadge';
 import { CancelButton } from './_components/CancelButton';
@@ -10,7 +11,13 @@ export const metadata = { title: 'Meus pedidos — Abilar' };
 
 export default async function PedidosPage() {
   const userId = await requireUserId();
-  const projects = await listMyProjects(userId);
+  const rows = await listMyProjectsWithCover(userId);
+  const projects = await Promise.all(
+    rows.map(async (p) => ({
+      ...p,
+      coverUrl: p.coverPath ? await signedProjectPhotoUrl(p.coverPath) : null,
+    })),
+  );
 
   return (
     <main className="mx-auto w-full max-w-screen-2xl px-4 py-8 sm:px-6 lg:px-8">
@@ -49,15 +56,22 @@ export default async function PedidosPage() {
             <li key={p.id} className="group relative">
               <Link
                 href={`/pedidos/${p.id}`}
-                className="flex h-full flex-col gap-3 rounded-2xl border border-subtle bg-surface p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-primary/40 hover:shadow-md"
+                className="flex h-full flex-col overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm transition hover:-translate-y-0.5 hover:border-brand-primary/40 hover:shadow-md"
               >
-                <div className="flex items-start justify-between">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-deep text-2xl" aria-hidden>
-                    {CATEGORY_EMOJI[p.category as Category]}
+                <div className="relative flex aspect-[4/3] items-center justify-center bg-deep">
+                  {p.coverUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.coverUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-5xl" aria-hidden>
+                      {CATEGORY_EMOJI[p.category as Category]}
+                    </span>
+                  )}
+                  <span className="absolute right-2 top-2">
+                    <StatusBadge status={p.status} />
                   </span>
-                  <StatusBadge status={p.status} />
                 </div>
-                <div>
+                <div className="p-4">
                   <h2 className="text-lg font-semibold text-charcoal">
                     {p.title ?? CATEGORY_LABELS[p.category as Category]}
                   </h2>

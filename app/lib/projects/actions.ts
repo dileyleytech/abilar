@@ -39,7 +39,7 @@ async function ownProject(projectId: string, userId: string) {
 export async function createProject(input: {
   project: unknown;
   firstModule?: unknown;
-}): Promise<Result<{ projectId: string }>> {
+}): Promise<Result<{ projectId: string; firstModuleId?: string }>> {
   const userId = await uid();
   if (!userId) return { ok: false, error: 'Faça login.' };
 
@@ -66,24 +66,29 @@ export async function createProject(input: {
 
   if (!created) return { ok: false, error: 'Não foi possível criar o pedido.' };
 
+  let firstModuleId: string | undefined;
   if (first?.success) {
     const m = first.data;
-    await db.insert(modules).values({
-      projectId: created.id,
-      ambiente: m.ambiente ?? null,
-      type: m.type,
-      label: m.label ?? null,
-      widthMm: m.widthMm,
-      heightMm: m.heightMm,
-      depthMm: m.depthMm,
-      material: m.material ?? null,
-      finish: m.finish ?? null,
-      notes: m.notes ?? null,
-    });
+    const [mod] = await db
+      .insert(modules)
+      .values({
+        projectId: created.id,
+        ambiente: m.ambiente ?? null,
+        type: m.type,
+        label: m.label ?? null,
+        widthMm: m.widthMm,
+        heightMm: m.heightMm,
+        depthMm: m.depthMm,
+        material: m.material ?? null,
+        finish: m.finish ?? null,
+        notes: m.notes ?? null,
+      })
+      .returning({ id: modules.id });
+    firstModuleId = mod?.id;
   }
 
   revalidatePath('/pedidos');
-  return { ok: true, data: { projectId: created.id } };
+  return { ok: true, data: { projectId: created.id, firstModuleId } };
 }
 
 /** Adiciona um módulo (medidas em cm → mm via schema). Retorna o id do módulo

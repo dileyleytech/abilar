@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { CATEGORIES, dimensionCmError, type Category, type WorkType } from '@abilar/shared';
 import { createProject, registerProjectPhoto } from '@/lib/projects/actions';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { downscaleImage } from '@/lib/image';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
 
 type Path = 'AI' | 'ARCHITECT';
@@ -32,8 +33,9 @@ export function NovoPedido() {
   const [h, setH] = useState('');
   const [d, setD] = useState('');
   const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'creating' | 'uploading'>('idle');
   const [error, setError] = useState<string | null>(null);
+  const busy = status !== 'idle';
 
   const order = STEPS[path];
   const goBack = () => {
@@ -51,7 +53,7 @@ export function NovoPedido() {
   const submit = async () => {
     if (!category) return;
     setError(null);
-    setLoading(true);
+    setStatus('creating');
     try {
       const isArchitect = path === 'ARCHITECT';
       const res = await createProject({
@@ -62,21 +64,32 @@ export function NovoPedido() {
       });
       if (!res.ok) {
         setError(res.error);
+        setStatus('idle');
         return;
       }
       const projectId = res.data.projectId;
       if (file) {
+        setStatus('uploading');
+        const toUpload = await downscaleImage(file); // comprime imagem (PDF passa direto)
         const supabase = createSupabaseBrowserClient();
-        const safe = file.name.replace(/[^\w.-]/g, '_');
-        const objectPath = `${projectId}/${Date.now()}-${safe}`;
-        const up = await supabase.storage.from('project-photos').upload(objectPath, file);
+        const safe = toUpload.name.replace(/[^\w.-]/g, '_');
+        // Foto do AI vincula ao 1º móvel (1 foto por móvel); PDF de arquiteto fica no projeto.
+        const moduleId = isArchitect ? undefined : res.data.firstModuleId;
+        const folder = moduleId ? `${projectId}/${moduleId}` : projectId;
+        const objectPath = `${folder}/${Date.now()}-${safe}`;
+        const up = await supabase.storage.from('project-photos').upload(objectPath, toUpload);
         if (!up.error) {
-          await registerProjectPhoto(projectId, { kind: isArchitect ? 'ARCHITECT_PDF' : 'ORIGINAL_ROOM', path: objectPath });
+          await registerProjectPhoto(projectId, {
+            kind: isArchitect ? 'ARCHITECT_PDF' : 'REFERENCE',
+            path: objectPath,
+            moduleId,
+          });
         }
       }
       router.push(`/pedidos/${projectId}`);
-    } finally {
-      setLoading(false);
+    } catch {
+      setError('Algo deu errado. Tente de novo.');
+      setStatus('idle');
     }
   };
 
@@ -205,9 +218,10 @@ export function NovoPedido() {
         )}
       </dl>
 
-      <button type="button" className={`${big} bg-brand-primary text-white`} disabled={loading} onClick={submit}>
-        {loading ? 'Criando…' : 'Criar pedido'}
+      <button type="button" className={`${big} bg-brand-primary text-white`} disabled={busy} onClick={submit}>
+        {status === 'creating' ? 'Criando pedido…' : status === 'uploading' ? 'Enviando foto…' : 'Criar pedido'}
       </button>
+      {status === 'uploading' && <p className="text-center text-sm text-muted">Quase lá — enviando sua foto.</p>}
       {error && (
         <p className="rounded-xl bg-ochre/20 px-4 py-3 text-base text-charcoal" role="alert">
           {error}
