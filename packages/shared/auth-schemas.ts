@@ -23,6 +23,18 @@ export const otpTokenSchema = z
 
 export const cepSchema = z.string().refine(isValidCep, { message: 'CEP inválido' });
 
+/** Senha — mínimo 8 caracteres. */
+export const passwordSchema = z.string().min(8, 'A senha precisa de ao menos 8 caracteres');
+
+/** Login por senha: identificador (telefone OU e-mail) + senha. */
+export const signInPasswordSchema = z.object({
+  identifier: z.string().trim().min(3, 'Informe telefone ou e-mail'),
+  password: passwordSchema,
+});
+
+/** Definir/alterar a própria senha (usuário logado). */
+export const setPasswordSchema = z.object({ password: passwordSchema });
+
 /** Início de login por telefone (envia OTP). */
 export const requestPhoneOtpSchema = z.object({
   phone: phoneSchema,

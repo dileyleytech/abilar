@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import type { Role } from '@abilar/shared';
 import { getSessionProfile } from '@/lib/auth/session';
 import { signOut } from '@/lib/auth/actions';
+import { SetPasswordForm } from './_components/SetPasswordForm';
 
 export const metadata = { title: 'Minha conta — Abilar' };
 
@@ -39,6 +40,8 @@ export default async function ContaPage() {
           </p>
         )}
       </div>
+
+      <SetPasswordForm />
 
       <form action={signOut}>
         <button type="submit" className="w-full rounded-md border border-subtle px-5 py-4 text-lg font-medium text-charcoal">

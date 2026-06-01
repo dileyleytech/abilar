@@ -5,6 +5,9 @@ import {
   requestPhoneOtpSchema,
   verifyPhoneOtpSchema,
   requestEmailLinkSchema,
+  signInPasswordSchema,
+  setPasswordSchema,
+  normalizeBrPhone,
 } from '@abilar/shared';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -59,6 +62,38 @@ export async function requestEmailLink(input: unknown): Promise<ActionResult> {
     },
   });
   if (error) return { ok: false, error: 'Não foi possível enviar o link. Tente de novo.' };
+  return { ok: true };
+}
+
+/** Login por SENHA (sem SMS). Identificador pode ser telefone (E.164) ou e-mail. */
+export async function signInWithPassword(input: unknown): Promise<ActionResult> {
+  const parsed = signInPasswordSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'Dados inválidos.' };
+
+  const supabase = await createSupabaseServerClient();
+  const phone = normalizeBrPhone(parsed.data.identifier);
+  const credential = phone
+    ? { phone, password: parsed.data.password }
+    : { email: parsed.data.identifier.trim().toLowerCase(), password: parsed.data.password };
+
+  const { error } = await supabase.auth.signInWithPassword(credential);
+  if (error) return { ok: false, error: 'Telefone/e-mail ou senha incorretos.' };
+  redirect('/conta');
+}
+
+/** Define/atualiza a senha do usuário logado (ex.: quem entrou por OTP). */
+export async function setPassword(input: unknown): Promise<ActionResult> {
+  const parsed = setPasswordSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'A senha precisa de ao menos 8 caracteres.' };
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Faça login primeiro.' };
+
+  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+  if (error) return { ok: false, error: 'Não foi possível salvar a senha.' };
   return { ok: true };
 }
 

@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import type { SignupRole } from '@abilar/shared';
-import { requestPhoneOtp, verifyPhoneOtp, requestEmailLink } from '@/lib/auth/actions';
+import { requestPhoneOtp, verifyPhoneOtp, requestEmailLink, signInWithPassword } from '@/lib/auth/actions';
 
 type Mode = 'login' | 'signup';
-type Method = 'phone' | 'email';
+type Method = 'phone' | 'email' | 'password';
 type Phase = 'role' | 'enter' | 'otp' | 'sent';
 
 const ROLE_CARDS: { role: SignupRole; emoji: string; title: string; desc: string }[] = [
@@ -21,6 +21,8 @@ export function AuthFlow({ mode }: { mode: Mode }) {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,6 +54,12 @@ export function AuthFlow({ mode }: { mode: Mode }) {
       const r = await requestEmailLink({ email, role });
       if (!r.ok) return setError(r.error);
       setPhase('sent');
+    });
+
+  const loginPwd = () =>
+    run(async () => {
+      const r = await signInWithPassword({ identifier, password });
+      if (r && !r.ok) setError(r.error); // sucesso redireciona no servidor
     });
 
   const big = 'w-full rounded-md px-5 py-4 text-lg font-medium';
@@ -100,9 +108,9 @@ export function AuthFlow({ mode }: { mode: Mode }) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Alternar telefone / e-mail */}
-      <div className="flex gap-2 rounded-pill bg-deep p-1" role="tablist" aria-label="Forma de entrar">
-        {(['phone', 'email'] as Method[]).map((m) => (
+      {/* Alternar telefone / e-mail / senha (senha só no login) */}
+      <div className="flex gap-1 rounded-pill bg-deep p-1" role="tablist" aria-label="Forma de entrar">
+        {((mode === 'login' ? ['phone', 'email', 'password'] : ['phone', 'email']) as Method[]).map((m) => (
           <button
             key={m}
             type="button"
@@ -113,11 +121,11 @@ export function AuthFlow({ mode }: { mode: Mode }) {
               setError(null);
               setPhase('enter');
             }}
-            className={`flex-1 rounded-pill px-4 py-2 text-base font-medium ${
+            className={`flex-1 rounded-pill px-3 py-2 text-sm font-medium ${
               method === m ? 'bg-surface text-charcoal' : 'text-muted'
             }`}
           >
-            {m === 'phone' ? '📱 Celular' : '✉️ E-mail'}
+            {m === 'phone' ? '📱 Celular' : m === 'email' ? '✉️ E-mail' : '🔑 Senha'}
           </button>
         ))}
       </div>
@@ -186,6 +194,41 @@ export function AuthFlow({ mode }: { mode: Mode }) {
           <button type="button" className={`${big} bg-brand text-white`} onClick={sendEmail} disabled={loading}>
             {loading ? 'Enviando…' : 'Enviar link de acesso'}
           </button>
+        </>
+      )}
+
+      {method === 'password' && (
+        <>
+          <label className="text-base text-charcoal" htmlFor="ident">
+            Telefone ou e-mail
+          </label>
+          <input
+            id="ident"
+            className={field}
+            type="text"
+            autoComplete="username"
+            placeholder="(11) 98765-4321 ou voce@exemplo.com"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+          />
+          <label className="text-base text-charcoal" htmlFor="pwd">
+            Senha
+          </label>
+          <input
+            id="pwd"
+            className={field}
+            type="password"
+            autoComplete="current-password"
+            placeholder="Sua senha"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <button type="button" className={`${big} bg-brand text-white`} onClick={loginPwd} disabled={loading}>
+            {loading ? 'Entrando…' : 'Entrar'}
+          </button>
+          <p className="text-center text-sm text-muted">
+            Ainda não tem senha? Entre por celular/e-mail e defina uma senha em “Minha conta”.
+          </p>
         </>
       )}
 
