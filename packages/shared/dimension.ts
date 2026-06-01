@@ -38,25 +38,14 @@ export function formatCm(mm: Mm): string {
   return `${str} cm`;
 }
 
-/** Faixas de sanidade (§2.5 do mestre) — usadas para validar MedidasGuiadas.
- *  TODO(fase 2): mover faixas por categoria/tipo de peça para configuração. */
-export const SANITY_MM = {
-  min: 50, // 5 cm
-  max: 6000, // 6 m
-} as const;
-
-/** Valida se uma medida está dentro da faixa de sanidade. */
-export function isSaneMm(mm: number): boolean {
-  return Number.isInteger(mm) && mm >= SANITY_MM.min && mm <= SANITY_MM.max;
+/** Valida se uma medida em mm é válida (inteiro positivo). Sem limite máximo. */
+export function isValidMm(mm: number): boolean {
+  return Number.isInteger(mm) && mm > 0;
 }
 
-/** Faixa de sanidade em cm (para a UI). */
-export const SANITY_CM = { min: SANITY_MM.min / 10, max: SANITY_MM.max / 10 } as const; // 5..600
-
-/** Valida uma medida em cm vinda da UI; devolve a mensagem de erro ou null. */
+/** Valida uma medida em cm vinda da UI; devolve a mensagem de erro ou null.
+ *  Só exige que seja um número positivo — não há limite de tamanho. */
 export function dimensionCmError(cm: number): string | null {
   if (!Number.isFinite(cm) || cm <= 0) return 'Informe a medida em cm';
-  if (cm < SANITY_CM.min) return `Mínimo ${SANITY_CM.min} cm`;
-  if (cm > SANITY_CM.max) return `Máximo ${SANITY_CM.max} cm (${SANITY_CM.max / 100} m)`;
   return null;
 }

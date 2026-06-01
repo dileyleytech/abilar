@@ -16,6 +16,7 @@ import {
 import { profiles, eq, sql } from '@abilar/db';
 import { getDb } from '@/lib/db';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { authErrorMessage } from '@/lib/auth/errors';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -34,7 +35,7 @@ export async function requestPhoneOtp(input: unknown): Promise<ActionResult> {
     phone: parsed.data.phone,
     options: parsed.data.role ? { data: { role: parsed.data.role } } : undefined,
   });
-  if (error) return { ok: false, error: 'Não foi possível enviar o código. Tente de novo.' };
+  if (error) return { ok: false, error: authErrorMessage(error, 'Não foi possível enviar o código. Tente de novo.') };
   return { ok: true };
 }
 
@@ -49,7 +50,7 @@ export async function verifyPhoneOtp(input: unknown): Promise<ActionResult> {
     token: parsed.data.token,
     type: 'sms',
   });
-  if (error) return { ok: false, error: 'Código incorreto ou expirado.' };
+  if (error) return { ok: false, error: authErrorMessage(error, 'Código incorreto ou expirado.') };
   redirect('/conta');
 }
 
@@ -67,7 +68,7 @@ export async function requestEmailLink(input: unknown): Promise<ActionResult> {
       data: parsed.data.role ? { role: parsed.data.role } : undefined,
     },
   });
-  if (error) return { ok: false, error: 'Não foi possível enviar o link. Tente de novo.' };
+  if (error) return { ok: false, error: authErrorMessage(error, 'Não foi possível enviar o link. Tente de novo.') };
   return { ok: true };
 }
 
@@ -83,7 +84,7 @@ export async function signInWithPassword(input: unknown): Promise<ActionResult> 
     : { email: parsed.data.identifier.trim().toLowerCase(), password: parsed.data.password };
 
   const { error } = await supabase.auth.signInWithPassword(credential);
-  if (error) return { ok: false, error: 'Telefone/e-mail ou senha incorretos.' };
+  if (error) return { ok: false, error: authErrorMessage(error, 'Telefone/e-mail ou senha incorretos.') };
   redirect('/conta');
 }
 
@@ -99,7 +100,7 @@ export async function setPassword(input: unknown): Promise<ActionResult> {
   if (!user) return { ok: false, error: 'Faça login primeiro.' };
 
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
-  if (error) return { ok: false, error: 'Não foi possível salvar a senha.' };
+  if (error) return { ok: false, error: authErrorMessage(error, 'Não foi possível salvar a senha.') };
   return { ok: true };
 }
 
@@ -138,10 +139,7 @@ export async function updateEmail(input: unknown): Promise<ActionResult> {
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.updateUser({ email: parsed.data.email });
-  if (error) {
-    console.error('[updateEmail]', error.status, error.code, error.message);
-    return { ok: false, error: `Não foi possível trocar o e-mail: ${error.message}` };
-  }
+  if (error) return { ok: false, error: authErrorMessage(error, 'Não foi possível trocar o e-mail.') };
   return { ok: true };
 }
 
@@ -154,7 +152,7 @@ export async function requestPhoneChange(input: unknown): Promise<ActionResult> 
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.updateUser({ phone: parsed.data.phone });
-  if (error) return { ok: false, error: 'Não foi possível enviar o código.' };
+  if (error) return { ok: false, error: authErrorMessage(error, 'Não foi possível enviar o código.') };
   return { ok: true };
 }
 
@@ -171,7 +169,7 @@ export async function confirmPhoneChange(input: unknown): Promise<ActionResult> 
     token: parsed.data.token,
     type: 'phone_change',
   });
-  if (error) return { ok: false, error: 'Código incorreto ou expirado.' };
+  if (error) return { ok: false, error: authErrorMessage(error, 'Código incorreto ou expirado.') };
 
   await getDb()
     .update(profiles)

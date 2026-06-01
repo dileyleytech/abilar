@@ -1,14 +1,13 @@
 // project-schemas.ts — validação (zod) de projeto e módulos. cm (UI) → mm (servidor).
 import { z } from 'zod';
 import { WORK_TYPES, SOURCE_TYPES } from './domain';
-import { cmToMm, isSaneMm } from './dimension';
+import { cmToMm } from './dimension';
 
-/** Dimensão vinda da UI em cm → mm inteiro, validada por sanidade (§2.5). */
+/** Dimensão vinda da UI em cm → mm inteiro positivo. Sem limite de tamanho. */
 export const cmDimensionSchema = z
   .number({ invalid_type_error: 'Informe um número' })
   .positive('Informe a medida')
-  .transform((cm) => cmToMm(cm))
-  .refine(isSaneMm, { message: 'Medida fora do esperado (5 cm a 6 m)' });
+  .transform((cm) => cmToMm(cm));
 
 /** Projeto = container com NOME (categoria/workType vivem nos móveis). */
 export const createProjectSchema = z.object({

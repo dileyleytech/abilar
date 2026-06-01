@@ -27,13 +27,10 @@ describe('project-schemas (zod)', () => {
     expect(m.workType).toBe('NEW_INSTALL');
   });
 
-  it('rejeita medida fora da faixa de sanidade', () => {
-    expect(() =>
-      moduleInputSchema.parse({ type: 'x', widthMm: 1, heightMm: 100, depthMm: 50 }),
-    ).toThrow(); // 1 cm = 10 mm < 50 mm
-    expect(() =>
-      moduleInputSchema.parse({ type: 'x', widthMm: 700, heightMm: 100, depthMm: 50 }),
-    ).toThrow(); // 700 cm = 7000 mm > 6000 mm
+  it('aceita medidas grandes (sem limite) e rejeita não-positivas', () => {
+    const big = moduleInputSchema.parse({ type: 'x', widthMm: 1000, heightMm: 800, depthMm: 90 });
+    expect(big.widthMm).toBe(10000); // 1000 cm → 10 m, aceito
+    expect(() => moduleInputSchema.parse({ type: 'x', widthMm: 0, heightMm: 100, depthMm: 50 })).toThrow();
   });
 
   it('guidedMeasures entrega mm', () => {

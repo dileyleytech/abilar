@@ -49,7 +49,7 @@ export async function createProject(input: {
   let first: ReturnType<typeof moduleInputSchema.safeParse> | null = null;
   if (input.firstModule !== undefined) {
     first = moduleInputSchema.safeParse(input.firstModule);
-    if (!first.success) return { ok: false, error: 'Confira as medidas do móvel (cada uma entre 5 e 600 cm).' };
+    if (!first.success) return { ok: false, error: 'Confira as medidas do móvel (em cm, maior que zero).' };
   }
 
   const db = getDb();
@@ -101,7 +101,7 @@ export async function addModule(
   if (!(await ownProject(projectId, userId))) return { ok: false, error: 'Pedido não encontrado.' };
 
   const m = moduleInputSchema.safeParse(input);
-  if (!m.success) return { ok: false, error: 'Confira as medidas do móvel (cada uma entre 5 e 600 cm).' };
+  if (!m.success) return { ok: false, error: 'Confira as medidas do móvel (em cm, maior que zero).' };
 
   const db = getDb();
   const [created] = await db
