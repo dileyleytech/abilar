@@ -20,7 +20,22 @@
       "Bash(pnpm remove *)",
       "Bash(pnpm exec *)",
       "Bash(pnpm test *)",
-      "Bash(git config *)"
+      "Bash(git config *)",
+      "Bash(node --env-file=.env.local db/_smoke.mjs)",
+      "Bash(nslookup db.ctbjvrcchgtxukvjxezx.supabase.co)",
+      "Bash(nslookup aws-0-sa-east-1.pooler.supabase.com)",
+      "Bash(nslookup aws-1-sa-east-1.pooler.supabase.com)",
+      "Bash(git check-ignore *)",
+      "Bash(gh --version)",
+      "Bash(git push *)",
+      "Bash(gh repo *)",
+      "Bash(git ls-remote *)",
+      "Bash(gh run *)",
+      "Bash(git checkout *)",
+      "Bash(perl -0pi -e 's/      - uses: pnpm\\\\/action-setup\\\\@v4\\\\n        with:\\\\n          version: 9\\\\n/      - uses: pnpm\\\\/action-setup\\\\@v4\\\\n/g' .github/workflows/ci.yml)",
+      "Bash(pnpm audit *)",
+      "Bash(pnpm add *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\('orm',p.dependencies['drizzle-orm'],'kit',p.devDependencies['drizzle-kit']\\)\")"
     ]
   }
 }

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { brand } from '@abilar/shared/tokens';
 
 // Página dummy da Fase 0 (validação de deploy ANTES de qualquer feature).
@@ -17,12 +18,12 @@ export default function Home() {
         pagamento fica protegido por etapa.
       </p>
       <div className="flex flex-wrap items-center justify-center gap-3">
-        <span className="rounded-md bg-brand-primary px-5 py-2 font-medium text-white">
-          Âmbar Terracota
-        </span>
-        <span className="rounded-md bg-brand-secondary px-5 py-2 font-medium text-white">
-          Verde Profundo (escrow)
-        </span>
+        <Link href="/cadastro" className="rounded-md bg-brand-primary px-6 py-3 text-lg font-medium text-white">
+          Criar conta
+        </Link>
+        <Link href="/entrar" className="rounded-md border border-subtle px-6 py-3 text-lg font-medium text-charcoal">
+          Entrar
+        </Link>
       </div>
     </main>
   );

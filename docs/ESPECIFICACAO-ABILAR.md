@@ -607,9 +607,10 @@ O marceneiro acessa o mesmo motor: pode (a) **editar** o estado estruturado e ge
 - [x] CI: lint, typecheck, test (+ SCA/audit e build) em `.github/workflows/ci.yml`; Dependabot configurado.
 
 ### Fase 1 — Auth e perfis
-- [ ] **Supabase Auth**: **OTP por telefone (SMS via provedor)** + e-mail/magic link; rate limit anti SMS-pumping; papéis em metadata; estratégia de **RLS** (§3).
-- [ ] Perfis: CarpenterProfile (tipo MEI/PJ/PF, logo, **cidade/CEP/raio, categorias**, KYC), ArchitectProfile, Address — com policies RLS.
-- [ ] Telas de cadastro/login mobile-first por papel (simples p/ marceneiro, §doc Design).
+- [x] **Supabase Auth**: **OTP por telefone (Twilio Verify)** + e-mail/magic link (`@supabase/ssr`, middleware de sessão, callback PKCE). Rate limit de OTP via Supabase Auth (TODO: 2ª camada KV). **Estratégia RLS definida** (§3): Drizzle/Hyperdrive como papel de serviço + autorização na Server Action; RLS habilitada é o guard primário p/ Realtime/Storage/supabase-js. Papel é fonte de verdade em `profiles.role` (NÃO em user_metadata).
+- [x] Perfis: `profiles` + `carpenter_profiles` (MEI/PJ/PF, logo, **cidade/CEP/raio, categorias**, KYC), `architect_profiles` (comissão config), `addresses` — com **policies RLS** + trigger `handle_new_user` (clampa ADMIN) + `lock_profile_role`. Migrations aplicadas e verificadas no Supabase (4 tabelas RLS on, 7 policies, 2 triggers).
+- [x] Telas de cadastro/login **mobile-first por papel** (cards de papel, alvos grandes ≥48dp, telefone+SMS e e-mail, `/conta` protegida) — §doc Design. (TODO: onboarding completo do marceneiro com voz na Fase 4/9.)
+- [x] Validadores BR (CPF/CNPJ/CEP/telefone E.164) + schemas zod em `@abilar/shared`, testados.
 
 ### Fase 2 — Projeto e módulos (sem IA ainda)
 - [ ] CRUD Project + Module + ProjectPhoto; status state-machine; **`workType` (nova/substituição)**.
