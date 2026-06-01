@@ -1,0 +1,5 @@
+packages:
+  - 'packages/*'
+  - 'db'
+  # 'workers/*'  -> consumers de Queue entram a partir da Fase 6
+  # 'apps/*'     -> app mobile (Expo) entra na Fase 9

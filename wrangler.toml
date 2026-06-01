@@ -1,0 +1,61 @@
+# wrangler.toml — Abilar (Cloudflare Workers + OpenNext)
+# Após `npx @opennextjs/cloudflare`, o build gera .open-next/. Ajuste os IDs (Hyperdrive, KV) com os reais.
+
+name = "abilar"
+main = ".open-next/worker.js"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Assets estáticos gerados pelo OpenNext
+assets = { directory = ".open-next/assets", binding = "ASSETS" }
+
+# Variáveis públicas (NÃO colocar segredos aqui — use `wrangler secret put`)
+[vars]
+ENVIRONMENT = "production"
+APP_URL = "https://abilar.example"   # trocar pelo domínio real
+
+# Banco: Hyperdrive aponta para a conexão DIRETA do Supabase (5432), nunca o pooler 6543
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "REPLACE_WITH_HYPERDRIVE_ID"
+# Dev local: string de Postgres local que emula o Hyperdrive (`next dev`/`preview`).
+# Trocar pela sua instância local; em produção o `id` acima é que vale.
+localConnectionString = "postgresql://postgres:postgres@localhost:5432/abilar_dev"
+
+# Storage de mídia (fotos, imagens geradas, PDFs)
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "abilar-media"
+
+# Cache leve (opcional)
+[[kv_namespaces]]
+binding = "CACHE"
+id = "REPLACE_WITH_KV_ID"
+
+# Fila assíncrona (geração de imagem, PDF, blog) — produtor + consumidor
+[[queues.producers]]
+binding = "JOBS"
+queue = "abilar-jobs"
+
+[[queues.consumers]]
+queue = "abilar-jobs"
+max_batch_size = 5
+max_retries = 3
+dead_letter_queue = "abilar-jobs-dlq"
+
+# PDF (orçamentos/contratos) via Browser Rendering
+[browser]
+binding = "BROWSER"
+
+# Cron Triggers:
+#  - keep-alive do Supabase Free a cada 6h
+#  - blog automático 2x/dia (09:00 e 21:00 UTC — ajustar p/ BRT se quiser)
+[triggers]
+crons = ["0 */6 * * *", "0 9 * * *", "0 21 * * *"]
+
+# Segredos (definir com: wrangler secret put NOME):
+#   GEMINI_API_KEY
+#   ASAAS_API_KEY, ASAAS_WEBHOOK_SECRET
+#   SUPABASE_SERVICE_ROLE_KEY
+#   SMS_PROVIDER_TOKEN  (Twilio/Zenvia p/ OTP)
+#   HYPERDRIVE_DIRECT_URL (string direta do Supabase, 5432) — se preferir via secret

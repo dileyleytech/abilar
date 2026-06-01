@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Cores/fontes vêm do preset (packages/shared/tokens.ts) via Tailwind.
+   Nunca hardcodar hex/fonte aqui. */
+@layer base {
+  body {
+    @apply bg-base text-charcoal font-body antialiased;
+  }
+  h1, h2, h3, h4 {
+    @apply font-heading;
+  }
+}

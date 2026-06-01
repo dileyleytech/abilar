@@ -1,0 +1,35 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "jsx": "preserve",
+    "allowJs": true,
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@/*": ["./app/*"],
+      "@abilar/shared": ["./packages/shared/index.ts"],
+      "@abilar/shared/*": ["./packages/shared/*"],
+      "@abilar/pricing": ["./packages/pricing/src/index.ts"],
+      "@abilar/ai-vision": ["./packages/ai-vision/src/index.ts"],
+      "@abilar/db": ["./db/index.ts"],
+      "@abilar/db/*": ["./db/*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "cloudflare-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    ".open-next",
+    "packages",
+    "db",
+    "workers",
+    "apps"
+  ]
+}

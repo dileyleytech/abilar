@@ -1,0 +1,54 @@
+{
+  "name": "abilar",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Abilar — marketplace de marcenaria sob demanda (web Next.js, deploy Cloudflare Workers via OpenNext).",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit && pnpm -r --filter=./packages/* --filter=./db run typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "pnpm --filter @abilar/db run generate",
+    "db:migrate": "pnpm --filter @abilar/db run migrate"
+  },
+  "dependencies": {
+    "@abilar/ai-vision": "workspace:*",
+    "@abilar/db": "workspace:*",
+    "@abilar/pricing": "workspace:*",
+    "@abilar/shared": "workspace:*",
+    "clsx": "^2.1.1",
+    "next": "^15.5.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^2.6.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@next/eslint-plugin-next": "^16.2.6",
+    "@opennextjs/cloudflare": "^1.0.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.18.0",
+    "globals": "^15.14.0",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^3.0.0",
+    "wrangler": "^4.0.0"
+  }
+}

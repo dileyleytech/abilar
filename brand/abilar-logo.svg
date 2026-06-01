@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 320" width="720" height="320" font-family="Poppins, 'Segoe UI', Arial, sans-serif">
+  <!-- Abilar — logo de partida (editável no Claude Design) -->
+  <!-- Cores: âmbar #C56A33 · carvão #1F2421 · verde #2F6B5E · areia #F6F1EA -->
+  <rect width="720" height="320" fill="#F6F1EA"/>
+
+  <!-- ÍCONE: quadrado arredondado + casa + ponto (ABI) -->
+  <g transform="translate(60,70)">
+    <rect x="0" y="0" width="180" height="180" rx="44" fill="#C56A33"/>
+    <!-- casa (telhado + corpo) -->
+    <path d="M50 96 L90 60 L130 96" fill="none" stroke="#F6F1EA" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="62" y="96" width="56" height="48" rx="8" fill="none" stroke="#F6F1EA" stroke-width="14"/>
+    <!-- ponto da ABI -->
+    <circle cx="132" cy="126" r="12" fill="#2F6B5E"/>
+  </g>
+
+  <!-- WORDMARK: abilar — "abi" âmbar, "lar" carvão; pingo do i = telhadinho -->
+  <g transform="translate(280,0)">
+    <text x="0" y="205" font-size="150" font-weight="700" letter-spacing="-4">
+      <tspan fill="#C56A33">abi</tspan><tspan fill="#1F2421">lar</tspan>
+    </text>
+    <!-- telhadinho substituindo o pingo do "i" (ajustar posição no Design conforme a fonte) -->
+    <path d="M196 96 L214 74 L232 96 Z" fill="#2F6B5E"/>
+  </g>
+
+  <text x="280" y="252" font-size="26" fill="#2F6B5E" font-weight="500" letter-spacing="1">Do projeto ao lar, com a ABI.</text>
+</svg>

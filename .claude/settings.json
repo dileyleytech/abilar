@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm -v)",
+      "Bash(echo \"pnpm: $\\(pnpm -v 2>&1\\)\")",
+      "Bash(npm -v)",
+      "Bash(echo \"npm: $\\(npm -v 2>&1\\)\")",
+      "Bash(git --version)",
+      "Bash(corepack --version)",
+      "Bash(echo \"corepack: $\\(corepack --version 2>&1\\)\")",
+      "Bash(corepack prepare *)",
+      "Bash(echo \"pnpm now: $\\(pnpm -v 2>&1\\)\")",
+      "Bash(npm ping *)",
+      "Bash(npm install *)",
+      "Bash(git init *)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm lint *)",
+      "Bash(pnpm typecheck *)",
+      "Bash(pnpm build *)",
+      "Bash(pnpm remove *)",
+      "Bash(pnpm exec *)",
+      "Bash(pnpm test *)",
+      "Bash(git config *)"
+    ]
+  }
+}
