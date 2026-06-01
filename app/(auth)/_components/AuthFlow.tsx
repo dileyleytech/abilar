@@ -62,9 +62,9 @@ export function AuthFlow({ mode }: { mode: Mode }) {
       if (r && !r.ok) setError(r.error); // sucesso redireciona no servidor
     });
 
-  const big = 'w-full rounded-md px-5 py-4 text-lg font-medium';
+  const big = 'w-full rounded-xl px-5 py-4 text-lg font-semibold transition hover:opacity-90';
   const field =
-    'w-full rounded-md border border-subtle bg-surface px-4 py-4 text-lg text-charcoal outline-none focus:border-brand';
+    'w-full rounded-xl border border-subtle bg-surface px-4 py-4 text-lg text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
 
   // Passo 1 do cadastro: escolher papel (cards grandes).
   if (phase === 'role') {
@@ -79,7 +79,7 @@ export function AuthFlow({ mode }: { mode: Mode }) {
               setRole(c.role);
               setPhase('enter');
             }}
-            className="flex items-center gap-4 rounded-lg border border-subtle bg-surface px-5 py-4 text-left transition hover:border-brand"
+            className="flex items-center gap-4 rounded-xl border border-subtle bg-surface px-5 py-4 text-left transition hover:-translate-y-0.5 hover:border-brand-primary/50 hover:shadow-sm"
           >
             <span className="text-3xl" aria-hidden>
               {c.emoji}

@@ -86,8 +86,12 @@ export async function createProject(input: {
   return { ok: true, data: { projectId: created.id } };
 }
 
-/** Adiciona um módulo (medidas em cm → mm via schema). */
-export async function addModule(projectId: string, input: unknown): Promise<Result> {
+/** Adiciona um módulo (medidas em cm → mm via schema). Retorna o id do módulo
+ *  para que a UI possa enviar 1 foto vinculada a ele. */
+export async function addModule(
+  projectId: string,
+  input: unknown,
+): Promise<Result<{ moduleId: string }>> {
   const userId = await uid();
   if (!userId) return { ok: false, error: 'Faça login.' };
   if (!(await ownProject(projectId, userId))) return { ok: false, error: 'Pedido não encontrado.' };
@@ -96,20 +100,25 @@ export async function addModule(projectId: string, input: unknown): Promise<Resu
   if (!m.success) return { ok: false, error: 'Módulo inválido.' };
 
   const db = getDb();
-  await db.insert(modules).values({
-    projectId,
-    ambiente: m.data.ambiente ?? null,
-    type: m.data.type,
-    label: m.data.label ?? null,
-    widthMm: m.data.widthMm,
-    heightMm: m.data.heightMm,
-    depthMm: m.data.depthMm,
-    material: m.data.material ?? null,
-    finish: m.data.finish ?? null,
-    notes: m.data.notes ?? null,
-  });
+  const [created] = await db
+    .insert(modules)
+    .values({
+      projectId,
+      ambiente: m.data.ambiente ?? null,
+      type: m.data.type,
+      label: m.data.label ?? null,
+      widthMm: m.data.widthMm,
+      heightMm: m.data.heightMm,
+      depthMm: m.data.depthMm,
+      material: m.data.material ?? null,
+      finish: m.data.finish ?? null,
+      notes: m.data.notes ?? null,
+    })
+    .returning({ id: modules.id });
+
+  if (!created) return { ok: false, error: 'Não foi possível salvar o móvel.' };
   revalidatePath(`/pedidos/${projectId}`);
-  return { ok: true, data: undefined };
+  return { ok: true, data: { moduleId: created.id } };
 }
 
 /** Remove um módulo do projeto (com ownership via projeto). */
@@ -124,10 +133,11 @@ export async function deleteModule(projectId: string, moduleId: string): Promise
   return { ok: true, data: undefined };
 }
 
-/** Registra um anexo já enviado ao Storage (path "<projectId>/..."). */
+/** Registra um anexo já enviado ao Storage (path "<projectId>/..."). Pode
+ *  vincular a um módulo (1 foto por móvel). */
 export async function registerProjectPhoto(
   projectId: string,
-  input: { kind: unknown; path: string },
+  input: { kind: unknown; path: string; moduleId?: string },
 ): Promise<Result> {
   const userId = await uid();
   if (!userId) return { ok: false, error: 'Faça login.' };
@@ -139,7 +149,18 @@ export async function registerProjectPhoto(
   }
 
   const db = getDb();
-  await db.insert(projectPhotos).values({ projectId, kind: kind.data, path: input.path });
+  // Se for foto de módulo, substitui a anterior (1 foto por móvel).
+  if (input.moduleId) {
+    await db
+      .delete(projectPhotos)
+      .where(and(eq(projectPhotos.projectId, projectId), eq(projectPhotos.moduleId, input.moduleId)));
+  }
+  await db.insert(projectPhotos).values({
+    projectId,
+    moduleId: input.moduleId ?? null,
+    kind: kind.data,
+    path: input.path,
+  });
   revalidatePath(`/pedidos/${projectId}`);
   return { ok: true, data: undefined };
 }

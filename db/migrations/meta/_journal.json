@@ -43,6 +43,13 @@
       "when": 1780322666306,
       "tag": "0005_fase2_modulo_ambiente",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1780331636052,
+      "tag": "0006_fase2_foto_por_modulo",
+      "breakpoints": true
     }
   ]
 }

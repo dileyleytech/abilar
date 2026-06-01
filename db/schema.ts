@@ -170,6 +170,7 @@ export const projectPhotos = pgTable(
     projectId: uuid('project_id')
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
+    moduleId: uuid('module_id').references(() => modules.id, { onDelete: 'cascade' }),
     kind: photoKindEnum('kind').notNull(),
     path: text('path').notNull(),
     version: integer('version').notNull().default(1),

@@ -5,14 +5,14 @@ import { useRouter } from 'next/navigation';
 import { CATEGORIES, type Category, type WorkType } from '@abilar/shared';
 import { createProject, registerProjectPhoto } from '@/lib/projects/actions';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import { CATEGORY_LABELS } from '@/lib/labels';
+import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
 
 type Path = 'AI' | 'ARCHITECT';
 type Step = 'path' | 'work' | 'category' | 'measures' | 'photo' | 'pdf';
 
-const big = 'w-full rounded-md px-5 py-4 text-lg font-medium';
+const big = 'w-full rounded-xl px-5 py-4 text-lg font-semibold transition hover:opacity-90';
 const card =
-  'flex items-center gap-4 rounded-lg border border-subtle bg-surface px-5 py-4 text-left transition hover:border-brand';
+  'flex items-center gap-4 rounded-xl border border-subtle bg-surface px-5 py-4 text-left transition hover:-translate-y-0.5 hover:border-brand-primary/50 hover:shadow-sm';
 
 export function NovoPedido() {
   const router = useRouter();
@@ -114,14 +114,15 @@ export function NovoPedido() {
   if (step === 'category') {
     return (
       <Frame title="O que você quer fazer?">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {CATEGORIES.map((c) => (
             <button
               key={c}
               type="button"
-              className="rounded-lg border border-subtle bg-surface px-4 py-5 text-center text-base font-medium text-charcoal transition hover:border-brand"
+              className="flex flex-col items-center gap-2 rounded-xl border border-subtle bg-surface px-3 py-5 text-center text-base font-medium text-charcoal transition hover:-translate-y-0.5 hover:border-brand-primary/50 hover:shadow-sm"
               onClick={() => { setCategory(c); setStep(path === 'AI' ? 'measures' : 'pdf'); }}
             >
+              <span className="text-2xl" aria-hidden>{CATEGORY_EMOJI[c]}</span>
               {CATEGORY_LABELS[c]}
             </button>
           ))}
@@ -139,7 +140,7 @@ export function NovoPedido() {
           <input
             type="text"
             placeholder="Ex.: Cozinha, Quarto do casal"
-            className="w-full rounded-md border border-subtle bg-surface px-4 py-4 text-lg text-charcoal outline-none focus:border-brand"
+            className="w-full rounded-xl border border-subtle bg-surface px-4 py-4 text-lg text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
             value={ambiente}
             onChange={(e) => setAmbiente(e.target.value)}
           />
@@ -214,7 +215,7 @@ function Measure({ label, value, onChange }: { label: string; value: string; onC
         type="number"
         inputMode="numeric"
         min={1}
-        className="w-full rounded-md border border-subtle bg-surface px-4 py-4 text-lg text-charcoal outline-none focus:border-brand"
+        className="w-full rounded-xl border border-subtle bg-surface px-4 py-4 text-lg text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />

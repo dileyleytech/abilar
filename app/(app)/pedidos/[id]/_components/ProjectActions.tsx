@@ -18,14 +18,16 @@ export function ProjectActions({ projectId, status }: { projectId: string; statu
       else router.refresh();
     });
 
-  if (status === 'EXECUTED' || status === 'CANCELLED') return null;
+  if (status === 'EXECUTED' || status === 'CANCELLED') {
+    return <p className="text-sm text-muted">Este pedido está {status === 'EXECUTED' ? 'concluído' : 'cancelado'}.</p>;
+  }
 
   return (
     <div className="flex flex-col gap-3">
       {status === 'DRAFT' && (
         <button
           type="button"
-          className="w-full rounded-md bg-brand px-5 py-4 text-lg font-medium text-white disabled:opacity-50"
+          className="w-full rounded-xl bg-brand-primary px-5 py-4 text-lg font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
           disabled={pending}
           onClick={() => go('OPEN_FOR_QUOTES')}
         >
@@ -34,14 +36,14 @@ export function ProjectActions({ projectId, status }: { projectId: string; statu
       )}
       <button
         type="button"
-        className="w-full rounded-md border border-subtle px-5 py-4 text-lg font-medium text-charcoal disabled:opacity-50"
+        className="w-full rounded-xl border border-subtle px-5 py-4 text-base font-medium text-charcoal transition hover:bg-deep disabled:opacity-50"
         disabled={pending}
         onClick={() => go('CANCELLED')}
       >
         Cancelar pedido
       </button>
       {error && (
-        <p className="rounded-md bg-ochre/20 px-4 py-3 text-base text-charcoal" role="alert">
+        <p className="rounded-xl bg-ochre/20 px-4 py-3 text-base text-charcoal" role="alert">
           {error}
         </p>
       )}
