@@ -4,6 +4,7 @@ import type { Role } from '@abilar/shared';
 import { getSessionProfile } from '@/lib/auth/session';
 import { signOut } from '@/lib/auth/actions';
 import { SetPasswordForm } from './_components/SetPasswordForm';
+import { MeuPerfil } from './_components/MeuPerfil';
 
 export const metadata = { title: 'Minha conta — Abilar' };
 
@@ -23,39 +24,33 @@ export default async function ContaPage() {
     <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
       <h1 className="mb-6 text-2xl font-bold text-charcoal">Minha conta</h1>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-subtle bg-surface p-6 shadow-sm sm:col-span-2">
-          <div className="flex items-center gap-4">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-primary text-xl font-bold text-white">
-              {initial}
+      <div className="mb-4 flex items-center justify-between gap-4 rounded-2xl border border-subtle bg-surface p-6 shadow-sm">
+        <div className="flex items-center gap-4">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-primary text-xl font-bold text-white">
+            {initial}
+          </span>
+          <div>
+            <p className="text-xl font-bold text-charcoal">{profile.name ?? 'Sem nome'}</p>
+            <span className="inline-block rounded-pill bg-brand-secondary/15 px-3 py-0.5 text-xs font-semibold text-brand-secondary">
+              {ROLE_LABEL[profile.role]}
             </span>
-            <div>
-              <p className="text-xl font-bold text-charcoal">{profile.name ?? 'Sem nome'}</p>
-              <span className="inline-block rounded-pill bg-brand-secondary/15 px-3 py-0.5 text-xs font-semibold text-brand-secondary">
-                {ROLE_LABEL[profile.role]}
-              </span>
-            </div>
           </div>
-          <dl className="mt-4 grid gap-1 text-base text-charcoal">
-            {profile.phone && <div className="font-mono text-muted">{profile.phone}</div>}
-            {profile.email && <div className="font-mono text-muted">{profile.email}</div>}
-          </dl>
-          {profile.role === 'CLIENT' && (
-            <Link
-              href="/pedidos"
-              className="mt-4 inline-flex items-center gap-1 font-medium text-brand-primary hover:underline"
-            >
-              Ver meus pedidos →
-            </Link>
-          )}
         </div>
+        {profile.role === 'CLIENT' && (
+          <Link href="/pedidos" className="shrink-0 font-medium text-brand-primary hover:underline">
+            Meus pedidos →
+          </Link>
+        )}
+      </div>
 
+      <div className="grid gap-4">
+        <MeuPerfil name={profile.name} email={profile.email} phone={profile.phone} />
         <SetPasswordForm />
 
-        <form action={signOut} className="flex">
+        <form action={signOut}>
           <button
             type="submit"
-            className="w-full self-start rounded-2xl border border-subtle bg-surface px-5 py-4 text-lg font-medium text-charcoal shadow-sm transition hover:bg-deep"
+            className="w-full rounded-2xl border border-subtle bg-surface px-5 py-4 text-lg font-medium text-charcoal shadow-sm transition hover:bg-deep"
           >
             Sair
           </button>

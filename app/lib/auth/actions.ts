@@ -7,8 +7,14 @@ import {
   requestEmailLinkSchema,
   signInPasswordSchema,
   setPasswordSchema,
+  updateNameSchema,
+  updateEmailSchema,
+  changePhoneSchema,
+  confirmPhoneChangeSchema,
   normalizeBrPhone,
 } from '@abilar/shared';
+import { profiles, eq, sql } from '@abilar/db';
+import { getDb } from '@/lib/db';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -94,6 +100,83 @@ export async function setPassword(input: unknown): Promise<ActionResult> {
 
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) return { ok: false, error: 'Não foi possível salvar a senha.' };
+  return { ok: true };
+}
+
+// ── Meu perfil ───────────────────────────────────────────────────────────────
+
+async function currentUserId(): Promise<string | null> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user?.id ?? null;
+}
+
+/** Atualiza o nome (profiles + metadata do auth). */
+export async function updateName(input: unknown): Promise<ActionResult> {
+  const parsed = updateNameSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'Informe um nome válido.' };
+  const userId = await currentUserId();
+  if (!userId) return { ok: false, error: 'Faça login.' };
+
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.updateUser({ data: { name: parsed.data.name } });
+  await getDb()
+    .update(profiles)
+    .set({ name: parsed.data.name, updatedAt: sql`now()` })
+    .where(eq(profiles.id, userId));
+  return { ok: true };
+}
+
+/** Inicia troca de e-mail (Supabase envia confirmação ao novo e-mail). */
+export async function updateEmail(input: unknown): Promise<ActionResult> {
+  const parsed = updateEmailSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'E-mail inválido.' };
+  const userId = await currentUserId();
+  if (!userId) return { ok: false, error: 'Faça login.' };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.updateUser({ email: parsed.data.email });
+  if (error) {
+    console.error('[updateEmail]', error.status, error.code, error.message);
+    return { ok: false, error: `Não foi possível trocar o e-mail: ${error.message}` };
+  }
+  return { ok: true };
+}
+
+/** Inicia troca de telefone: envia OTP ao novo número (type phone_change).
+ *  TODO(segurança): cooldown + notificar o número antigo (doc Segurança). */
+export async function requestPhoneChange(input: unknown): Promise<ActionResult> {
+  const parsed = changePhoneSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'Telefone inválido.' };
+  if (!(await currentUserId())) return { ok: false, error: 'Faça login.' };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.updateUser({ phone: parsed.data.phone });
+  if (error) return { ok: false, error: 'Não foi possível enviar o código.' };
+  return { ok: true };
+}
+
+/** Confirma a troca de telefone com o OTP recebido. */
+export async function confirmPhoneChange(input: unknown): Promise<ActionResult> {
+  const parsed = confirmPhoneChangeSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'Dados inválidos.' };
+  const userId = await currentUserId();
+  if (!userId) return { ok: false, error: 'Faça login.' };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.verifyOtp({
+    phone: parsed.data.phone,
+    token: parsed.data.token,
+    type: 'phone_change',
+  });
+  if (error) return { ok: false, error: 'Código incorreto ou expirado.' };
+
+  await getDb()
+    .update(profiles)
+    .set({ phone: parsed.data.phone, updatedAt: sql`now()` })
+    .where(eq(profiles.id, userId));
   return { ok: true };
 }
 

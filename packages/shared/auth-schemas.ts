@@ -35,6 +35,12 @@ export const signInPasswordSchema = z.object({
 /** Definir/alterar a própria senha (usuário logado). */
 export const setPasswordSchema = z.object({ password: passwordSchema });
 
+/** Edição de perfil (usuário logado). */
+export const updateNameSchema = z.object({ name: z.string().trim().min(2, 'Informe seu nome').max(80) });
+export const updateEmailSchema = z.object({ email: emailSchema });
+export const changePhoneSchema = z.object({ phone: phoneSchema });
+export const confirmPhoneChangeSchema = z.object({ phone: phoneSchema, token: otpTokenSchema });
+
 /** Início de login por telefone (envia OTP). */
 export const requestPhoneOtpSchema = z.object({
   phone: phoneSchema,

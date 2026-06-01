@@ -48,7 +48,12 @@
       "Bash(curl -s -o /dev/null -w \"/entrar %{http_code}\\\\n\" http://localhost:3001/entrar)",
       "Bash(curl -s -o /dev/null -w \"/pedidos %{http_code}\\\\n\" http://localhost:3001/pedidos)",
       "Bash(curl -s -o /dev/null -w \"/pedidos/novo \\(sem login\\) %{http_code}\\\\n\" http://localhost:3001/pedidos/novo)",
-      "Bash(mkdir -p public/brand && cp brand/svg/*.svg public/brand/ 2>&1 && cp brand/favicon/icon-512.png app/icon.png 2>&1 && cp brand/favicon/apple-touch-icon-180.png app/apple-icon.png 2>&1; echo \"=== public/brand ===\"; ls public/brand/ | head; echo \"=== app icons ===\"; ls app/*.png)"
+      "Bash(mkdir -p public/brand && cp brand/svg/*.svg public/brand/ 2>&1 && cp brand/favicon/icon-512.png app/icon.png 2>&1 && cp brand/favicon/apple-touch-icon-180.png app/apple-icon.png 2>&1; echo \"=== public/brand ===\"; ls public/brand/ | head; echo \"=== app icons ===\"; ls app/*.png)",
+      "Bash(curl -s -o /dev/null -w \"/ \\(landing\\) %{http_code}\\\\n\" http://localhost:3001/)",
+      "Bash(curl -s http://localhost:3001/)",
+      "Bash(curl -s -o /dev/null -w \"/brand/abilar-logo-horizontal.svg %{http_code}\\\\n\" http://localhost:3001/brand/abilar-logo-horizontal.svg)",
+      "Bash(grep -qE \"\\(passed|failed|error|Error|problem|Done$\\)\" /private/tmp/claude-501/-Users-rodrigodiley-Documents-Projetos-Leytech-abilar/b1eeda97-9e6c-45c8-9a69-0e6ee2da2b2b/tasks/be167ibgf.output)",
+      "Bash(curl -s -o /dev/null -w \"/ %{http_code} \\(logado redireciona\\)\\\\n\" -I http://localhost:3001/)"
     ],
     "additionalDirectories": [
       "/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/brand/svg"

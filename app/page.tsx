@@ -1,6 +1,8 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { brand } from '@abilar/shared/tokens';
 import { AppHeader } from '@/components/AppHeader';
+import { getSessionProfile } from '@/lib/auth/session';
 
 export const metadata = {
   title: `${brand.name} — ${brand.tagline}`,
@@ -14,7 +16,11 @@ const STEPS = [
   { emoji: '🤝', title: 'O marceneiro realiza', desc: 'Receba orçamentos de profissionais da sua região e contrate com segurança.' },
 ];
 
-export default function Home() {
+export default async function Home() {
+  // Logado: a tela inicial já leva aos pedidos do usuário.
+  const profile = await getSessionProfile();
+  if (profile) redirect(profile.role === 'CLIENT' ? '/pedidos' : '/conta');
+
   return (
     <div className="flex min-h-screen flex-col bg-base">
       <AppHeader />
