@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { CATEGORIES, formatCm, type Category } from '@abilar/shared';
+import { CATEGORIES, formatCm, dimensionCmError, type Category } from '@abilar/shared';
 import { addModule, deleteModule, registerProjectPhoto } from '@/lib/projects/actions';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
@@ -55,9 +55,13 @@ export function ModulesSection({
     (groups.get(k) ?? groups.set(k, []).get(k)!).push(m);
   }
 
-  const ready = Number(w) > 0 && Number(h) > 0 && Number(d) > 0;
+  const eW = w === '' ? null : dimensionCmError(Number(w));
+  const eH = h === '' ? null : dimensionCmError(Number(h));
+  const eD = d === '' ? null : dimensionCmError(Number(d));
+  const ready = w !== '' && h !== '' && d !== '' && !eW && !eH && !eD;
   const fld =
     'w-full rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
+  const fldErr = 'border-ochre ring-2 ring-ochre/30';
 
   const submit = () =>
     start(async () => {
@@ -201,9 +205,18 @@ export function ModulesSection({
             </label>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <input className={fld} type="number" inputMode="numeric" min={1} placeholder="Larg. cm" value={w} onChange={(e) => setW(e.target.value)} />
-            <input className={fld} type="number" inputMode="numeric" min={1} placeholder="Alt. cm" value={h} onChange={(e) => setH(e.target.value)} />
-            <input className={fld} type="number" inputMode="numeric" min={1} placeholder="Prof. cm" value={d} onChange={(e) => setD(e.target.value)} />
+            <div>
+              <input className={`${fld} ${eW ? fldErr : ''}`} type="number" inputMode="numeric" min={1} placeholder="Larg. cm" value={w} onChange={(e) => setW(e.target.value)} />
+              {eW && <span className="text-xs text-ochre">{eW}</span>}
+            </div>
+            <div>
+              <input className={`${fld} ${eH ? fldErr : ''}`} type="number" inputMode="numeric" min={1} placeholder="Alt. cm" value={h} onChange={(e) => setH(e.target.value)} />
+              {eH && <span className="text-xs text-ochre">{eH}</span>}
+            </div>
+            <div>
+              <input className={`${fld} ${eD ? fldErr : ''}`} type="number" inputMode="numeric" min={1} placeholder="Prof. cm" value={d} onChange={(e) => setD(e.target.value)} />
+              {eD && <span className="text-xs text-ochre">{eD}</span>}
+            </div>
           </div>
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium text-charcoal">Foto do móvel (opcional)</span>

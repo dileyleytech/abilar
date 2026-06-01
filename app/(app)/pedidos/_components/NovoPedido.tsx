@@ -2,17 +2,24 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CATEGORIES, type Category, type WorkType } from '@abilar/shared';
+import { CATEGORIES, dimensionCmError, type Category, type WorkType } from '@abilar/shared';
 import { createProject, registerProjectPhoto } from '@/lib/projects/actions';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
 
 type Path = 'AI' | 'ARCHITECT';
-type Step = 'path' | 'work' | 'category' | 'measures' | 'photo' | 'pdf';
+type Step = 'path' | 'work' | 'category' | 'measures' | 'photo' | 'pdf' | 'review';
 
-const big = 'w-full rounded-xl px-5 py-4 text-lg font-semibold transition hover:opacity-90';
+const STEPS: Record<Path, Step[]> = {
+  AI: ['path', 'work', 'category', 'measures', 'photo', 'review'],
+  ARCHITECT: ['path', 'work', 'category', 'pdf', 'review'],
+};
+
+const big = 'w-full rounded-xl px-5 py-4 text-lg font-semibold transition hover:opacity-90 disabled:opacity-50';
 const card =
   'flex items-center gap-4 rounded-xl border border-subtle bg-surface px-5 py-4 text-left transition hover:-translate-y-0.5 hover:border-brand-primary/50 hover:shadow-sm';
+const fld =
+  'w-full rounded-xl border border-subtle bg-surface px-4 py-4 text-lg text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
 
 export function NovoPedido() {
   const router = useRouter();
@@ -28,42 +35,44 @@ export function NovoPedido() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const submit = async (opts: { withMeasures: boolean; photoKind?: 'ORIGINAL_ROOM' | 'ARCHITECT_PDF' }) => {
+  const order = STEPS[path];
+  const goBack = () => {
+    const i = order.indexOf(step);
+    if (i > 0) setStep(order[i - 1]!);
+    setError(null);
+  };
+
+  // Validação por medida (mensagem clara).
+  const eW = w === '' ? null : dimensionCmError(Number(w));
+  const eH = h === '' ? null : dimensionCmError(Number(h));
+  const eD = d === '' ? null : dimensionCmError(Number(d));
+  const measuresValid = w !== '' && h !== '' && d !== '' && !eW && !eH && !eD;
+
+  const submit = async () => {
     if (!category) return;
     setError(null);
     setLoading(true);
     try {
+      const isArchitect = path === 'ARCHITECT';
       const res = await createProject({
-        project: {
-          category,
-          workType,
-          sourceType: path === 'ARCHITECT' ? 'ARCHITECT_PROJECT' : 'AI_GENERATED',
-        },
-        firstModule: opts.withMeasures
-          ? {
-              type: category,
-              ambiente: ambiente.trim() || undefined,
-              widthMm: Number(w),
-              heightMm: Number(h),
-              depthMm: Number(d),
-            }
-          : undefined,
+        project: { category, workType, sourceType: isArchitect ? 'ARCHITECT_PROJECT' : 'AI_GENERATED' },
+        firstModule: isArchitect
+          ? undefined
+          : { type: category, ambiente: ambiente.trim() || undefined, widthMm: Number(w), heightMm: Number(h), depthMm: Number(d) },
       });
       if (!res.ok) {
         setError(res.error);
         return;
       }
       const projectId = res.data.projectId;
-
-      if (file && opts.photoKind) {
+      if (file) {
         const supabase = createSupabaseBrowserClient();
         const safe = file.name.replace(/[^\w.-]/g, '_');
         const objectPath = `${projectId}/${Date.now()}-${safe}`;
         const up = await supabase.storage.from('project-photos').upload(objectPath, file);
         if (!up.error) {
-          await registerProjectPhoto(projectId, { kind: opts.photoKind, path: objectPath });
+          await registerProjectPhoto(projectId, { kind: isArchitect ? 'ARCHITECT_PDF' : 'ORIGINAL_ROOM', path: objectPath });
         }
-        // Falha de upload não bloqueia o pedido (o cliente pode enviar depois).
       }
       router.push(`/pedidos/${projectId}`);
     } finally {
@@ -71,6 +80,7 @@ export function NovoPedido() {
     }
   };
 
+  // ── Passos ────────────────────────────────────────────────────────────────
   if (step === 'path') {
     return (
       <Frame title="Como você quer começar?">
@@ -94,7 +104,7 @@ export function NovoPedido() {
 
   if (step === 'work') {
     return (
-      <Frame title="O que você precisa?">
+      <Frame title="O que você precisa?" onBack={goBack}>
         {([
           { v: 'NEW_INSTALL', emoji: '🆕', t: 'Quero um móvel novo', s: 'Não existe nada no lugar' },
           { v: 'REPLACE_EXISTING', emoji: '🔁', t: 'Quero trocar um que já tenho', s: 'Substituir o móvel atual' },
@@ -113,7 +123,7 @@ export function NovoPedido() {
 
   if (step === 'category') {
     return (
-      <Frame title="O que você quer fazer?">
+      <Frame title="O que você quer fazer?" onBack={goBack}>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {CATEGORIES.map((c) => (
             <button
@@ -132,27 +142,20 @@ export function NovoPedido() {
   }
 
   if (step === 'measures') {
-    const ready = Number(w) > 0 && Number(h) > 0 && Number(d) > 0;
     return (
-      <Frame title="Seu primeiro móvel">
+      <Frame title="Seu primeiro móvel" onBack={goBack}>
         <label className="flex flex-col gap-1">
           <span className="text-base text-charcoal">Cômodo (opcional)</span>
-          <input
-            type="text"
-            placeholder="Ex.: Cozinha, Quarto do casal"
-            className="w-full rounded-xl border border-subtle bg-surface px-4 py-4 text-lg text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
-            value={ambiente}
-            onChange={(e) => setAmbiente(e.target.value)}
-          />
+          <input className={fld} placeholder="Ex.: Cozinha, Quarto do casal" value={ambiente} onChange={(e) => setAmbiente(e.target.value)} />
         </label>
-        <p className="text-sm text-muted">Medidas do vão onde o móvel vai ficar (em cm).</p>
-        <Measure label="Largura (cm)" value={w} onChange={setW} />
-        <Measure label="Altura (cm)" value={h} onChange={setH} />
-        <Measure label="Profundidade (cm)" value={d} onChange={setD} />
-        <p className="rounded-md bg-deep px-4 py-3 text-sm text-muted">
-          💡 Depois você pode adicionar <strong>mais móveis</strong> e <strong>outros cômodos</strong> a este pedido.
+        <p className="text-sm text-muted">Medidas do vão onde o móvel vai ficar (em cm, de 5 a 600).</p>
+        <Measure label="Largura (cm)" value={w} onChange={setW} error={eW} />
+        <Measure label="Altura (cm)" value={h} onChange={setH} error={eH} />
+        <Measure label="Profundidade (cm)" value={d} onChange={setD} error={eD} />
+        <p className="rounded-xl bg-deep px-4 py-3 text-sm text-muted">
+          💡 Depois você pode adicionar <strong>mais móveis</strong> e <strong>outros cômodos</strong>.
         </p>
-        <button type="button" className={`${big} bg-brand text-white disabled:opacity-50`} disabled={!ready} onClick={() => setStep('photo')}>
+        <button type="button" className={`${big} bg-brand-primary text-white`} disabled={!measuresValid} onClick={() => setStep('photo')}>
           Continuar
         </button>
       </Frame>
@@ -160,54 +163,78 @@ export function NovoPedido() {
   }
 
   if (step === 'photo') {
-    const hint =
-      workType === 'NEW_INSTALL'
-        ? 'Fotografe a parede/espaço vazio onde quer o móvel.'
-        : 'Fotografe o móvel atual que será trocado.';
+    const hint = workType === 'NEW_INSTALL' ? 'Fotografe a parede/espaço vazio onde quer o móvel.' : 'Fotografe o móvel atual que será trocado.';
     return (
-      <Frame title="Foto do cômodo (opcional)">
+      <Frame title="Foto do cômodo (opcional)" onBack={goBack}>
         <p className="text-sm text-muted">{hint}</p>
-        <input
-          type="file"
-          accept="image/*"
-          className="w-full rounded-md border border-subtle bg-surface px-4 py-4 text-base"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-        />
-        <button type="button" className={`${big} bg-brand text-white`} disabled={loading} onClick={() => submit({ withMeasures: true, photoKind: 'ORIGINAL_ROOM' })}>
-          {loading ? 'Criando…' : 'Criar pedido'}
+        <input type="file" accept="image/*" className={fld} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+        {file && <p className="text-sm text-brand-secondary">✓ {file.name}</p>}
+        <button type="button" className={`${big} bg-brand-primary text-white`} onClick={() => setStep('review')}>
+          Continuar
         </button>
-        <Err error={error} />
       </Frame>
     );
   }
 
-  // step === 'pdf' (caminho arquiteto)
+  if (step === 'pdf') {
+    return (
+      <Frame title="Envie o PDF do projeto" onBack={goBack}>
+        <input type="file" accept="application/pdf" className={fld} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+        {file && <p className="text-sm text-brand-secondary">✓ {file.name}</p>}
+        <button type="button" className={`${big} bg-brand-primary text-white`} disabled={!file} onClick={() => setStep('review')}>
+          Continuar
+        </button>
+      </Frame>
+    );
+  }
+
+  // step === 'review'
   return (
-    <Frame title="Envie o PDF do projeto">
-      <input
-        type="file"
-        accept="application/pdf"
-        className="w-full rounded-md border border-subtle bg-surface px-4 py-4 text-base"
-        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-      />
-      <button type="button" className={`${big} bg-brand text-white`} disabled={loading} onClick={() => submit({ withMeasures: false, photoKind: 'ARCHITECT_PDF' })}>
+    <Frame title="Confira seu pedido" onBack={goBack}>
+      <dl className="divide-y divide-subtle rounded-xl border border-subtle">
+        <Row label="Tipo de obra" value={workType === 'NEW_INSTALL' ? 'Móvel novo' : 'Substituição'} />
+        <Row label="Categoria" value={category ? `${CATEGORY_EMOJI[category]} ${CATEGORY_LABELS[category]}` : '—'} onEdit={() => setStep('category')} />
+        {path === 'AI' ? (
+          <>
+            <Row label="Cômodo" value={ambiente.trim() || '—'} onEdit={() => setStep('measures')} />
+            <Row label="Medidas (L×A×P)" value={`${w} × ${h} × ${d} cm`} onEdit={() => setStep('measures')} />
+            <Row label="Foto" value={file ? file.name : 'Sem foto'} onEdit={() => setStep('photo')} />
+          </>
+        ) : (
+          <Row label="PDF do projeto" value={file ? file.name : '—'} onEdit={() => setStep('pdf')} />
+        )}
+      </dl>
+
+      <button type="button" className={`${big} bg-brand-primary text-white`} disabled={loading} onClick={submit}>
         {loading ? 'Criando…' : 'Criar pedido'}
       </button>
-      <Err error={error} />
+      {error && (
+        <p className="rounded-xl bg-ochre/20 px-4 py-3 text-base text-charcoal" role="alert">
+          {error}
+        </p>
+      )}
     </Frame>
   );
 }
 
-function Frame({ title, children }: { title: string; children: React.ReactNode }) {
+function Frame({ title, onBack, children }: { title: string; onBack?: () => void; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-center text-lg font-semibold text-charcoal">{title}</h2>
+      <div className="flex items-center gap-2">
+        {onBack && (
+          <button type="button" onClick={onBack} className="rounded-md px-2 py-1 text-sm text-muted hover:bg-deep hover:text-charcoal">
+            ← Voltar
+          </button>
+        )}
+        <h2 className="flex-1 text-center text-lg font-semibold text-charcoal">{title}</h2>
+        {onBack && <span className="w-16" aria-hidden />}
+      </div>
       {children}
     </div>
   );
 }
 
-function Measure({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function Measure({ label, value, onChange, error }: { label: string; value: string; onChange: (v: string) => void; error: string | null }) {
   return (
     <label className="flex flex-col gap-1">
       <span className="text-base text-charcoal">{label}</span>
@@ -215,19 +242,27 @@ function Measure({ label, value, onChange }: { label: string; value: string; onC
         type="number"
         inputMode="numeric"
         min={1}
-        className="w-full rounded-xl border border-subtle bg-surface px-4 py-4 text-lg text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+        className={`${fld} ${error ? 'border-ochre ring-2 ring-ochre/30' : ''}`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
+      {error && <span className="text-sm text-ochre">{error}</span>}
     </label>
   );
 }
 
-function Err({ error }: { error: string | null }) {
-  if (!error) return null;
+function Row({ label, value, onEdit }: { label: string; value: string; onEdit?: () => void }) {
   return (
-    <p className="rounded-md bg-ochre/20 px-4 py-3 text-base text-charcoal" role="alert">
-      {error}
-    </p>
+    <div className="flex items-center justify-between gap-2 px-4 py-3">
+      <div className="min-w-0">
+        <dt className="text-xs uppercase tracking-wide text-subtle">{label}</dt>
+        <dd className="truncate text-base text-charcoal">{value}</dd>
+      </div>
+      {onEdit && (
+        <button type="button" onClick={onEdit} className="shrink-0 text-sm font-medium text-brand-primary hover:underline">
+          Editar
+        </button>
+      )}
+    </div>
   );
 }

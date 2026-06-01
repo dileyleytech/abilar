@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { cmToMm, mmToCm, formatCm, isSaneMm, assertMm, DimensionError } from './dimension';
+import {
+  cmToMm,
+  mmToCm,
+  formatCm,
+  isSaneMm,
+  assertMm,
+  dimensionCmError,
+  DimensionError,
+} from './dimension';
 
 describe('dimension — milímetros (regra de ouro #5)', () => {
   it('converte cm <-> mm', () => {
@@ -25,5 +33,12 @@ describe('dimension — milímetros (regra de ouro #5)', () => {
     expect(isSaneMm(40)).toBe(false); // < 5 cm
     expect(isSaneMm(7000)).toBe(false); // > 6 m
     expect(isSaneMm(100.5)).toBe(false); // não inteiro
+  });
+
+  it('dimensionCmError dá mensagem por faixa', () => {
+    expect(dimensionCmError(240)).toBeNull();
+    expect(dimensionCmError(0)).toBe('Informe a medida em cm');
+    expect(dimensionCmError(3)).toContain('Mínimo');
+    expect(dimensionCmError(700)).toContain('Máximo');
   });
 });

@@ -44,7 +44,9 @@
       "Bash(pkill -f \"next dev\")",
       "Bash(pkill -f \"next-server\")",
       "Bash(curl -s -o /dev/null -w \"/entrar HTTP %{http_code}\\\\n\" http://localhost:3001/entrar)",
-      "Bash(curl -s -o /dev/null -w \"/conta HTTP %{http_code} -> %{redirect_url}\\\\n\" http://localhost:3001/conta)"
+      "Bash(curl -s -o /dev/null -w \"/conta HTTP %{http_code} -> %{redirect_url}\\\\n\" http://localhost:3001/conta)",
+      "Bash(curl -s -o /dev/null -w \"/entrar %{http_code}\\\\n\" http://localhost:3001/entrar)",
+      "Bash(curl -s -o /dev/null -w \"/pedidos %{http_code}\\\\n\" http://localhost:3001/pedidos)"
     ]
   }
 }
