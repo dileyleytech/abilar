@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { brand } from '@abilar/shared/tokens';
 import { getSessionProfile } from '@/lib/auth/session';
 
 /** Cabeçalho do app (full-width, sticky). Mostra navegação conforme login/papel. */
@@ -10,9 +9,9 @@ export async function AppHeader() {
   return (
     <header className="sticky top-0 z-20 w-full border-b border-subtle bg-surface/90 backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-screen-2xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="text-xl font-bold tracking-tight text-charcoal">
-          {brand.name}
-          <span className="text-brand-primary">.</span>
+        <Link href="/" className="flex items-center" aria-label="Abilar — início">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/abilar-logo-horizontal.svg" alt="Abilar" className="h-8 w-auto" />
         </Link>
 
         <nav className="flex items-center gap-1 sm:gap-2">

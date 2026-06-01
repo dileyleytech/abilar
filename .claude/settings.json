@@ -47,7 +47,11 @@
       "Bash(curl -s -o /dev/null -w \"/conta HTTP %{http_code} -> %{redirect_url}\\\\n\" http://localhost:3001/conta)",
       "Bash(curl -s -o /dev/null -w \"/entrar %{http_code}\\\\n\" http://localhost:3001/entrar)",
       "Bash(curl -s -o /dev/null -w \"/pedidos %{http_code}\\\\n\" http://localhost:3001/pedidos)",
-      "Bash(curl -s -o /dev/null -w \"/pedidos/novo \\(sem login\\) %{http_code}\\\\n\" http://localhost:3001/pedidos/novo)"
+      "Bash(curl -s -o /dev/null -w \"/pedidos/novo \\(sem login\\) %{http_code}\\\\n\" http://localhost:3001/pedidos/novo)",
+      "Bash(mkdir -p public/brand && cp brand/svg/*.svg public/brand/ 2>&1 && cp brand/favicon/icon-512.png app/icon.png 2>&1 && cp brand/favicon/apple-touch-icon-180.png app/apple-icon.png 2>&1; echo \"=== public/brand ===\"; ls public/brand/ | head; echo \"=== app icons ===\"; ls app/*.png)"
+    ],
+    "additionalDirectories": [
+      "/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/brand/svg"
     ]
   }
 }

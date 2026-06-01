@@ -47,7 +47,7 @@ export function NovoPedido() {
         const up = await supabase.storage.from('project-photos').upload(objectPath, file);
         if (!up.error) await registerProjectPhoto(projectId, { kind: 'ARCHITECT_PDF', path: objectPath });
       }
-      router.push(`/pedidos/${projectId}`);
+      router.push('/pedidos'); // volta à listagem após criar o pedido
     } catch {
       setError('Algo deu errado. Tente de novo.');
       setStatus('idle');

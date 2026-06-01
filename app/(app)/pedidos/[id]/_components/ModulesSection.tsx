@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useOptimistic, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { CATEGORIES, formatCm, dimensionCmError, type Category, type WorkType } from '@abilar/shared';
+import { CATEGORIES, cmToMm, formatCm, dimensionCmError, type Category, type WorkType } from '@abilar/shared';
 import { addModule, deleteModule, registerProjectPhoto } from '@/lib/projects/actions';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { downscaleImage } from '@/lib/image';
@@ -30,6 +30,15 @@ async function uploadModulePhoto(projectId: string, moduleId: string, file: File
   if (!up.error) await registerProjectPhoto(projectId, { kind: 'REFERENCE', path, moduleId });
 }
 
+function Spinner() {
+  return (
+    <span
+      className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand-primary border-t-transparent"
+      aria-hidden
+    />
+  );
+}
+
 export function ModulesSection({
   projectId,
   modules,
@@ -53,8 +62,15 @@ export function ModulesSection({
   const [d, setD] = useState('');
   const [file, setFile] = useState<File | null>(null);
 
+  // UI otimista: o móvel aparece na hora (sem flash de "lista vazia") e some o
+  // erro percebido; quando o router.refresh sincroniza, os dados reais assumem.
+  const [optimisticModules, addOptimistic] = useOptimistic(modules, (state, m: ModuleView) => [
+    ...state,
+    m,
+  ]);
+
   const groups = new Map<string, ModuleView[]>();
-  for (const m of modules) {
+  for (const m of optimisticModules) {
     const k = m.ambiente?.trim() || 'Outros';
     (groups.get(k) ?? groups.set(k, []).get(k)!).push(m);
   }
@@ -67,28 +83,44 @@ export function ModulesSection({
     'w-full rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
   const fldErr = 'border-ochre ring-2 ring-ochre/30';
 
-  const submit = () =>
+  const submit = () => {
+    const payload = {
+      ambiente: ambiente.trim() || undefined,
+      type,
+      workType: wt,
+      widthMm: Number(w),
+      heightMm: Number(h),
+      depthMm: Number(d),
+    };
+    const localFile = file;
+    // Limpa e fecha o form já; o móvel aparece otimista logo abaixo.
+    setAmbiente('');
+    setWt('NEW_INSTALL');
+    setW('');
+    setH('');
+    setD('');
+    setFile(null);
+    setOpen(false);
+
     start(async () => {
       setError(null);
-      const r = await addModule(projectId, {
-        ambiente: ambiente.trim() || undefined,
-        type,
-        workType: wt,
-        widthMm: Number(w),
-        heightMm: Number(h),
-        depthMm: Number(d),
+      addOptimistic({
+        id: `temp-${Date.now()}`,
+        ambiente: payload.ambiente ?? null,
+        type: payload.type,
+        workType: payload.workType,
+        label: null,
+        widthMm: cmToMm(payload.widthMm),
+        heightMm: cmToMm(payload.heightMm),
+        depthMm: cmToMm(payload.depthMm),
+        photoUrl: localFile ? URL.createObjectURL(localFile) : null,
       });
-      if (!r.ok) return setError(r.error);
-      if (file) await uploadModulePhoto(projectId, r.data.moduleId, file);
-      setAmbiente('');
-      setWt('NEW_INSTALL');
-      setW('');
-      setH('');
-      setD('');
-      setFile(null);
-      setOpen(false);
+      const r = await addModule(projectId, payload);
+      if (!r.ok) return setError(r.error); // otimista reverte ao fim da transição
+      if (localFile) await uploadModulePhoto(projectId, r.data.moduleId, localFile);
       router.refresh();
     });
+  };
 
   const remove = (moduleId: string) =>
     start(async () => {
@@ -110,7 +142,14 @@ export function ModulesSection({
   return (
     <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-charcoal">Móveis do pedido</h2>
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-charcoal">
+          Móveis do pedido
+          {pending && (
+            <span className="inline-flex items-center gap-1 text-sm font-normal text-muted">
+              <Spinner /> salvando…
+            </span>
+          )}
+        </h2>
         {editable && !open && (
           <button
             type="button"
@@ -122,7 +161,7 @@ export function ModulesSection({
         )}
       </div>
 
-      {modules.length === 0 && !open ? (
+      {optimisticModules.length === 0 && !open ? (
         <p className="rounded-xl border border-dashed border-subtle p-6 text-center text-muted">
           Nenhum móvel ainda. Adicione o primeiro móvel deste pedido.
         </p>
@@ -137,7 +176,10 @@ export function ModulesSection({
               </h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {mods.map((m) => (
-                  <div key={m.id} className="flex gap-3 rounded-xl border border-subtle p-3">
+                  <div
+                    key={m.id}
+                    className={`flex gap-3 rounded-xl border border-subtle p-3 ${m.id.startsWith('temp-') ? 'opacity-60' : ''}`}
+                  >
                     {/* Miniatura / upload da foto do móvel */}
                     <label className="relative flex h-20 w-20 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-deep text-2xl">
                       {m.photoUrl ? (
