@@ -123,10 +123,8 @@ export const projects = pgTable(
     clientId: uuid('client_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
-    title: text('title'),
-    category: categoryEnum('category').notNull(),
+    title: text('title').notNull(), // nome do projeto (dado pelo cliente)
     status: projectStatusEnum('status').notNull().default('DRAFT'),
-    workType: workTypeEnum('work_type').notNull(),
     sourceType: sourceTypeEnum('source_type').notNull().default('AI_GENERATED'),
     architectId: uuid('architect_id').references(() => profiles.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -147,7 +145,8 @@ export const modules = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
     ambiente: text('ambiente'), // cômodo (ex.: "Cozinha", "Quarto do casal")
-    type: text('type').notNull(),
+    type: text('type').notNull(), // categoria do móvel (GUARDA_ROUPA, COZINHA, ...)
+    workType: workTypeEnum('work_type'), // novo vs substituição (por móvel)
     label: text('label'),
     widthMm: integer('width_mm').notNull(),
     heightMm: integer('height_mm').notNull(),

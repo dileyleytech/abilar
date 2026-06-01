@@ -57,9 +57,7 @@ export async function createProject(input: {
     .insert(projects)
     .values({
       clientId: userId,
-      title: p.data.title ?? null,
-      category: p.data.category,
-      workType: p.data.workType,
+      title: p.data.title,
       sourceType: p.data.sourceType,
     })
     .returning({ id: projects.id });
@@ -75,6 +73,7 @@ export async function createProject(input: {
         projectId: created.id,
         ambiente: m.ambiente ?? null,
         type: m.type,
+        workType: m.workType ?? null,
         label: m.label ?? null,
         widthMm: m.widthMm,
         heightMm: m.heightMm,
@@ -111,6 +110,7 @@ export async function addModule(
       projectId,
       ambiente: m.data.ambiente ?? null,
       type: m.data.type,
+      workType: m.data.workType ?? null,
       label: m.data.label ?? null,
       widthMm: m.data.widthMm,
       heightMm: m.data.heightMm,

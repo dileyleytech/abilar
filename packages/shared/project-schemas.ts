@@ -1,6 +1,5 @@
 // project-schemas.ts — validação (zod) de projeto e módulos. cm (UI) → mm (servidor).
 import { z } from 'zod';
-import { CATEGORIES } from './domain';
 import { WORK_TYPES, SOURCE_TYPES } from './domain';
 import { cmToMm, isSaneMm } from './dimension';
 
@@ -11,18 +10,18 @@ export const cmDimensionSchema = z
   .transform((cm) => cmToMm(cm))
   .refine(isSaneMm, { message: 'Medida fora do esperado (5 cm a 6 m)' });
 
+/** Projeto = container com NOME (categoria/workType vivem nos móveis). */
 export const createProjectSchema = z.object({
-  category: z.enum(CATEGORIES),
-  workType: z.enum(WORK_TYPES),
+  title: z.string().trim().min(2, 'Dê um nome ao pedido').max(120),
   sourceType: z.enum(SOURCE_TYPES).default('AI_GENERATED'),
-  title: z.string().trim().min(2, 'Dê um nome ao pedido').max(120).optional(),
 });
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 
-/** Módulo: a UI envia cm; o schema entrega *Mm prontos para o banco. */
+/** Módulo (móvel): a UI envia cm; o schema entrega *Mm prontos para o banco. */
 export const moduleInputSchema = z.object({
   ambiente: z.string().trim().max(60).optional(), // cômodo (ex.: "Cozinha")
   type: z.string().trim().min(1, 'Informe o tipo da peça'),
+  workType: z.enum(WORK_TYPES).optional(), // novo vs substituição (por móvel)
   label: z.string().trim().max(80).optional(),
   widthMm: cmDimensionSchema,
   heightMm: cmDimensionSchema,

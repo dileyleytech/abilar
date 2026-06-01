@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { CATEGORIES, formatCm, dimensionCmError, type Category } from '@abilar/shared';
+import { CATEGORIES, formatCm, dimensionCmError, type Category, type WorkType } from '@abilar/shared';
 import { addModule, deleteModule, registerProjectPhoto } from '@/lib/projects/actions';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { downscaleImage } from '@/lib/image';
@@ -12,6 +12,7 @@ export type ModuleView = {
   id: string;
   ambiente: string | null;
   type: string;
+  workType: WorkType | null;
   label: string | null;
   widthMm: number;
   heightMm: number;
@@ -46,6 +47,7 @@ export function ModulesSection({
 
   const [ambiente, setAmbiente] = useState('');
   const [type, setType] = useState<Category>('GUARDA_ROUPA');
+  const [wt, setWt] = useState<WorkType>('NEW_INSTALL');
   const [w, setW] = useState('');
   const [h, setH] = useState('');
   const [d, setD] = useState('');
@@ -71,6 +73,7 @@ export function ModulesSection({
       const r = await addModule(projectId, {
         ambiente: ambiente.trim() || undefined,
         type,
+        workType: wt,
         widthMm: Number(w),
         heightMm: Number(h),
         depthMm: Number(d),
@@ -78,6 +81,7 @@ export function ModulesSection({
       if (!r.ok) return setError(r.error);
       if (file) await uploadModulePhoto(projectId, r.data.moduleId, file);
       setAmbiente('');
+      setWt('NEW_INSTALL');
       setW('');
       setH('');
       setD('');
@@ -177,7 +181,14 @@ export function ModulesSection({
                       <p className="mt-1 font-mono text-sm text-muted">
                         {formatCm(m.widthMm)} × {formatCm(m.heightMm)} × {formatCm(m.depthMm)}
                       </p>
-                      <p className="text-xs text-subtle">L × A × P</p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="text-xs text-subtle">L × A × P</span>
+                        {m.workType && (
+                          <span className="rounded-pill bg-deep px-2 py-0.5 text-[10px] font-medium text-muted">
+                            {m.workType === 'NEW_INSTALL' ? 'Novo' : 'Troca'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -205,6 +216,23 @@ export function ModulesSection({
                 ))}
               </select>
             </label>
+          </div>
+          <div className="flex gap-2">
+            {([
+              { v: 'NEW_INSTALL', t: '🆕 Móvel novo' },
+              { v: 'REPLACE_EXISTING', t: '🔁 Substituição' },
+            ] as const).map((o) => (
+              <button
+                key={o.v}
+                type="button"
+                onClick={() => setWt(o.v)}
+                className={`flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                  wt === o.v ? 'border-brand-primary bg-brand-primary/10 text-charcoal' : 'border-subtle text-muted'
+                }`}
+              >
+                {o.t}
+              </button>
+            ))}
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div>

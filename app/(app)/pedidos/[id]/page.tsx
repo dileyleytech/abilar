@@ -1,10 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import type { Category } from '@abilar/shared';
 import { requireUserId } from '@/lib/auth/session';
 import { getProjectDetail } from '@/lib/projects/queries';
 import { signedProjectPhotoUrl } from '@/lib/storage';
-import { CATEGORY_LABELS } from '@/lib/labels';
 import { StatusBadge } from '@/components/StatusBadge';
 import { ProjectActions } from './_components/ProjectActions';
 import { ModulesSection, type ModuleView } from './_components/ModulesSection';
@@ -29,6 +27,7 @@ export default async function PedidoDetailPage({ params }: { params: Promise<{ i
     id: m.id,
     ambiente: m.ambiente,
     type: m.type,
+    workType: m.workType,
     label: m.label,
     widthMm: m.widthMm,
     heightMm: m.heightMm,
@@ -44,12 +43,10 @@ export default async function PedidoDetailPage({ params }: { params: Promise<{ i
 
       <header className="mt-3 mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-charcoal sm:text-3xl">
-            {project.title ?? CATEGORY_LABELS[project.category as Category]}
-          </h1>
+          <h1 className="text-2xl font-bold text-charcoal sm:text-3xl">{project.title}</h1>
           <p className="text-sm text-muted">
-            {CATEGORY_LABELS[project.category as Category]} ·{' '}
-            {project.workType === 'NEW_INSTALL' ? 'Móvel novo' : 'Substituição'}
+            {moduleViews.length} {moduleViews.length === 1 ? 'móvel' : 'móveis'}
+            {project.sourceType === 'ARCHITECT_PROJECT' ? ' · Projeto de arquiteto' : ''}
           </p>
         </div>
         <StatusBadge status={project.status} />

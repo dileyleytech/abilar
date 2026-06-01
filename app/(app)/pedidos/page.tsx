@@ -1,9 +1,8 @@
 import Link from 'next/link';
-import { isTerminalProjectStatus, type Category } from '@abilar/shared';
+import { isTerminalProjectStatus } from '@abilar/shared';
 import { requireUserId } from '@/lib/auth/session';
 import { listMyProjectsWithCover } from '@/lib/projects/queries';
 import { signedProjectPhotoUrl } from '@/lib/storage';
-import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
 import { StatusBadge } from '@/components/StatusBadge';
 import { CancelButton } from './_components/CancelButton';
 
@@ -64,7 +63,7 @@ export default async function PedidosPage() {
                     <img src={p.coverUrl} alt="" className="h-full w-full object-cover" />
                   ) : (
                     <span className="text-5xl" aria-hidden>
-                      {CATEGORY_EMOJI[p.category as Category]}
+                      🛋️
                     </span>
                   )}
                   <span className="absolute right-2 top-2">
@@ -72,11 +71,9 @@ export default async function PedidosPage() {
                   </span>
                 </div>
                 <div className="p-4">
-                  <h2 className="text-lg font-semibold text-charcoal">
-                    {p.title ?? CATEGORY_LABELS[p.category as Category]}
-                  </h2>
+                  <h2 className="text-lg font-semibold text-charcoal">{p.title}</h2>
                   <p className="text-sm text-muted">
-                    {p.workType === 'NEW_INSTALL' ? 'Móvel novo' : 'Substituição'}
+                    {p.moduleCount} {p.moduleCount === 1 ? 'móvel' : 'móveis'}
                   </p>
                 </div>
               </Link>

@@ -58,18 +58,19 @@ describe('db schema — Fase 1 (auth e perfis)', () => {
     expect(cols(addresses)).toContain('cep');
   });
 
-  it('projects tem dono, categoria, status e workType + índice de feed', () => {
+  it('projects é container com nome (sem categoria/workType) + índice de feed', () => {
     const cfg = getTableConfig(projects);
     expect(cfg.name).toBe('projects');
-    for (const f of ['client_id', 'category', 'status', 'work_type', 'source_type']) {
+    for (const f of ['client_id', 'title', 'status', 'source_type']) {
       expect(cols(projects)).toContain(f);
     }
+    expect(cols(projects)).not.toContain('category');
     expect(cfg.indexes.map((i) => i.config.name)).toContain('projects_status_created_idx');
   });
 
-  it('modules guarda dimensões em mm', () => {
+  it('modules guarda cômodo, tipo, workType e dimensões em mm', () => {
     expect(getTableConfig(modules).name).toBe('modules');
-    for (const f of ['project_id', 'width_mm', 'height_mm', 'depth_mm']) {
+    for (const f of ['project_id', 'ambiente', 'type', 'work_type', 'width_mm', 'height_mm', 'depth_mm']) {
       expect(cols(modules)).toContain(f);
     }
   });

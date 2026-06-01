@@ -2,19 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CATEGORIES, dimensionCmError, type Category, type WorkType } from '@abilar/shared';
 import { createProject, registerProjectPhoto } from '@/lib/projects/actions';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import { downscaleImage } from '@/lib/image';
-import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
 
 type Path = 'AI' | 'ARCHITECT';
-type Step = 'path' | 'work' | 'category' | 'measures' | 'photo' | 'pdf' | 'review';
-
-const STEPS: Record<Path, Step[]> = {
-  AI: ['path', 'work', 'category', 'measures', 'photo', 'review'],
-  ARCHITECT: ['path', 'work', 'category', 'pdf', 'review'],
-};
+type Step = 'path' | 'name' | 'pdf';
 
 const big = 'w-full rounded-xl px-5 py-4 text-lg font-semibold transition hover:opacity-90 disabled:opacity-50';
 const card =
@@ -26,41 +18,21 @@ export function NovoPedido() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('path');
   const [path, setPath] = useState<Path>('AI');
-  const [workType, setWorkType] = useState<WorkType>('NEW_INSTALL');
-  const [category, setCategory] = useState<Category | null>(null);
-  const [ambiente, setAmbiente] = useState('');
-  const [w, setW] = useState('');
-  const [h, setH] = useState('');
-  const [d, setD] = useState('');
+  const [title, setTitle] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<'idle' | 'creating' | 'uploading'>('idle');
   const [error, setError] = useState<string | null>(null);
   const busy = status !== 'idle';
-
-  const order = STEPS[path];
-  const goBack = () => {
-    const i = order.indexOf(step);
-    if (i > 0) setStep(order[i - 1]!);
-    setError(null);
-  };
-
-  // Validação por medida (mensagem clara).
-  const eW = w === '' ? null : dimensionCmError(Number(w));
-  const eH = h === '' ? null : dimensionCmError(Number(h));
-  const eD = d === '' ? null : dimensionCmError(Number(d));
-  const measuresValid = w !== '' && h !== '' && d !== '' && !eW && !eH && !eD;
+  const nameOk = title.trim().length >= 2;
 
   const submit = async () => {
-    if (!category) return;
+    if (!nameOk) return;
     setError(null);
     setStatus('creating');
     try {
       const isArchitect = path === 'ARCHITECT';
       const res = await createProject({
-        project: { category, workType, sourceType: isArchitect ? 'ARCHITECT_PROJECT' : 'AI_GENERATED' },
-        firstModule: isArchitect
-          ? undefined
-          : { type: category, ambiente: ambiente.trim() || undefined, widthMm: Number(w), heightMm: Number(h), depthMm: Number(d) },
+        project: { title: title.trim(), sourceType: isArchitect ? 'ARCHITECT_PROJECT' : 'AI_GENERATED' },
       });
       if (!res.ok) {
         setError(res.error);
@@ -68,23 +40,12 @@ export function NovoPedido() {
         return;
       }
       const projectId = res.data.projectId;
-      if (file) {
+      if (isArchitect && file) {
         setStatus('uploading');
-        const toUpload = await downscaleImage(file); // comprime imagem (PDF passa direto)
+        const objectPath = `${projectId}/${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`;
         const supabase = createSupabaseBrowserClient();
-        const safe = toUpload.name.replace(/[^\w.-]/g, '_');
-        // Foto do AI vincula ao 1º móvel (1 foto por móvel); PDF de arquiteto fica no projeto.
-        const moduleId = isArchitect ? undefined : res.data.firstModuleId;
-        const folder = moduleId ? `${projectId}/${moduleId}` : projectId;
-        const objectPath = `${folder}/${Date.now()}-${safe}`;
-        const up = await supabase.storage.from('project-photos').upload(objectPath, toUpload);
-        if (!up.error) {
-          await registerProjectPhoto(projectId, {
-            kind: isArchitect ? 'ARCHITECT_PDF' : 'REFERENCE',
-            path: objectPath,
-            moduleId,
-          });
-        }
+        const up = await supabase.storage.from('project-photos').upload(objectPath, file);
+        if (!up.error) await registerProjectPhoto(projectId, { kind: 'ARCHITECT_PDF', path: objectPath });
       }
       router.push(`/pedidos/${projectId}`);
     } catch {
@@ -93,18 +54,17 @@ export function NovoPedido() {
     }
   };
 
-  // ── Passos ────────────────────────────────────────────────────────────────
   if (step === 'path') {
     return (
       <Frame title="Como você quer começar?">
-        <button type="button" className={card} onClick={() => { setPath('AI'); setStep('work'); }}>
+        <button type="button" className={card} onClick={() => { setPath('AI'); setStep('name'); }}>
           <span className="text-3xl" aria-hidden>💬</span>
           <span>
-            <span className="block text-lg font-semibold text-charcoal">Criar com a ABI</span>
-            <span className="block text-sm text-muted">Mando uma foto e converso pra ver o móvel</span>
+            <span className="block text-lg font-semibold text-charcoal">Montar com a ABI</span>
+            <span className="block text-sm text-muted">Adiciono os cômodos e móveis e mando fotos</span>
           </span>
         </button>
-        <button type="button" className={card} onClick={() => { setPath('ARCHITECT'); setStep('work'); }}>
+        <button type="button" className={card} onClick={() => { setPath('ARCHITECT'); setStep('name'); }}>
           <span className="text-3xl" aria-hidden>📐</span>
           <span>
             <span className="block text-lg font-semibold text-charcoal">Tenho projeto de arquiteto</span>
@@ -115,118 +75,42 @@ export function NovoPedido() {
     );
   }
 
-  if (step === 'work') {
+  if (step === 'name') {
     return (
-      <Frame title="O que você precisa?" onBack={goBack}>
-        {([
-          { v: 'NEW_INSTALL', emoji: '🆕', t: 'Quero um móvel novo', s: 'Não existe nada no lugar' },
-          { v: 'REPLACE_EXISTING', emoji: '🔁', t: 'Quero trocar um que já tenho', s: 'Substituir o móvel atual' },
-        ] as const).map((o) => (
-          <button key={o.v} type="button" className={card} onClick={() => { setWorkType(o.v); setStep('category'); }}>
-            <span className="text-3xl" aria-hidden>{o.emoji}</span>
-            <span>
-              <span className="block text-lg font-semibold text-charcoal">{o.t}</span>
-              <span className="block text-sm text-muted">{o.s}</span>
-            </span>
-          </button>
-        ))}
-      </Frame>
-    );
-  }
-
-  if (step === 'category') {
-    return (
-      <Frame title="O que você quer fazer?" onBack={goBack}>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c}
-              type="button"
-              className="flex flex-col items-center gap-2 rounded-xl border border-subtle bg-surface px-3 py-5 text-center text-base font-medium text-charcoal transition hover:-translate-y-0.5 hover:border-brand-primary/50 hover:shadow-sm"
-              onClick={() => { setCategory(c); setStep(path === 'AI' ? 'measures' : 'pdf'); }}
-            >
-              <span className="text-2xl" aria-hidden>{CATEGORY_EMOJI[c]}</span>
-              {CATEGORY_LABELS[c]}
-            </button>
-          ))}
-        </div>
-      </Frame>
-    );
-  }
-
-  if (step === 'measures') {
-    return (
-      <Frame title="Seu primeiro móvel" onBack={goBack}>
-        <label className="flex flex-col gap-1">
-          <span className="text-base text-charcoal">Cômodo (opcional)</span>
-          <input className={fld} placeholder="Ex.: Cozinha, Quarto do casal" value={ambiente} onChange={(e) => setAmbiente(e.target.value)} />
-        </label>
-        <p className="text-sm text-muted">Medidas do vão onde o móvel vai ficar (em cm, de 5 a 600).</p>
-        <Measure label="Largura (cm)" value={w} onChange={setW} error={eW} />
-        <Measure label="Altura (cm)" value={h} onChange={setH} error={eH} />
-        <Measure label="Profundidade (cm)" value={d} onChange={setD} error={eD} />
-        <p className="rounded-xl bg-deep px-4 py-3 text-sm text-muted">
-          💡 Depois você pode adicionar <strong>mais móveis</strong> e <strong>outros cômodos</strong>.
+      <Frame title="Dê um nome ao seu pedido" onBack={() => setStep('path')}>
+        <p className="text-sm text-muted">
+          Um pedido pode ter vários cômodos e móveis. Dê um nome que te ajude a reconhecer.
         </p>
-        <button type="button" className={`${big} bg-brand-primary text-white`} disabled={!measuresValid} onClick={() => setStep('photo')}>
-          Continuar
-        </button>
-      </Frame>
-    );
-  }
-
-  if (step === 'photo') {
-    const hint = workType === 'NEW_INSTALL' ? 'Fotografe a parede/espaço vazio onde quer o móvel.' : 'Fotografe o móvel atual que será trocado.';
-    return (
-      <Frame title="Foto do cômodo (opcional)" onBack={goBack}>
-        <p className="text-sm text-muted">{hint}</p>
-        <input type="file" accept="image/*" className={fld} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-        {file && <p className="text-sm text-brand-secondary">✓ {file.name}</p>}
-        <button type="button" className={`${big} bg-brand-primary text-white`} onClick={() => setStep('review')}>
-          Continuar
-        </button>
-      </Frame>
-    );
-  }
-
-  if (step === 'pdf') {
-    return (
-      <Frame title="Envie o PDF do projeto" onBack={goBack}>
-        <input type="file" accept="application/pdf" className={fld} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-        {file && <p className="text-sm text-brand-secondary">✓ {file.name}</p>}
-        <button type="button" className={`${big} bg-brand-primary text-white`} disabled={!file} onClick={() => setStep('review')}>
-          Continuar
-        </button>
-      </Frame>
-    );
-  }
-
-  // step === 'review'
-  return (
-    <Frame title="Confira seu pedido" onBack={goBack}>
-      <dl className="divide-y divide-subtle rounded-xl border border-subtle">
-        <Row label="Tipo de obra" value={workType === 'NEW_INSTALL' ? 'Móvel novo' : 'Substituição'} />
-        <Row label="Categoria" value={category ? `${CATEGORY_EMOJI[category]} ${CATEGORY_LABELS[category]}` : '—'} onEdit={() => setStep('category')} />
+        <input
+          className={fld}
+          placeholder="Ex.: Reforma do apartamento, Casa nova"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          autoFocus
+        />
         {path === 'AI' ? (
-          <>
-            <Row label="Cômodo" value={ambiente.trim() || '—'} onEdit={() => setStep('measures')} />
-            <Row label="Medidas (L×A×P)" value={`${w} × ${h} × ${d} cm`} onEdit={() => setStep('measures')} />
-            <Row label="Foto" value={file ? file.name : 'Sem foto'} onEdit={() => setStep('photo')} />
-          </>
+          <button type="button" className={`${big} bg-brand-primary text-white`} disabled={!nameOk || busy} onClick={submit}>
+            {status === 'creating' ? 'Criando…' : 'Criar pedido'}
+          </button>
         ) : (
-          <Row label="PDF do projeto" value={file ? file.name : '—'} onEdit={() => setStep('pdf')} />
+          <button type="button" className={`${big} bg-brand-primary text-white`} disabled={!nameOk} onClick={() => setStep('pdf')}>
+            Continuar
+          </button>
         )}
-      </dl>
+        {error && <Err msg={error} />}
+      </Frame>
+    );
+  }
 
-      <button type="button" className={`${big} bg-brand-primary text-white`} disabled={busy} onClick={submit}>
-        {status === 'creating' ? 'Criando pedido…' : status === 'uploading' ? 'Enviando foto…' : 'Criar pedido'}
+  // step === 'pdf' (arquiteto)
+  return (
+    <Frame title="Envie o PDF do projeto" onBack={() => setStep('name')}>
+      <input type="file" accept="application/pdf" className={fld} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+      {file && <p className="text-sm text-brand-secondary">✓ {file.name}</p>}
+      <button type="button" className={`${big} bg-brand-primary text-white`} disabled={!file || busy} onClick={submit}>
+        {status === 'uploading' ? 'Enviando PDF…' : status === 'creating' ? 'Criando…' : 'Criar pedido'}
       </button>
-      {status === 'uploading' && <p className="text-center text-sm text-muted">Quase lá — enviando sua foto.</p>}
-      {error && (
-        <p className="rounded-xl bg-ochre/20 px-4 py-3 text-base text-charcoal" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <Err msg={error} />}
     </Frame>
   );
 }
@@ -248,35 +132,10 @@ function Frame({ title, onBack, children }: { title: string; onBack?: () => void
   );
 }
 
-function Measure({ label, value, onChange, error }: { label: string; value: string; onChange: (v: string) => void; error: string | null }) {
+function Err({ msg }: { msg: string }) {
   return (
-    <label className="flex flex-col gap-1">
-      <span className="text-base text-charcoal">{label}</span>
-      <input
-        type="number"
-        inputMode="numeric"
-        min={1}
-        className={`${fld} ${error ? 'border-ochre ring-2 ring-ochre/30' : ''}`}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
-      {error && <span className="text-sm text-ochre">{error}</span>}
-    </label>
-  );
-}
-
-function Row({ label, value, onEdit }: { label: string; value: string; onEdit?: () => void }) {
-  return (
-    <div className="flex items-center justify-between gap-2 px-4 py-3">
-      <div className="min-w-0">
-        <dt className="text-xs uppercase tracking-wide text-subtle">{label}</dt>
-        <dd className="truncate text-base text-charcoal">{value}</dd>
-      </div>
-      {onEdit && (
-        <button type="button" onClick={onEdit} className="shrink-0 text-sm font-medium text-brand-primary hover:underline">
-          Editar
-        </button>
-      )}
-    </div>
+    <p className="rounded-xl bg-ochre/20 px-4 py-3 text-base text-charcoal" role="alert">
+      {msg}
+    </p>
   );
 }

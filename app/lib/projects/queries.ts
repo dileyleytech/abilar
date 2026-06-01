@@ -1,5 +1,5 @@
 import 'server-only';
-import { projects, modules, projectPhotos, and, asc, desc, eq, inArray } from '@abilar/db';
+import { projects, modules, projectPhotos, and, asc, desc, eq, inArray, sql } from '@abilar/db';
 import type { Project, Module, ProjectPhoto } from '@abilar/db';
 import { getDb } from '@/lib/db';
 
@@ -13,23 +13,38 @@ export async function listMyProjects(userId: string): Promise<Project[]> {
     .orderBy(desc(projects.createdAt));
 }
 
-/** Pedidos + caminho da foto de capa (a 1ª foto de cada pedido), para a listagem. */
+/** Pedidos + foto de capa + nº de móveis, para a listagem. */
 export async function listMyProjectsWithCover(
   userId: string,
-): Promise<(Project & { coverPath: string | null })[]> {
+): Promise<(Project & { coverPath: string | null; moduleCount: number })[]> {
   const db = getDb();
   const rows = await listMyProjects(userId);
   if (rows.length === 0) return [];
+  const ids = rows.map((p) => p.id);
 
-  const photos = await db
-    .select({ projectId: projectPhotos.projectId, path: projectPhotos.path })
-    .from(projectPhotos)
-    .where(inArray(projectPhotos.projectId, rows.map((p) => p.id)))
-    .orderBy(asc(projectPhotos.createdAt));
+  const [photos, counts] = await Promise.all([
+    db
+      .select({ projectId: projectPhotos.projectId, path: projectPhotos.path })
+      .from(projectPhotos)
+      .where(inArray(projectPhotos.projectId, ids))
+      .orderBy(asc(projectPhotos.createdAt)),
+    db
+      .select({ projectId: modules.projectId, n: sql<number>`count(*)::int` })
+      .from(modules)
+      .where(inArray(modules.projectId, ids))
+      .groupBy(modules.projectId),
+  ]);
 
   const cover = new Map<string, string>();
   for (const ph of photos) if (!cover.has(ph.projectId)) cover.set(ph.projectId, ph.path);
-  return rows.map((p) => ({ ...p, coverPath: cover.get(p.id) ?? null }));
+  const count = new Map<string, number>();
+  for (const c of counts) count.set(c.projectId, c.n);
+
+  return rows.map((p) => ({
+    ...p,
+    coverPath: cover.get(p.id) ?? null,
+    moduleCount: count.get(p.id) ?? 0,
+  }));
 }
 
 export type ProjectDetail = {

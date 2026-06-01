@@ -2,19 +2,21 @@ import { describe, it, expect } from 'vitest';
 import { createProjectSchema, moduleInputSchema, guidedMeasuresSchema } from './project-schemas';
 
 describe('project-schemas (zod)', () => {
-  it('createProject aplica default de sourceType', () => {
-    const p = createProjectSchema.parse({ category: 'COZINHA', workType: 'NEW_INSTALL' });
+  it('createProject exige nome e aplica default de sourceType', () => {
+    const p = createProjectSchema.parse({ title: 'Reforma apê' });
+    expect(p.title).toBe('Reforma apê');
     expect(p.sourceType).toBe('AI_GENERATED');
   });
 
-  it('rejeita categoria/workType inválidos', () => {
-    expect(() => createProjectSchema.parse({ category: 'X', workType: 'NEW_INSTALL' })).toThrow();
-    expect(() => createProjectSchema.parse({ category: 'COZINHA', workType: 'NOVA' })).toThrow();
+  it('rejeita projeto sem nome', () => {
+    expect(() => createProjectSchema.parse({})).toThrow();
+    expect(() => createProjectSchema.parse({ title: 'a' })).toThrow();
   });
 
-  it('módulo converte cm → mm e valida sanidade', () => {
+  it('módulo converte cm → mm, valida sanidade e aceita workType', () => {
     const m = moduleInputSchema.parse({
-      type: 'guarda-roupa',
+      type: 'GUARDA_ROUPA',
+      workType: 'NEW_INSTALL',
       widthMm: 240, // cm → 2400 mm
       heightMm: 260,
       depthMm: 55,
@@ -22,6 +24,7 @@ describe('project-schemas (zod)', () => {
     expect(m.widthMm).toBe(2400);
     expect(m.heightMm).toBe(2600);
     expect(m.depthMm).toBe(550);
+    expect(m.workType).toBe('NEW_INSTALL');
   });
 
   it('rejeita medida fora da faixa de sanidade', () => {
