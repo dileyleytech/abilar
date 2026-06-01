@@ -1,6 +1,17 @@
 import 'server-only';
+import { redirect } from 'next/navigation';
 import type { Role } from '@abilar/shared';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+
+/** Id do usuário autenticado; redireciona p/ /entrar se deslogado. */
+export async function requireUserId(): Promise<string> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect('/entrar');
+  return user.id;
+}
 
 export type SessionProfile = {
   id: string;

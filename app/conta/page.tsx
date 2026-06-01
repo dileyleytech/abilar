@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { Role } from '@abilar/shared';
 import { getSessionProfile } from '@/lib/auth/session';
@@ -26,10 +27,17 @@ export default async function ContaPage() {
           {profile.phone && <div className="font-mono text-muted">{profile.phone}</div>}
           {profile.email && <div className="font-mono text-muted">{profile.email}</div>}
         </dl>
-        <p className="mt-4 text-sm text-muted">
-          {/* TODO(Fase 2+): redirecionar para a área do papel (feed, pedidos, pipeline). */}
-          Em breve: sua área de {ROLE_LABEL[profile.role].toLowerCase()}.
-        </p>
+        {profile.role === 'CLIENT' && (
+          <Link href="/pedidos" className="mt-4 inline-block font-medium text-brand underline">
+            Ver meus pedidos →
+          </Link>
+        )}
+        {profile.role !== 'CLIENT' && (
+          <p className="mt-4 text-sm text-muted">
+            {/* TODO(Fase 4+): feed do marceneiro / vitrine do arquiteto. */}
+            Em breve: sua área de {ROLE_LABEL[profile.role].toLowerCase()}.
+          </p>
+        )}
       </div>
 
       <form action={signOut}>

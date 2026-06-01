@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { getTableConfig } from 'drizzle-orm/pg-core';
-import { profiles, carpenterProfiles, architectProfiles, addresses } from './schema';
+import {
+  profiles,
+  carpenterProfiles,
+  architectProfiles,
+  addresses,
+  projects,
+  modules,
+  projectPhotos,
+} from './schema';
 
 // Smoke tests do schema (não conectam no banco). A query real de Worker e as
 // policies RLS são validadas via migration aplicada no Supabase (ver README).
@@ -48,5 +56,28 @@ describe('db schema — Fase 1 (auth e perfis)', () => {
     expect(getTableConfig(addresses).name).toBe('addresses');
     expect(cols(addresses)).toContain('user_id');
     expect(cols(addresses)).toContain('cep');
+  });
+
+  it('projects tem dono, categoria, status e workType + índice de feed', () => {
+    const cfg = getTableConfig(projects);
+    expect(cfg.name).toBe('projects');
+    for (const f of ['client_id', 'category', 'status', 'work_type', 'source_type']) {
+      expect(cols(projects)).toContain(f);
+    }
+    expect(cfg.indexes.map((i) => i.config.name)).toContain('projects_status_created_idx');
+  });
+
+  it('modules guarda dimensões em mm', () => {
+    expect(getTableConfig(modules).name).toBe('modules');
+    for (const f of ['project_id', 'width_mm', 'height_mm', 'depth_mm']) {
+      expect(cols(modules)).toContain(f);
+    }
+  });
+
+  it('project_photos referencia o projeto e guarda o path', () => {
+    expect(getTableConfig(projectPhotos).name).toBe('project_photos');
+    for (const f of ['project_id', 'kind', 'path', 'is_current']) {
+      expect(cols(projectPhotos)).toContain(f);
+    }
   });
 });

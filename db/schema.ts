@@ -10,6 +10,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -17,13 +18,26 @@ import {
   timestamp,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { ROLES, PERSON_TYPES, CATEGORIES, KYC_STATUS } from '@abilar/shared';
+import {
+  ROLES,
+  PERSON_TYPES,
+  CATEGORIES,
+  KYC_STATUS,
+  PROJECT_STATUS,
+  WORK_TYPES,
+  SOURCE_TYPES,
+  PHOTO_KINDS,
+} from '@abilar/shared';
 
 // Enums (fonte única dos literais em @abilar/shared/domain).
 export const roleEnum = pgEnum('role', ROLES);
 export const personTypeEnum = pgEnum('person_type', PERSON_TYPES);
 export const categoryEnum = pgEnum('category', CATEGORIES);
 export const kycStatusEnum = pgEnum('kyc_status', KYC_STATUS);
+export const projectStatusEnum = pgEnum('project_status', PROJECT_STATUS);
+export const workTypeEnum = pgEnum('work_type', WORK_TYPES);
+export const sourceTypeEnum = pgEnum('source_type', SOURCE_TYPES);
+export const photoKindEnum = pgEnum('photo_kind', PHOTO_KINDS);
 
 /** Perfil 1:1 com auth.users (id = auth.uid()). `role` é a fonte de verdade
  *  do papel (NÃO confiar em user_metadata para autorização). */
@@ -98,6 +112,78 @@ export const addresses = pgTable(
   },
   (t) => [index('addresses_user_id_idx').on(t.userId)],
 );
+
+// ── Fase 2: Projeto, Módulos e Fotos ────────────────────────────────────────
+
+/** Projeto do cliente (DRAFT → OPEN_FOR_QUOTES → …). `category` alimenta o matching. */
+export const projects = pgTable(
+  'projects',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    clientId: uuid('client_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    title: text('title'),
+    category: categoryEnum('category').notNull(),
+    status: projectStatusEnum('status').notNull().default('DRAFT'),
+    workType: workTypeEnum('work_type').notNull(),
+    sourceType: sourceTypeEnum('source_type').notNull().default('AI_GENERATED'),
+    architectId: uuid('architect_id').references(() => profiles.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('projects_status_created_idx').on(t.status, t.createdAt), // feed de pedidos
+    index('projects_client_idx').on(t.clientId),
+  ],
+);
+
+/** Módulo do projeto. Dimensões em mm (inteiro). hardware/items em jsonb. */
+export const modules = pgTable(
+  'modules',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    label: text('label'),
+    widthMm: integer('width_mm').notNull(),
+    heightMm: integer('height_mm').notNull(),
+    depthMm: integer('depth_mm').notNull(),
+    material: text('material'),
+    finish: text('finish'),
+    hardware: jsonb('hardware').notNull().default(sql`'{}'::jsonb`),
+    items: jsonb('items').notNull().default(sql`'[]'::jsonb`),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('modules_project_idx').on(t.projectId)],
+);
+
+/** Foto/anexo do projeto. `path` = caminho no bucket; a URL assinada é curta (gerada na leitura). */
+export const projectPhotos = pgTable(
+  'project_photos',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    kind: photoKindEnum('kind').notNull(),
+    path: text('path').notNull(),
+    version: integer('version').notNull().default(1),
+    isCurrent: boolean('is_current').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('project_photos_project_idx').on(t.projectId)],
+);
+
+export type Project = typeof projects.$inferSelect;
+export type NewProject = typeof projects.$inferInsert;
+export type Module = typeof modules.$inferSelect;
+export type NewModule = typeof modules.$inferInsert;
+export type ProjectPhoto = typeof projectPhotos.$inferSelect;
+export type NewProjectPhoto = typeof projectPhotos.$inferInsert;
 
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;

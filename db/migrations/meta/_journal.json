@@ -15,6 +15,27 @@
       "when": 1780319284375,
       "tag": "0001_rls_trigger_authz",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780320583667,
+      "tag": "0002_fase2_projetos",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780320588678,
+      "tag": "0003_fase2_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780320627444,
+      "tag": "0004_fase2_storage",
+      "breakpoints": true
     }
   ]
 }
