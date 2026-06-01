@@ -146,6 +146,7 @@ export const modules = pgTable(
     projectId: uuid('project_id')
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
+    ambiente: text('ambiente'), // cômodo (ex.: "Cozinha", "Quarto do casal")
     type: text('type').notNull(),
     label: text('label'),
     widthMm: integer('width_mm').notNull(),

@@ -35,7 +35,14 @@
       "Bash(perl -0pi -e 's/      - uses: pnpm\\\\/action-setup\\\\@v4\\\\n        with:\\\\n          version: 9\\\\n/      - uses: pnpm\\\\/action-setup\\\\@v4\\\\n/g' .github/workflows/ci.yml)",
       "Bash(pnpm audit *)",
       "Bash(pnpm add *)",
-      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\('orm',p.dependencies['drizzle-orm'],'kit',p.devDependencies['drizzle-kit']\\)\")"
+      "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\('orm',p.dependencies['drizzle-orm'],'kit',p.devDependencies['drizzle-kit']\\)\")",
+      "Bash(pnpm dev *)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3001/)",
+      "Bash(curl -s http://localhost:3001/api/health)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3001/entrar)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} -> %{redirect_url}\\\\n\" http://localhost:3001/pedidos)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(pkill -f \"next-server\")"
     ]
   }
 }

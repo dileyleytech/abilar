@@ -1,18 +1,9 @@
 import Link from 'next/link';
-import type { ProjectStatus } from '@abilar/shared';
 import { requireUserId } from '@/lib/auth/session';
 import { listMyProjects } from '@/lib/projects/queries';
+import { PROJECT_STATUS_LABEL } from '@/lib/labels';
 
 export const metadata = { title: 'Meus pedidos — Abilar' };
-
-const STATUS_LABEL: Record<ProjectStatus, string> = {
-  DRAFT: 'Rascunho',
-  OPEN_FOR_QUOTES: 'Recebendo orçamentos',
-  IN_NEGOTIATION: 'Em negociação',
-  HIRED: 'Contratado',
-  EXECUTED: 'Concluído',
-  CANCELLED: 'Cancelado',
-};
 
 export default async function PedidosPage() {
   const userId = await requireUserId();
@@ -40,7 +31,7 @@ export default async function PedidosPage() {
             <li key={p.id}>
               <Link href={`/pedidos/${p.id}`} className="block rounded-lg border border-subtle bg-surface p-4 shadow-sm transition hover:border-brand">
                 <span className="block text-lg font-semibold text-charcoal">{p.title ?? p.category}</span>
-                <span className="text-sm text-muted">{STATUS_LABEL[p.status]}</span>
+                <span className="text-sm text-muted">{PROJECT_STATUS_LABEL[p.status]}</span>
               </Link>
             </li>
           ))}

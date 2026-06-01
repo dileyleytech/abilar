@@ -5,20 +5,10 @@ import { useRouter } from 'next/navigation';
 import { CATEGORIES, type Category, type WorkType } from '@abilar/shared';
 import { createProject, registerProjectPhoto } from '@/lib/projects/actions';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { CATEGORY_LABELS } from '@/lib/labels';
 
 type Path = 'AI' | 'ARCHITECT';
 type Step = 'path' | 'work' | 'category' | 'measures' | 'photo' | 'pdf';
-
-const CATEGORY_LABELS: Record<Category, string> = {
-  GUARDA_ROUPA: 'Guarda-roupa',
-  COZINHA: 'Cozinha',
-  PAINEL_TV: 'Painel de TV',
-  ESTANTE: 'Estante',
-  HOME_OFFICE: 'Home office',
-  BANHEIRO: 'Banheiro',
-  LAVANDERIA: 'Lavanderia',
-  OUTRO: 'Outro',
-};
 
 const big = 'w-full rounded-md px-5 py-4 text-lg font-medium';
 const card =
@@ -30,6 +20,7 @@ export function NovoPedido() {
   const [path, setPath] = useState<Path>('AI');
   const [workType, setWorkType] = useState<WorkType>('NEW_INSTALL');
   const [category, setCategory] = useState<Category | null>(null);
+  const [ambiente, setAmbiente] = useState('');
   const [w, setW] = useState('');
   const [h, setH] = useState('');
   const [d, setD] = useState('');
@@ -48,7 +39,15 @@ export function NovoPedido() {
           workType,
           sourceType: path === 'ARCHITECT' ? 'ARCHITECT_PROJECT' : 'AI_GENERATED',
         },
-        measures: opts.withMeasures ? { widthMm: Number(w), heightMm: Number(h), depthMm: Number(d) } : undefined,
+        firstModule: opts.withMeasures
+          ? {
+              type: category,
+              ambiente: ambiente.trim() || undefined,
+              widthMm: Number(w),
+              heightMm: Number(h),
+              depthMm: Number(d),
+            }
+          : undefined,
       });
       if (!res.ok) {
         setError(res.error);
@@ -134,11 +133,24 @@ export function NovoPedido() {
   if (step === 'measures') {
     const ready = Number(w) > 0 && Number(h) > 0 && Number(d) > 0;
     return (
-      <Frame title="Quais as medidas do vão? (em cm)">
-        <p className="text-sm text-muted">Meça o espaço onde o móvel vai ficar.</p>
+      <Frame title="Seu primeiro móvel">
+        <label className="flex flex-col gap-1">
+          <span className="text-base text-charcoal">Cômodo (opcional)</span>
+          <input
+            type="text"
+            placeholder="Ex.: Cozinha, Quarto do casal"
+            className="w-full rounded-md border border-subtle bg-surface px-4 py-4 text-lg text-charcoal outline-none focus:border-brand"
+            value={ambiente}
+            onChange={(e) => setAmbiente(e.target.value)}
+          />
+        </label>
+        <p className="text-sm text-muted">Medidas do vão onde o móvel vai ficar (em cm).</p>
         <Measure label="Largura (cm)" value={w} onChange={setW} />
         <Measure label="Altura (cm)" value={h} onChange={setH} />
         <Measure label="Profundidade (cm)" value={d} onChange={setD} />
+        <p className="rounded-md bg-deep px-4 py-3 text-sm text-muted">
+          💡 Depois você pode adicionar <strong>mais móveis</strong> e <strong>outros cômodos</strong> a este pedido.
+        </p>
         <button type="button" className={`${big} bg-brand text-white disabled:opacity-50`} disabled={!ready} onClick={() => setStep('photo')}>
           Continuar
         </button>

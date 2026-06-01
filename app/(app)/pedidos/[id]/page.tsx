@@ -1,19 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { formatCm, type ProjectStatus } from '@abilar/shared';
 import { requireUserId } from '@/lib/auth/session';
 import { getProjectDetail } from '@/lib/projects/queries';
 import { signedProjectPhotoUrl } from '@/lib/storage';
+import { PROJECT_STATUS_LABEL } from '@/lib/labels';
 import { ProjectActions } from './_components/ProjectActions';
-
-const STATUS_LABEL: Record<ProjectStatus, string> = {
-  DRAFT: 'Rascunho',
-  OPEN_FOR_QUOTES: 'Recebendo orçamentos',
-  IN_NEGOTIATION: 'Em negociação',
-  HIRED: 'Contratado',
-  EXECUTED: 'Concluído',
-  CANCELLED: 'Cancelado',
-};
+import { ModulesSection } from './_components/ModulesSection';
 
 export default async function PedidoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -35,7 +27,7 @@ export default async function PedidoDetailPage({ params }: { params: Promise<{ i
 
       <header>
         <h1 className="text-2xl font-bold text-charcoal">{project.title ?? project.category}</h1>
-        <p className="text-sm text-muted">{STATUS_LABEL[project.status]}</p>
+        <p className="text-sm text-muted">{PROJECT_STATUS_LABEL[project.status]}</p>
       </header>
 
       {photoUrls.length > 0 && (
@@ -55,23 +47,19 @@ export default async function PedidoDetailPage({ params }: { params: Promise<{ i
         </section>
       )}
 
-      <section className="rounded-lg bg-surface p-4 shadow-sm">
-        <h2 className="mb-2 text-lg font-semibold text-charcoal">Módulos</h2>
-        {modules.length === 0 ? (
-          <p className="text-muted">Nenhum módulo ainda.</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {modules.map((m) => (
-              <li key={m.id} className="text-base text-charcoal">
-                <span className="font-medium">{m.label ?? m.type}</span>{' '}
-                <span className="font-mono text-muted">
-                  {formatCm(m.widthMm)} × {formatCm(m.heightMm)} × {formatCm(m.depthMm)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <ModulesSection
+        projectId={project.id}
+        editable={['DRAFT', 'OPEN_FOR_QUOTES', 'IN_NEGOTIATION'].includes(project.status)}
+        modules={modules.map((m) => ({
+          id: m.id,
+          ambiente: m.ambiente,
+          type: m.type,
+          label: m.label,
+          widthMm: m.widthMm,
+          heightMm: m.heightMm,
+          depthMm: m.depthMm,
+        }))}
+      />
 
       <ProjectActions projectId={project.id} status={project.status} />
     </main>

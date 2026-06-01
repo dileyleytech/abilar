@@ -4,7 +4,6 @@ import { revalidatePath } from 'next/cache';
 import {
   createProjectSchema,
   moduleInputSchema,
-  guidedMeasuresSchema,
   photoKindSchema,
   projectStatusSchema,
   assertProjectTransition,
@@ -35,10 +34,11 @@ async function ownProject(projectId: string, userId: string) {
   return rows[0] ?? null;
 }
 
-/** Cria projeto (DRAFT) + opcionalmente um módulo inicial das medidas guiadas. */
+/** Cria projeto (DRAFT) + opcionalmente o 1º módulo (móvel). Mais móveis/cômodos
+ *  são adicionados depois via addModule (um projeto tem vários módulos — §2.6). */
 export async function createProject(input: {
   project: unknown;
-  measures?: unknown;
+  firstModule?: unknown;
 }): Promise<Result<{ projectId: string }>> {
   const userId = await uid();
   if (!userId) return { ok: false, error: 'Faça login.' };
@@ -46,11 +46,10 @@ export async function createProject(input: {
   const p = createProjectSchema.safeParse(input.project);
   if (!p.success) return { ok: false, error: 'Dados do pedido inválidos.' };
 
-  let moduleData: { widthMm: number; heightMm: number; depthMm: number } | null = null;
-  if (input.measures !== undefined) {
-    const m = guidedMeasuresSchema.safeParse(input.measures);
-    if (!m.success) return { ok: false, error: 'Medidas inválidas.' };
-    moduleData = m.data;
+  let first: ReturnType<typeof moduleInputSchema.safeParse> | null = null;
+  if (input.firstModule !== undefined) {
+    first = moduleInputSchema.safeParse(input.firstModule);
+    if (!first.success) return { ok: false, error: 'Medidas do móvel inválidas.' };
   }
 
   const db = getDb();
@@ -67,13 +66,19 @@ export async function createProject(input: {
 
   if (!created) return { ok: false, error: 'Não foi possível criar o pedido.' };
 
-  if (moduleData) {
+  if (first?.success) {
+    const m = first.data;
     await db.insert(modules).values({
       projectId: created.id,
-      type: p.data.category,
-      widthMm: moduleData.widthMm,
-      heightMm: moduleData.heightMm,
-      depthMm: moduleData.depthMm,
+      ambiente: m.ambiente ?? null,
+      type: m.type,
+      label: m.label ?? null,
+      widthMm: m.widthMm,
+      heightMm: m.heightMm,
+      depthMm: m.depthMm,
+      material: m.material ?? null,
+      finish: m.finish ?? null,
+      notes: m.notes ?? null,
     });
   }
 
@@ -93,6 +98,7 @@ export async function addModule(projectId: string, input: unknown): Promise<Resu
   const db = getDb();
   await db.insert(modules).values({
     projectId,
+    ambiente: m.data.ambiente ?? null,
     type: m.data.type,
     label: m.data.label ?? null,
     widthMm: m.data.widthMm,
@@ -102,6 +108,18 @@ export async function addModule(projectId: string, input: unknown): Promise<Resu
     finish: m.data.finish ?? null,
     notes: m.data.notes ?? null,
   });
+  revalidatePath(`/pedidos/${projectId}`);
+  return { ok: true, data: undefined };
+}
+
+/** Remove um módulo do projeto (com ownership via projeto). */
+export async function deleteModule(projectId: string, moduleId: string): Promise<Result> {
+  const userId = await uid();
+  if (!userId) return { ok: false, error: 'Faça login.' };
+  if (!(await ownProject(projectId, userId))) return { ok: false, error: 'Pedido não encontrado.' };
+
+  const db = getDb();
+  await db.delete(modules).where(and(eq(modules.id, moduleId), eq(modules.projectId, projectId)));
   revalidatePath(`/pedidos/${projectId}`);
   return { ok: true, data: undefined };
 }

@@ -21,6 +21,7 @@ export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 
 /** Módulo: a UI envia cm; o schema entrega *Mm prontos para o banco. */
 export const moduleInputSchema = z.object({
+  ambiente: z.string().trim().max(60).optional(), // cômodo (ex.: "Cozinha")
   type: z.string().trim().min(1, 'Informe o tipo da peça'),
   label: z.string().trim().max(80).optional(),
   widthMm: cmDimensionSchema,
