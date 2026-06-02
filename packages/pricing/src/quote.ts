@@ -81,20 +81,28 @@ export function quotePricing(input: QuotePricingInput): QuotePricingResult {
   }
   const sSafe = clamp(s, 0, 100);
 
+  // Incentivo: nas vendas PARCELADAS o marceneiro paga uma comissão tm reduzida
+  // (desconto em pontos). À vista mantém o tm cheio. Default 0 (sem incentivo).
+  const discount = cfg.carpenterInstallmentDiscountPct ?? 0;
+  const effTm = Math.max(0, tm - discount);
+  const payoutBaseEff = V - applyPercent(V, effTm);
+
   const custoParc = applyPercent(precoBase, row.mdrPct);
   const carpenterAbsorb = applyPercent(custoParc, sSafe);
-  const payoutParc = payoutAvista - carpenterAbsorb;
+  const payoutParc = payoutBaseEff - carpenterAbsorb;
   const clientFromCusto = custoParc - carpenterAbsorb; // (1 - s) * custoParc
   const platformMarginPortion = applyPercent(precoBase, cfg.dilutionPlatformMarginPct);
   const acrescimo = clientFromCusto + platformMarginPortion;
   const displayed = precoBase + acrescimo;
   const gatewayFee = applyPercent(displayed, row.mdrPct);
   const platformNetParc = displayed - gatewayFee - payoutParc - architectPayout;
-  const delta = platformNetParc - platformNetAvista;
+  const delta = platformNetParc - platformNetAvista; // pode ser < 0 (incentivo)
 
-  if (delta < 0) {
+  // Com o incentivo a plataforma pode abrir mão de margem no parcelado de
+  // propósito — só barramos se ela ficar no PREJUÍZO absoluto.
+  if (platformNetParc < 0) {
     valid = false;
-    warnings.push('Parcelamento reduz a margem da plataforma.');
+    warnings.push('Parcelamento deixa a plataforma no prejuízo.');
   }
   if (input.carpenterCostCents != null && payoutParc < input.carpenterCostCents) {
     valid = false;

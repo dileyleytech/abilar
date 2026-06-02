@@ -27,6 +27,7 @@ export const pricingConfigInputSchema = z
     architectCommissionPct: pct,
     dilutionMinCarpenterSharePct: sharePct,
     dilutionPlatformMarginPct: pct,
+    carpenterInstallmentDiscountPct: sharePct.default(0),
     pixFixedFeeCents: z.number().int().min(0),
     installments: z.array(installmentRowInputSchema).min(1, 'Inclua ao menos uma parcela'),
     promo: promoInputSchema.nullable().optional(),
@@ -54,6 +55,7 @@ export function inputToPricingConfig(input: PricingConfigInput): PricingConfig {
     installmentTable: buildInstallmentTable(input.installments),
     dilutionMinCarpenterSharePct: input.dilutionMinCarpenterSharePct,
     dilutionPlatformMarginPct: input.dilutionPlatformMarginPct,
+    carpenterInstallmentDiscountPct: input.carpenterInstallmentDiscountPct,
     pixFixedFeeCents: input.pixFixedFeeCents,
     promo: (input.promo as PromoOverrides | null | undefined) ?? null,
   };

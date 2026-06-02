@@ -1,0 +1,1 @@
+ALTER TABLE "pricing_config" ADD COLUMN "carpenter_installment_discount_pct" numeric(6, 3) DEFAULT '0' NOT NULL;

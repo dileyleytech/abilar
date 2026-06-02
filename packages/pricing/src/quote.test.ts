@@ -136,6 +136,43 @@ describe('quotePricing — §5 (motor de pricing, crítico)', () => {
     });
   });
 
+  describe('incentivo: tm reduzido no parcelado (carpenterInstallmentDiscountPct)', () => {
+    const cfg: PricingConfig = { ...baseConfig, carpenterInstallmentDiscountPct: 2 }; // tm 10% → 8% no parcelado
+
+    it('à vista NÃO recebe o desconto (tm cheio)', () => {
+      const r = quotePricing({ baseValueCents: V, config: cfg, installments: 1, method: 'PIX', carpenterDilutionSharePct: 50 });
+      expect(r.carpenterPayoutCents).toBe(1_800_000); // 90% de V (tm cheio)
+      expect(r.displayedAmountCents).toBe(2_160_000);
+    });
+
+    it('parcelado: marceneiro recebe +2% de V; a plataforma abre mão dessa margem', () => {
+      const r = quotePricing({ baseValueCents: V, config: cfg, installments: 10, method: 'CARD', carpenterDilutionSharePct: 50 });
+      expect(r.carpenterPayoutCents).toBe(1_791_400); // base tm 8% (1.840.000) − 48.600
+      expect(r.displayedAmountCents).toBe(2_230_200); // cliente não muda
+      expect(r.platformNetCents).toBe(278_441); // 318.441 − 40.000 (o incentivo)
+      expect(r.installmentDeltaCents).toBe(-21_559); // ganha menos no parcelado, de propósito
+      expect(r.valid).toBe(true);
+    });
+
+    it('soma continua fechando com o desconto', () => {
+      const r = quotePricing({ baseValueCents: V, config: cfg, installments: 10, method: 'CARD', carpenterDilutionSharePct: 50 });
+      expect(r.gatewayFeeCents + r.carpenterPayoutCents + r.architectPayoutCents + r.platformNetCents).toBe(r.displayedAmountCents);
+    });
+
+    it('desconto absurdo que leva a plataforma ao prejuízo é inválido', () => {
+      // tc=0 + arquiteto 5% + desconto 50pp (tm→0): a plataforma fica negativa no parcelado.
+      const big: PricingConfig = {
+        ...baseConfig,
+        clientCommissionPct: 0,
+        architectCommissionPct: 5,
+        carpenterInstallmentDiscountPct: 50,
+      };
+      const r = quotePricing({ baseValueCents: V, config: big, installments: 10, method: 'CARD', carpenterDilutionSharePct: 50 });
+      expect(r.valid).toBe(false);
+      expect(r.warnings.join(' ')).toMatch(/prejuízo/);
+    });
+  });
+
   describe('soma fecha (conservação de centavos)', () => {
     it('cliente pago = gateway + marceneiro + arquiteto + plataforma (10x)', () => {
       const r = quotePricing({ baseValueCents: V, config: baseConfig, installments: 10, method: 'CARD', carpenterDilutionSharePct: 50 });
