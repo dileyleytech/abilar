@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { cmToMm, mmToCm, formatCm, isSaneMm, assertMm, DimensionError } from './dimension';
+import {
+  cmToMm,
+  mmToCm,
+  formatCm,
+  isValidMm,
+  assertMm,
+  dimensionCmError,
+  DimensionError,
+} from './dimension';
 
 describe('dimension — milímetros (regra de ouro #5)', () => {
   it('converte cm <-> mm', () => {
@@ -20,10 +28,19 @@ describe('dimension — milímetros (regra de ouro #5)', () => {
     expect(() => mmToCm(-5)).toThrow(DimensionError);
   });
 
-  it('valida sanidade (5 cm a 6 m)', () => {
-    expect(isSaneMm(2400)).toBe(true);
-    expect(isSaneMm(40)).toBe(false); // < 5 cm
-    expect(isSaneMm(7000)).toBe(false); // > 6 m
-    expect(isSaneMm(100.5)).toBe(false); // não inteiro
+  it('isValidMm aceita inteiro positivo (sem limite máximo)', () => {
+    expect(isValidMm(2400)).toBe(true);
+    expect(isValidMm(99999)).toBe(true); // sem limite
+    expect(isValidMm(0)).toBe(false);
+    expect(isValidMm(-1)).toBe(false);
+    expect(isValidMm(100.5)).toBe(false); // não inteiro
+  });
+
+  it('dimensionCmError só rejeita não-positivo (sem limite de tamanho)', () => {
+    expect(dimensionCmError(240)).toBeNull();
+    expect(dimensionCmError(3)).toBeNull(); // sem mínimo
+    expect(dimensionCmError(700)).toBeNull(); // sem máximo
+    expect(dimensionCmError(0)).toBe('Informe a medida em cm');
+    expect(dimensionCmError(-5)).toBe('Informe a medida em cm');
   });
 });

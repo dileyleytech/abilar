@@ -15,6 +15,48 @@
       "when": 1780319284375,
       "tag": "0001_rls_trigger_authz",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780320583667,
+      "tag": "0002_fase2_projetos",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780320588678,
+      "tag": "0003_fase2_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780320627444,
+      "tag": "0004_fase2_storage",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1780322666306,
+      "tag": "0005_fase2_modulo_ambiente",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1780331636052,
+      "tag": "0006_fase2_foto_por_modulo",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780335615613,
+      "tag": "0007_fase2_projeto_container",
+      "breakpoints": true
     }
   ]
 }

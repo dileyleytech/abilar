@@ -13,8 +13,9 @@ const nextConfig: NextConfig = {
 
 export default nextConfig;
 
-// OpenNext (Cloudflare) — só no `next dev`, para que os bindings/getCloudflareContext
-// funcionem localmente. NÃO roda no `next build` (evita exigir Hyperdrive/Postgres).
-if (process.env.NODE_ENV === 'development') {
+// OpenNext (Cloudflare) — emula os bindings (Hyperdrive/R2/Queues) no dev via
+// miniflare. É OPT-IN (USE_CF_DEV=1): por ora o app usa DATABASE_URL/postgres.js e
+// Supabase via HTTP, então `pnpm dev` roda Next puro (mais leve e sem workerd).
+if (process.env.NODE_ENV === 'development' && process.env.USE_CF_DEV === '1') {
   initOpenNextCloudflareForDev();
 }

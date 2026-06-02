@@ -613,9 +613,10 @@ O marceneiro acessa o mesmo motor: pode (a) **editar** o estado estruturado e ge
 - [x] Validadores BR (CPF/CNPJ/CEP/telefone E.164) + schemas zod em `@abilar/shared`, testados.
 
 ### Fase 2 — Projeto e módulos (sem IA ainda)
-- [ ] CRUD Project + Module + ProjectPhoto; status state-machine; **`workType` (nova/substituição)**.
-- [ ] Upload de foto (R2, URL assinada) e MedidasGuiadas com validação de sanidade (§2.5).
-- [ ] Caminho "projeto de arquiteto" (upload PDF, pula IA).
+- [x] CRUD Project + Module + ProjectPhoto; **state-machine de status** (pura, testada) com transição validada no servidor; **`workType`** (NEW_INSTALL/REPLACE_EXISTING) + `sourceType`. RLS por dono (cliente) + ownership explícito nas Server Actions.
+- [x] Upload de foto (**Supabase Storage** — bucket privado + RLS; R2 quando o Cloudflare estiver ligado, §1.3) com **URL assinada curta**; **MedidasGuiadas** (stepper cm→mm) com validação de sanidade (§2.5).
+- [x] Caminho **"projeto de arquiteto"** (upload PDF, `sourceType=ARCHITECT_PROJECT`, pula IA).
+- [x] Telas mobile-first: novo pedido (caminho IA: tipo→categoria→medidas→foto; caminho arquiteto: categoria→PDF), lista e detalhe (publicar/cancelar). Validadores zod + state-machine testados.
 
 ### Fase 3 — Motor de pricing (`packages/pricing`)  ⚠️ crítico
 - [ ] Implementar `quotePricing` (§5.4) + `PricingConfig` (incl. diluição escolhida pelo marceneiro).

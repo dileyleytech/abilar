@@ -35,10 +35,20 @@ export const PROJECT_STATUS = [
 export const projectStatusSchema = z.enum(PROJECT_STATUS);
 export type ProjectStatus = z.infer<typeof projectStatusSchema>;
 
-// Obra nova vs substituição (§9 Fase 2 / doc Ciência de Dados).
-export const WORK_TYPES = ['NOVA', 'SUBSTITUICAO'] as const;
+// Obra nova vs substituição (§3 / doc Design §5 / Ciência de Dados).
+export const WORK_TYPES = ['NEW_INSTALL', 'REPLACE_EXISTING'] as const;
 export const workTypeSchema = z.enum(WORK_TYPES);
 export type WorkType = z.infer<typeof workTypeSchema>;
+
+// Origem do projeto: gerado por IA (chat de design) vs projeto de arquiteto (PDF).
+export const SOURCE_TYPES = ['AI_GENERATED', 'ARCHITECT_PROJECT'] as const;
+export const sourceTypeSchema = z.enum(SOURCE_TYPES);
+export type SourceType = z.infer<typeof sourceTypeSchema>;
+
+// Tipos de foto/anexo de um projeto (§3).
+export const PHOTO_KINDS = ['ORIGINAL_ROOM', 'GENERATED', 'REFERENCE', 'ARCHITECT_PDF'] as const;
+export const photoKindSchema = z.enum(PHOTO_KINDS);
+export type PhotoKind = z.infer<typeof photoKindSchema>;
 
 export const KYC_STATUS = ['PENDING', 'APPROVED', 'REJECTED'] as const;
 export const kycStatusSchema = z.enum(KYC_STATUS);
