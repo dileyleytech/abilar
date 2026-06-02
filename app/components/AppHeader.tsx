@@ -25,6 +25,14 @@ export async function AppHeader() {
                   Meus pedidos
                 </Link>
               )}
+              {profile.role === 'ADMIN' && (
+                <Link
+                  href="/admin/precos"
+                  className="rounded-md px-3 py-2 text-sm font-medium text-charcoal hover:bg-deep"
+                >
+                  Taxas
+                </Link>
+              )}
               <Link
                 href="/conta"
                 className="flex items-center gap-2 rounded-pill bg-deep px-3 py-1.5 text-sm font-medium text-charcoal hover:bg-sand-deep"

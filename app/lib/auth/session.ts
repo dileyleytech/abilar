@@ -1,5 +1,5 @@
 import 'server-only';
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import type { Role } from '@abilar/shared';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
@@ -20,6 +20,14 @@ export type SessionProfile = {
   phone: string | null;
   email: string | null;
 };
+
+/** Exige um papel específico; redireciona se deslogado, 404 se papel errado. */
+export async function requireRole(role: Role): Promise<SessionProfile> {
+  const profile = await getSessionProfile();
+  if (!profile) redirect('/entrar');
+  if (profile.role !== role) notFound();
+  return profile;
+}
 
 /** Usuário autenticado + seu profile (lido via RLS: só lê o próprio). Null se deslogado. */
 export async function getSessionProfile(): Promise<SessionProfile | null> {
