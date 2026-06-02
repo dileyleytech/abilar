@@ -619,9 +619,9 @@ O marceneiro acessa o mesmo motor: pode (a) **editar** o estado estruturado e ge
 - [x] Telas mobile-first: novo pedido (caminho IA: tipo→categoria→medidas→foto; caminho arquiteto: categoria→PDF), lista e detalhe (publicar/cancelar). Validadores zod + state-machine testados.
 
 ### Fase 3 — Motor de pricing (`packages/pricing`)  ⚠️ crítico
-- [ ] Implementar `quotePricing` (§5.4) + `PricingConfig` (incl. diluição escolhida pelo marceneiro).
-- [ ] **Testes** cobrindo o exemplo de §5.3 e casos de borda (promo zera taxa, margem negativa rejeitada, s no mínimo/máximo, todos os n).
-- [ ] CRUD admin de taxas/promoções.
+- [x] Implementar `quotePricing` (§5.4) + `PricingConfig` (incl. diluição `s` do marceneiro, promo overrides). Função pura, em centavos, sem I/O.
+- [x] **Testes (TDD)** cobrindo o exemplo de §5.3 (à vista + 10x, valores exatos) e bordas: promo zera taxa, margem negativa rejeitada, `s` no mín/máx, n sem taxa, proteção de custo, conservação de centavos. (14 testes.)
+- [ ] CRUD admin de taxas/promoções (tabela `PricingConfig` + telas admin) — próximo passo da fase.
 
 ### Fase 4 — Matching, cotações, pré-aprovação e chat
 - [ ] **Matching** por cidade + categoria + CEP→raio; feed de pedidos elegíveis (real-time).
