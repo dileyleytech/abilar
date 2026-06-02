@@ -7,6 +7,7 @@
 // é o guard primário para Realtime/Storage/supabase-js (que usam o JWT).
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   boolean,
   index,
   integer,
@@ -16,6 +17,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 import {
@@ -38,6 +40,7 @@ export const projectStatusEnum = pgEnum('project_status', PROJECT_STATUS);
 export const workTypeEnum = pgEnum('work_type', WORK_TYPES);
 export const sourceTypeEnum = pgEnum('source_type', SOURCE_TYPES);
 export const photoKindEnum = pgEnum('photo_kind', PHOTO_KINDS);
+export const pricingScopeEnum = pgEnum('pricing_scope', ['GLOBAL', 'PROMO']);
 
 /** Perfil 1:1 com auth.users (id = auth.uid()). `role` é a fonte de verdade
  *  do papel (NÃO confiar em user_metadata para autorização). */
@@ -178,6 +181,36 @@ export const projectPhotos = pgTable(
   },
   (t) => [index('project_photos_project_idx').on(t.projectId)],
 );
+
+// ── Fase 3: configuração de pricing (taxas/promoções) ───────────────────────
+
+/** Configuração financeira (§5.1). Dinheiro em centavos (BIGINT); % em numeric.
+ *  Mapeada para o tipo puro PricingConfig de @abilar/pricing. */
+export const pricingConfig = pgTable(
+  'pricing_config',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    key: text('key').notNull(), // 'GLOBAL' (config ativa) ou chave de promo
+    scope: pricingScopeEnum('scope').notNull().default('GLOBAL'),
+    clientCommissionPct: numeric('client_commission_pct', { precision: 6, scale: 3 }).notNull(),
+    carpenterCommissionPct: numeric('carpenter_commission_pct', { precision: 6, scale: 3 }).notNull(),
+    architectCommissionPct: numeric('architect_commission_pct', { precision: 6, scale: 3 }).notNull().default('0'),
+    // installmentTable: { "1": { "mdrPct": 0 }, "10": { "mdrPct": 4.5 }, ... }
+    installmentTable: jsonb('installment_table').notNull().default(sql`'{}'::jsonb`),
+    dilutionMinCarpenterSharePct: numeric('dilution_min_carpenter_share_pct', { precision: 6, scale: 3 }).notNull().default('50'),
+    dilutionPlatformMarginPct: numeric('dilution_platform_margin_pct', { precision: 6, scale: 3 }).notNull().default('1'),
+    pixFixedFeeCents: bigint('pix_fixed_fee_cents', { mode: 'number' }).notNull().default(0),
+    promoRules: jsonb('promo_rules'), // PromoOverrides (nullable)
+    activeFrom: timestamp('active_from', { withTimezone: true }),
+    activeTo: timestamp('active_to', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('pricing_config_key_idx').on(t.key)],
+);
+
+export type PricingConfigRow = typeof pricingConfig.$inferSelect;
+export type NewPricingConfigRow = typeof pricingConfig.$inferInsert;
 
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;

@@ -4,3 +4,4 @@
 export * from './allocate';
 export * from './types';
 export * from './quote';
+export * from './config-schema';

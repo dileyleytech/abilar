@@ -57,6 +57,20 @@
       "when": 1780335615613,
       "tag": "0007_fase2_projeto_container",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780399350884,
+      "tag": "0008_fase3_pricing_config",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1780399351338,
+      "tag": "0009_fase3_pricing_rls_seed",
+      "breakpoints": true
     }
   ]
 }
