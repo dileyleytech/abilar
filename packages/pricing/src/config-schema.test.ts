@@ -27,6 +27,17 @@ describe('config-schema (admin de pricing)', () => {
     ).toThrow();
   });
 
+  it('rejeita desconto no parcelado maior que a comissão do marceneiro (tm)', () => {
+    expect(() =>
+      pricingConfigInputSchema.parse({ ...validInput, carpenterCommissionPct: 5, carpenterInstallmentDiscountPct: 10 }),
+    ).toThrow(/desconto/i);
+    // igual ao tm é permitido (zera a comissão no parcelado)
+    expect(
+      pricingConfigInputSchema.parse({ ...validInput, carpenterCommissionPct: 5, carpenterInstallmentDiscountPct: 5 })
+        .carpenterInstallmentDiscountPct,
+    ).toBe(5);
+  });
+
   it('buildInstallmentTable monta o Record por nº', () => {
     expect(buildInstallmentTable(validInput.installments)).toEqual({ 1: { mdrPct: 0 }, 10: { mdrPct: 4.5 } });
   });

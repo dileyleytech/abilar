@@ -27,6 +27,7 @@ export const pricingConfigInputSchema = z
     architectCommissionPct: pct,
     dilutionMinCarpenterSharePct: sharePct,
     dilutionPlatformMarginPct: pct,
+    carpenterInstallmentDiscountPct: sharePct.default(0),
     pixFixedFeeCents: z.number().int().min(0),
     installments: z.array(installmentRowInputSchema).min(1, 'Inclua ao menos uma parcela'),
     promo: promoInputSchema.nullable().optional(),
@@ -34,6 +35,10 @@ export const pricingConfigInputSchema = z
   .refine((d) => new Set(d.installments.map((r) => r.n)).size === d.installments.length, {
     path: ['installments'],
     message: 'Nº de parcelas duplicado',
+  })
+  .refine((d) => d.carpenterInstallmentDiscountPct <= d.carpenterCommissionPct, {
+    path: ['carpenterInstallmentDiscountPct'],
+    message: 'O desconto no parcelado não pode ser maior que a comissão do marceneiro (tm).',
   });
 
 export type PricingConfigInput = z.infer<typeof pricingConfigInputSchema>;
@@ -54,6 +59,7 @@ export function inputToPricingConfig(input: PricingConfigInput): PricingConfig {
     installmentTable: buildInstallmentTable(input.installments),
     dilutionMinCarpenterSharePct: input.dilutionMinCarpenterSharePct,
     dilutionPlatformMarginPct: input.dilutionPlatformMarginPct,
+    carpenterInstallmentDiscountPct: input.carpenterInstallmentDiscountPct,
     pixFixedFeeCents: input.pixFixedFeeCents,
     promo: (input.promo as PromoOverrides | null | undefined) ?? null,
   };

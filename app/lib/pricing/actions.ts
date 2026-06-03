@@ -30,6 +30,7 @@ export async function updatePricingConfig(input: unknown): Promise<ActionResult>
       architectCommissionPct: String(d.architectCommissionPct),
       dilutionMinCarpenterSharePct: String(d.dilutionMinCarpenterSharePct),
       dilutionPlatformMarginPct: String(d.dilutionPlatformMarginPct),
+      carpenterInstallmentDiscountPct: String(d.carpenterInstallmentDiscountPct),
       pixFixedFeeCents: d.pixFixedFeeCents,
       installmentTable: buildInstallmentTable(d.installments),
       promoRules: d.promo ?? null,

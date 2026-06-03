@@ -71,6 +71,13 @@
       "when": 1780399351338,
       "tag": "0009_fase3_pricing_rls_seed",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1780403602842,
+      "tag": "0010_fase3_carpenter_installment_discount",
+      "breakpoints": true
     }
   ]
 }

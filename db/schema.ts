@@ -199,6 +199,8 @@ export const pricingConfig = pgTable(
     installmentTable: jsonb('installment_table').notNull().default(sql`'{}'::jsonb`),
     dilutionMinCarpenterSharePct: numeric('dilution_min_carpenter_share_pct', { precision: 6, scale: 3 }).notNull().default('50'),
     dilutionPlatformMarginPct: numeric('dilution_platform_margin_pct', { precision: 6, scale: 3 }).notNull().default('1'),
+    // Desconto (pontos) na comissão do marceneiro nas vendas parceladas (incentivo).
+    carpenterInstallmentDiscountPct: numeric('carpenter_installment_discount_pct', { precision: 6, scale: 3 }).notNull().default('0'),
     pixFixedFeeCents: bigint('pix_fixed_fee_cents', { mode: 'number' }).notNull().default(0),
     promoRules: jsonb('promo_rules'), // PromoOverrides (nullable)
     activeFrom: timestamp('active_from', { withTimezone: true }),

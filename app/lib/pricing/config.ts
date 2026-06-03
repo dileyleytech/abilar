@@ -17,6 +17,7 @@ export function rowToPricingConfig(row: PricingConfigRow): PricingConfig {
     installmentTable: (row.installmentTable ?? {}) as InstallmentTable,
     dilutionMinCarpenterSharePct: Number(row.dilutionMinCarpenterSharePct),
     dilutionPlatformMarginPct: Number(row.dilutionPlatformMarginPct),
+    carpenterInstallmentDiscountPct: Number(row.carpenterInstallmentDiscountPct),
     pixFixedFeeCents: row.pixFixedFeeCents,
     promo: (row.promoRules as PromoOverrides | null) ?? null,
   };
@@ -34,6 +35,7 @@ export function rowToForm(row: PricingConfigRow): PricingConfigInput {
     architectCommissionPct: Number(row.architectCommissionPct),
     dilutionMinCarpenterSharePct: Number(row.dilutionMinCarpenterSharePct),
     dilutionPlatformMarginPct: Number(row.dilutionPlatformMarginPct),
+    carpenterInstallmentDiscountPct: Number(row.carpenterInstallmentDiscountPct),
     pixFixedFeeCents: row.pixFixedFeeCents,
     installments,
     promo: (row.promoRules as PromoOverrides | null) ?? null,

@@ -20,6 +20,7 @@ export function PricingForm({ initial }: { initial: PricingConfigInput }) {
   const [a, setA] = useState(String(initial.architectCommissionPct));
   const [dmin, setDmin] = useState(String(initial.dilutionMinCarpenterSharePct));
   const [mp, setMp] = useState(String(initial.dilutionPlatformMarginPct));
+  const [disc, setDisc] = useState(String(initial.carpenterInstallmentDiscountPct ?? 0));
   const [pix, setPix] = useState(String(initial.pixFixedFeeCents));
   const [rows, setRows] = useState<Row[]>(
     initial.installments.map((r) => ({ n: String(r.n), mdrPct: String(r.mdrPct) })),
@@ -48,6 +49,7 @@ export function PricingForm({ initial }: { initial: PricingConfigInput }) {
         architectCommissionPct: Number(a),
         dilutionMinCarpenterSharePct: Number(dmin),
         dilutionPlatformMarginPct: Number(mp),
+        carpenterInstallmentDiscountPct: Number(disc),
         pixFixedFeeCents: Number(pix),
         installments: rows
           .filter((r) => r.n !== '' && r.mdrPct !== '')
@@ -78,7 +80,13 @@ export function PricingForm({ initial }: { initial: PricingConfigInput }) {
           <Field label="Mín. do marceneiro (s)" value={dmin} onChange={setDmin} suffix="%" />
           <Field label="Margem da plataforma (mp)" value={mp} onChange={setMp} suffix="%" />
           <Field label="Taxa fixa Pix" value={pix} onChange={setPix} suffix="centavos" />
+          <Field label="Desconto no parcelado" value={disc} onChange={setDisc} suffix="pontos" />
         </div>
+        <p className="mt-2 text-sm text-muted">
+          💡 <strong>Desconto no parcelado</strong>: pontos a menos na comissão do marceneiro
+          (tm) <strong>só</strong> nas vendas parceladas no cartão — incentivo para ele aceitar
+          parcelamento. À vista mantém o tm cheio. Ex.: tm 10% e desconto 2 → 8% no parcelado.
+        </p>
       </Section>
 
       <Section title="Taxas por nº de parcelas (MDR do cartão)">

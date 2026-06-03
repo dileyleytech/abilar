@@ -14,6 +14,7 @@ export type PromoOverrides = Partial<
     | 'architectCommissionPct'
     | 'dilutionMinCarpenterSharePct'
     | 'dilutionPlatformMarginPct'
+    | 'carpenterInstallmentDiscountPct'
   >
 >;
 
@@ -26,6 +27,9 @@ export interface PricingConfig {
   installmentTable: Record<number, InstallmentRow>;
   dilutionMinCarpenterSharePct: number; // mínimo de s que o marceneiro absorve
   dilutionPlatformMarginPct: number; // mp — margem da plataforma na diluição
+  /** Desconto (em pontos) na comissão tm do marceneiro nas vendas PARCELADAS
+   *  (cartão n>1) — incentivo para ele aceitar parcelamento. Default 0. */
+  carpenterInstallmentDiscountPct?: number;
   pixFixedFeeCents?: number; // custoFixoPix (default 0)
   promo?: PromoOverrides | null;
 }
