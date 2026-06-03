@@ -57,7 +57,8 @@
       "Bash(awk '{print $2}')",
       "Bash(git pull *)",
       "Bash(curl -s -o /dev/null -w \"/ %{http_code}\\\\n\" http://localhost:3001/)",
-      "Bash(curl -s -o /dev/null -w \"/admin/precos \\(sem login\\) %{http_code} -> %{redirect_url}\\\\n\" http://localhost:3001/admin/precos)"
+      "Bash(curl -s -o /dev/null -w \"/admin/precos \\(sem login\\) %{http_code} -> %{redirect_url}\\\\n\" http://localhost:3001/admin/precos)",
+      "Bash(curl -s -o /dev/null -w \"/admin/precos %{http_code}\\\\n\" http://localhost:3001/admin/precos)"
     ],
     "additionalDirectories": [
       "/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/brand/svg"

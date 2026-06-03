@@ -35,6 +35,10 @@ export const pricingConfigInputSchema = z
   .refine((d) => new Set(d.installments.map((r) => r.n)).size === d.installments.length, {
     path: ['installments'],
     message: 'Nº de parcelas duplicado',
+  })
+  .refine((d) => d.carpenterInstallmentDiscountPct <= d.carpenterCommissionPct, {
+    path: ['carpenterInstallmentDiscountPct'],
+    message: 'O desconto no parcelado não pode ser maior que a comissão do marceneiro (tm).',
   });
 
 export type PricingConfigInput = z.infer<typeof pricingConfigInputSchema>;
