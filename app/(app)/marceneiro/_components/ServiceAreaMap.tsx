@@ -12,8 +12,11 @@ const GREEN = '#2F6B5E';
 function FitToRadius({ lat, lng, radiusKm }: { lat: number; lng: number; radiusKm: number }) {
   const map = useMap();
   useEffect(() => {
-    const circle = L.circle([lat, lng], { radius: radiusKm * 1000 });
-    map.fitBounds(circle.getBounds(), { padding: [16, 16] });
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    // toBounds(diâmetro em metros) — não precisa do círculo anexado ao mapa.
+    const bounds = L.latLng(lat, lng).toBounds(radiusKm * 1000 * 2);
+    map.invalidateSize();
+    map.fitBounds(bounds, { padding: [16, 16] });
   }, [lat, lng, radiusKm, map]);
   return null;
 }
