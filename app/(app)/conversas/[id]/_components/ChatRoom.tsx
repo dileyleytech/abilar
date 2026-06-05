@@ -28,9 +28,12 @@ export function ChatRoom({
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Estou vendo a conversa → marca como lida (ao abrir e a cada nova mensagem).
+  // Estou vendo a conversa → marca como lida (ao abrir e a cada nova mensagem)
+  // e avisa o header pra re-sincronizar a bolinha de não lidas.
   useEffect(() => {
-    void markConversationRead(conversationId);
+    void markConversationRead(conversationId).then(() => {
+      window.dispatchEvent(new CustomEvent('abilar:unread-changed'));
+    });
   }, [conversationId, messages.length]);
 
   // Realtime: novas mensagens da conversa (a RLS garante só participantes).
