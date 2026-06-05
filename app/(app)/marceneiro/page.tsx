@@ -1,11 +1,10 @@
 import Link from 'next/link';
-import type { Category } from '@abilar/shared';
 import { requireRole } from '@/lib/auth/session';
 import { getCarpenterProfile } from '@/lib/carpenter/profile';
 import { getCarpenterFeed, getCarpenterQuotedProjects } from '@/lib/carpenter/feed';
 import { signedProjectPhotoUrl } from '@/lib/storage';
-import { CATEGORY_LABELS } from '@/lib/labels';
 import { MarceneiroFeed } from './_components/MarceneiroFeed';
+import { ServiceAreaPanel } from './_components/ServiceAreaPanel';
 
 export const metadata = { title: 'Área do marceneiro — Abilar' };
 
@@ -24,7 +23,7 @@ export default async function MarceneiroPage() {
   ]);
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="mx-auto w-full max-w-screen-2xl px-4 py-8 sm:px-6 lg:px-8">
       <h1 className="mb-6 text-2xl font-bold text-charcoal sm:text-3xl">
         Olá, {carpenter?.name ?? profile.name ?? 'marceneiro'} 👋
       </h1>
@@ -39,31 +38,22 @@ export default async function MarceneiroPage() {
           </Link>
         </div>
       ) : (
-        <div className="flex flex-col gap-6">
-          <section className="rounded-2xl border border-subtle bg-surface p-6 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <h2 className="text-lg font-semibold text-charcoal">Seu atendimento</h2>
-              <Link href="/marceneiro/perfil" className="text-sm font-medium text-brand-primary hover:underline">
-                Editar
-              </Link>
-            </div>
-            <p className="mt-2 text-base text-charcoal">
-              📍 {carpenter.serviceCity} · raio de {carpenter.serviceRadiusKm} km
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {carpenter.categories.map((c) => (
-                <span key={c} className="rounded-pill bg-deep px-3 py-1 text-sm text-charcoal">
-                  {CATEGORY_LABELS[c as Category] ?? c}
-                </span>
-              ))}
-            </div>
-          </section>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
+          {/* Feed (Meus orçamentos + Pedidos da região, lado a lado) */}
+          <div className="order-2 lg:order-1">
+            <MarceneiroFeed open={openCards} quoted={quotedCards} />
+          </div>
 
-          <MarceneiroFeed
-            open={openCards}
-            quoted={quotedCards}
-            serviceCategories={carpenter.categories as string[]}
-          />
+          {/* Lateral direita: área de atendimento editável (filtra o feed) */}
+          <aside className="order-1 lg:order-2">
+            <div className="lg:sticky lg:top-20">
+              <ServiceAreaPanel
+                city={carpenter.serviceCity}
+                radiusKm={carpenter.serviceRadiusKm}
+                categories={carpenter.categories as string[]}
+              />
+            </div>
+          </aside>
         </div>
       )}
     </main>

@@ -59,3 +59,13 @@ export const QUOTE_STATUS_BADGE: Record<QuoteStatus, string> = {
   EXPIRED: 'bg-deep text-muted',
   PAID: 'bg-sage/30 text-charcoal',
 };
+
+/** Variante SÓLIDA (fundo cheio + texto branco) para badge legível sobre foto. */
+export const QUOTE_STATUS_BADGE_SOLID: Record<QuoteStatus, string> = {
+  SENT: 'bg-brand-secondary text-white',
+  PRE_APPROVED: 'bg-brand-primary text-white',
+  ACCEPTED: 'bg-brand-primary text-white',
+  REJECTED: 'bg-charcoal/85 text-white',
+  EXPIRED: 'bg-charcoal/65 text-white',
+  PAID: 'bg-brand-primary text-white',
+};

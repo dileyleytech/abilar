@@ -7,7 +7,10 @@ import {
   carpenterProfiles,
   eq,
   and,
+  or,
   asc,
+  desc,
+  inArray,
 } from '@abilar/db';
 import type { Message } from '@abilar/db';
 import { getDb } from '@/lib/db';
@@ -52,6 +55,74 @@ export async function getConversation(id: string, userId: string): Promise<Conve
     meIsClient,
     otherName: (meIsClient ? row.carpenterName : row.clientName) ?? (meIsClient ? 'Marceneiro' : 'Cliente'),
   };
+}
+
+export type ConversationListItem = {
+  id: string;
+  projectId: string;
+  projectTitle: string;
+  otherName: string;
+  status: string;
+  lastText: string | null;
+  lastAt: string | null; // ISO
+};
+
+/** Todas as conversas do usuário (cliente ou marceneiro), com a outra parte, o
+ *  pedido e a prévia da última mensagem. Ordenadas por atividade mais recente. */
+export async function listConversations(userId: string): Promise<ConversationListItem[]> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      id: conversations.id,
+      projectId: conversations.projectId,
+      clientId: conversations.clientId,
+      carpenterId: conversations.carpenterId,
+      status: conversations.status,
+      createdAt: conversations.createdAt,
+      projectTitle: projects.title,
+      clientName: profiles.name,
+      carpenterName: carpenterProfiles.name,
+    })
+    .from(conversations)
+    .innerJoin(projects, eq(projects.id, conversations.projectId))
+    .leftJoin(profiles, eq(profiles.id, conversations.clientId))
+    .leftJoin(carpenterProfiles, eq(carpenterProfiles.userId, conversations.carpenterId))
+    .where(or(eq(conversations.clientId, userId), eq(conversations.carpenterId, userId)));
+  if (rows.length === 0) return [];
+
+  // Última mensagem de cada conversa (mais recente primeiro; fica a 1ª por conversa).
+  const ids = rows.map((r) => r.id);
+  const msgs = await db
+    .select({
+      conversationId: messages.conversationId,
+      body: messages.body,
+      redactedBody: messages.redactedBody,
+      createdAt: messages.createdAt,
+    })
+    .from(messages)
+    .where(inArray(messages.conversationId, ids))
+    .orderBy(desc(messages.createdAt));
+  const last = new Map<string, { text: string; at: Date }>();
+  for (const m of msgs) {
+    if (!last.has(m.conversationId)) last.set(m.conversationId, { text: m.redactedBody ?? m.body, at: m.createdAt });
+  }
+
+  return rows
+    .map((r) => {
+      const meIsClient = r.clientId === userId;
+      const l = last.get(r.id);
+      return {
+        id: r.id,
+        projectId: r.projectId,
+        projectTitle: r.projectTitle,
+        status: r.status,
+        otherName:
+          (meIsClient ? r.carpenterName : r.clientName) ?? (meIsClient ? 'Marceneiro' : 'Cliente'),
+        lastText: l?.text ?? null,
+        lastAt: (l?.at ?? r.createdAt).toISOString(),
+      };
+    })
+    .sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
 }
 
 export type ChatMessage = Pick<Message, 'id' | 'senderId' | 'createdAt'> & { text: string };

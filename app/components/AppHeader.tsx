@@ -33,6 +33,14 @@ export async function AppHeader() {
                   Minha área
                 </Link>
               )}
+              {(profile.role === 'CLIENT' || profile.role === 'CARPENTER') && (
+                <Link
+                  href="/conversas"
+                  className="rounded-md px-3 py-2 text-sm font-medium text-charcoal hover:bg-deep"
+                >
+                  Conversas
+                </Link>
+              )}
               {profile.role === 'ADMIN' && (
                 <Link
                   href="/admin/precos"
