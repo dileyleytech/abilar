@@ -59,7 +59,8 @@
       "Bash(curl -s -o /dev/null -w \"/ %{http_code}\\\\n\" http://localhost:3001/)",
       "Bash(curl -s -o /dev/null -w \"/admin/precos \\(sem login\\) %{http_code} -> %{redirect_url}\\\\n\" http://localhost:3001/admin/precos)",
       "Bash(curl -s -o /dev/null -w \"/admin/precos %{http_code}\\\\n\" http://localhost:3001/admin/precos)",
-      "Bash(grep -qE \"\\(eslint|error TS|Done$\\)\" /private/tmp/claude-501/-Users-rodrigodiley-Documents-Projetos-Leytech-abilar/b1eeda97-9e6c-45c8-9a69-0e6ee2da2b2b/tasks/bqj03y7kt.output)"
+      "Bash(grep -qE \"\\(eslint|error TS|Done$\\)\" /private/tmp/claude-501/-Users-rodrigodiley-Documents-Projetos-Leytech-abilar/b1eeda97-9e6c-45c8-9a69-0e6ee2da2b2b/tasks/bqj03y7kt.output)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001/)"
     ],
     "additionalDirectories": [
       "/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/brand/svg"

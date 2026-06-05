@@ -75,6 +75,11 @@ export default async function PedidosPage() {
                   <p className="text-sm text-muted">
                     {p.moduleCount} {p.moduleCount === 1 ? 'móvel' : 'móveis'}
                   </p>
+                  {p.quoteCount > 0 && (
+                    <span className="mt-2 inline-flex items-center gap-1 rounded-pill bg-brand-secondary/15 px-2.5 py-1 text-xs font-semibold text-brand-secondary">
+                      💬 {p.quoteCount} {p.quoteCount === 1 ? 'orçamento recebido' : 'orçamentos recebidos'}
+                    </span>
+                  )}
                 </div>
               </Link>
               {!isTerminalProjectStatus(p.status) && (
