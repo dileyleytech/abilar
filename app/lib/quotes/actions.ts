@@ -78,6 +78,51 @@ export async function sendQuote(projectId: string, input: unknown): Promise<Acti
   return { ok: true };
 }
 
+export type QuotePreview = {
+  avista: { youGetCents: number; clientPaysCents: number };
+  parcelado: { youGetCents: number; clientPaysCents: number; installmentCents: number; n: number } | null;
+  valid: boolean;
+  warning?: string;
+};
+
+/** Calcula os cenários (à vista/parcelado) no SERVIDOR — a config de preço não
+ *  vai para o navegador. Usado pelo preview ao vivo do construtor de orçamento. */
+export async function previewQuote(input: {
+  baseValueCents: number;
+  maxInstallments: number;
+  dilutionSharePct: number;
+}): Promise<QuotePreview | null> {
+  const profile = await getSessionProfile();
+  if (!profile || profile.role !== 'CARPENTER') return null;
+  const config = await getActivePricingConfig();
+  if (!config) return null;
+
+  const cents = Math.max(0, Math.round(input.baseValueCents));
+  if (cents <= 0) return null;
+  const s = Math.min(100, Math.max(0, input.dilutionSharePct));
+  const n = Math.max(1, Math.round(input.maxInstallments));
+
+  const avista = quotePricing({ baseValueCents: cents, config, installments: 1, method: 'PIX', carpenterDilutionSharePct: s });
+  const parc =
+    n > 1
+      ? quotePricing({ baseValueCents: cents, config, installments: n, method: 'CARD', carpenterDilutionSharePct: s })
+      : null;
+
+  return {
+    avista: { youGetCents: avista.carpenterPayoutCents, clientPaysCents: avista.displayedAmountCents },
+    parcelado: parc
+      ? {
+          youGetCents: parc.carpenterPayoutCents,
+          clientPaysCents: parc.displayedAmountCents,
+          installmentCents: Math.round(parc.displayedAmountCents / n),
+          n,
+        }
+      : null,
+    valid: (parc ?? avista).valid,
+    warning: (parc ?? avista).warnings[0],
+  };
+}
+
 /** Remove o próprio orçamento (marceneiro). */
 export async function withdrawQuote(projectId: string): Promise<ActionResult> {
   const profile = await getSessionProfile();

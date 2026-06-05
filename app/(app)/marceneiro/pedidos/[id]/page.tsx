@@ -13,14 +13,17 @@ import { QuoteForm, type QuoteInitial } from './_components/QuoteForm';
 export default async function CarpenterPedidoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const profile = await requireRole('CARPENTER');
-  const carpenter = await getCarpenterProfile(profile.id);
+  // Queries independentes em paralelo (1 ida em vez de 3 sequenciais).
+  const [carpenter, config, existing] = await Promise.all([
+    getCarpenterProfile(profile.id),
+    getActivePricingConfig(),
+    getCarpenterQuote(id, profile.id),
+  ]);
   if (!carpenter) notFound();
 
   const detail = await getProjectForCarpenter(id, carpenter);
   if (!detail) notFound();
   const { project, modules, photos } = detail;
-
-  const [config, existing] = await Promise.all([getActivePricingConfig(), getCarpenterQuote(id, profile.id)]);
   const quoteInitial: QuoteInitial | undefined = existing
     ? {
         baseValueReais: String(existing.baseValueCents / 100),
@@ -123,7 +126,12 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
           <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
             <h2 className="mb-3 text-lg font-semibold text-charcoal">Seu orçamento</h2>
             {config ? (
-              <QuoteForm projectId={project.id} config={config} initial={quoteInitial} />
+              <QuoteForm
+                projectId={project.id}
+                minDilutionPct={config.dilutionMinCarpenterSharePct}
+                installmentOptions={Object.keys(config.installmentTable).map(Number).sort((a, b) => a - b)}
+                initial={quoteInitial}
+              />
             ) : (
               <p className="text-muted">Configuração de preço indisponível.</p>
             )}

@@ -1,10 +1,9 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { reaisToCents, formatBRL } from '@abilar/shared';
-import { quotePricing, type PricingConfig } from '@abilar/pricing';
-import { sendQuote, withdrawQuote } from '@/lib/quotes/actions';
+import { sendQuote, withdrawQuote, previewQuote, type QuotePreview } from '@/lib/quotes/actions';
 
 const fld =
   'w-full rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
@@ -19,42 +18,45 @@ export type QuoteInitial = {
 
 export function QuoteForm({
   projectId,
-  config,
+  minDilutionPct,
+  installmentOptions,
   initial,
 }: {
   projectId: string;
-  config: PricingConfig;
+  minDilutionPct: number;
+  installmentOptions: number[];
   initial?: QuoteInitial;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const minS = config.dilutionMinCarpenterSharePct;
-  const installmentOptions = useMemo(
-    () => Object.keys(config.installmentTable).map(Number).sort((a, b) => a - b),
-    [config],
-  );
-
   const [valor, setValor] = useState(initial?.baseValueReais ?? '');
   const [maxInst, setMaxInst] = useState<number>(initial?.maxInstallments ?? 1);
-  const [s, setS] = useState<number>(initial?.dilutionSharePct ?? Math.max(minS, 100));
+  const [s, setS] = useState<number>(initial?.dilutionSharePct ?? Math.max(minDilutionPct, 100));
   const [note, setNote] = useState(initial?.note ?? '');
+  const [preview, setPreview] = useState<QuotePreview | null>(null);
 
   const cents = (() => {
     const n = Number(valor);
     return Number.isFinite(n) && n > 0 ? reaisToCents(n) : 0;
   })();
 
-  const preview = useMemo(() => {
-    if (cents <= 0) return null;
-    const avista = quotePricing({ baseValueCents: cents, config, installments: 1, method: 'PIX', carpenterDilutionSharePct: s });
-    const parc =
-      maxInst > 1
-        ? quotePricing({ baseValueCents: cents, config, installments: maxInst, method: 'CARD', carpenterDilutionSharePct: s })
-        : null;
-    return { avista, parc };
-  }, [cents, maxInst, s, config]);
+  // Preview ao vivo (calculado no servidor, com debounce).
+  const tRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (cents <= 0) {
+      setPreview(null);
+      return;
+    }
+    if (tRef.current) clearTimeout(tRef.current);
+    tRef.current = setTimeout(() => {
+      previewQuote({ baseValueCents: cents, maxInstallments: maxInst, dilutionSharePct: s }).then(setPreview);
+    }, 300);
+    return () => {
+      if (tRef.current) clearTimeout(tRef.current);
+    };
+  }, [cents, maxInst, s]);
 
   const submit = () =>
     start(async () => {
@@ -105,26 +107,21 @@ export function QuoteForm({
             <span className="text-sm font-medium text-charcoal">Quanto da taxa do cartão você absorve</span>
             <span className="font-mono text-base text-brand-primary">{s}%</span>
           </div>
-          <input type="range" min={minS} max={100} step={1} value={s} onChange={(e) => setS(Number(e.target.value))} className="mt-2 w-full accent-brand-primary" />
+          <input type="range" min={minDilutionPct} max={100} step={1} value={s} onChange={(e) => setS(Number(e.target.value))} className="mt-2 w-full accent-brand-primary" />
           <p className="text-sm text-muted">Quanto mais você absorve, menos o cliente paga a mais — e você recebe um pouco menos.</p>
         </div>
       )}
 
-      {/* Preview ao vivo */}
       {preview && (
         <div className="grid grid-cols-1 gap-3 rounded-xl border border-subtle bg-base p-4 sm:grid-cols-2">
-          <Scenario
-            title="À vista (Pix)"
-            youGet={preview.avista.carpenterPayoutCents}
-            clientPays={preview.avista.displayedAmountCents}
-          />
-          {preview.parc ? (
+          <Scenario title="À vista (Pix)" youGet={preview.avista.youGetCents} clientPays={preview.avista.clientPaysCents} />
+          {preview.parcelado ? (
             <Scenario
-              title={`Em ${maxInst}x no cartão`}
-              youGet={preview.parc.carpenterPayoutCents}
-              clientPays={preview.parc.displayedAmountCents}
-              installment={Math.round(preview.parc.displayedAmountCents / maxInst)}
-              n={maxInst}
+              title={`Em ${preview.parcelado.n}x no cartão`}
+              youGet={preview.parcelado.youGetCents}
+              clientPays={preview.parcelado.clientPaysCents}
+              installment={preview.parcelado.installmentCents}
+              n={preview.parcelado.n}
             />
           ) : (
             <div className="flex items-center justify-center rounded-lg bg-deep p-4 text-center text-sm text-muted">
