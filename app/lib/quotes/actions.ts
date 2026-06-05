@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { quoteInputSchema } from '@abilar/shared';
-import { quotePricing } from '@abilar/pricing';
+import { quotePricing, maxClientInstallments } from '@abilar/pricing';
 import { quotes, eq, and, sql } from '@abilar/db';
 import { getDb } from '@/lib/db';
 import { getSessionProfile } from '@/lib/auth/session';
@@ -32,17 +32,24 @@ export async function sendQuote(projectId: string, input: unknown): Promise<Acti
 
   const config = await getActivePricingConfig();
   if (!config) return { ok: false, error: 'Configuração de preço indisponível.' };
-  if (d.dilutionSharePct < config.dilutionMinCarpenterSharePct) {
+
+  // O marceneiro só "perde dinheiro" se aceitou subsidiar (maxInstallments > 1);
+  // só aí a diluição mínima se aplica.
+  const subsidizes = d.maxInstallments > 1;
+  if (subsidizes && d.dilutionSharePct < config.dilutionMinCarpenterSharePct) {
     return { ok: false, error: `A diluição mínima é ${config.dilutionMinCarpenterSharePct}%.` };
   }
 
-  // Recalcula no pior caso (nº máx de parcelas = menor payout) e valida.
+  // Recalcula no cenário REAL: o cliente parcela no máx do sistema; o marceneiro
+  // subsidia só até o N dele. É o pior caso de payout/margem — valida aqui.
+  const nClient = maxClientInstallments(config);
   const worst = quotePricing({
     baseValueCents: d.baseValueCents,
     config,
-    installments: d.maxInstallments,
-    method: d.maxInstallments > 1 ? 'CARD' : 'PIX',
-    carpenterDilutionSharePct: d.dilutionSharePct,
+    installments: subsidizes ? d.maxInstallments : 1,
+    clientInstallments: nClient,
+    method: nClient > 1 ? 'CARD' : 'PIX',
+    carpenterDilutionSharePct: subsidizes ? d.dilutionSharePct : 0,
     carpenterCostCents: d.carpenterCostCents,
   });
   if (!worst.valid) return { ok: false, error: worst.warnings[0] ?? 'Orçamento inválido.' };
@@ -99,13 +106,22 @@ export async function previewQuote(input: {
 
   const cents = Math.max(0, Math.round(input.baseValueCents));
   if (cents <= 0) return null;
-  const s = Math.min(100, Math.max(0, input.dilutionSharePct));
-  const n = Math.max(1, Math.round(input.maxInstallments));
+  const nCarp = Math.max(1, Math.round(input.maxInstallments)); // teto do subsídio (interno)
+  const subsidizes = nCarp > 1;
+  const s = subsidizes ? Math.min(100, Math.max(0, input.dilutionSharePct)) : 0;
+  const nClient = maxClientInstallments(config); // cliente sempre parcela no máx do sistema
 
   const avista = quotePricing({ baseValueCents: cents, config, installments: 1, method: 'PIX', carpenterDilutionSharePct: s });
   const parc =
-    n > 1
-      ? quotePricing({ baseValueCents: cents, config, installments: n, method: 'CARD', carpenterDilutionSharePct: s })
+    nClient > 1
+      ? quotePricing({
+          baseValueCents: cents,
+          config,
+          installments: subsidizes ? nCarp : 1,
+          clientInstallments: nClient,
+          method: 'CARD',
+          carpenterDilutionSharePct: s,
+        })
       : null;
 
   return {
@@ -114,8 +130,8 @@ export async function previewQuote(input: {
       ? {
           youGetCents: parc.carpenterPayoutCents,
           clientPaysCents: parc.displayedAmountCents,
-          installmentCents: Math.round(parc.displayedAmountCents / n),
-          n,
+          installmentCents: Math.round(parc.displayedAmountCents / nClient),
+          n: nClient,
         }
       : null,
     valid: (parc ?? avista).valid,

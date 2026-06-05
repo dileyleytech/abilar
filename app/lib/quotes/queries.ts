@@ -2,7 +2,7 @@ import 'server-only';
 import { quotes, carpenterProfiles, eq, and, desc } from '@abilar/db';
 import type { Quote } from '@abilar/db';
 import type { QuoteStatus } from '@abilar/shared';
-import { quotePricing } from '@abilar/pricing';
+import { quotePricing, maxClientInstallments } from '@abilar/pricing';
 import { getDb } from '@/lib/db';
 import { getActivePricingConfig } from '@/lib/pricing/config';
 
@@ -23,7 +23,8 @@ export type ReceivedQuote = {
   status: QuoteStatus;
   note: string | null;
   avistaCents: number;
-  maxInstallments: number;
+  // O cliente sempre parcela no máx do sistema; NUNCA expomos o N do marceneiro.
+  clientInstallments: number;
   parceladoCents: number | null;
   installmentValueCents: number | null;
 };
@@ -50,8 +51,13 @@ export async function getReceivedQuotes(projectId: string): Promise<ReceivedQuot
   const config = await getActivePricingConfig();
   if (!config) return [];
 
+  // O cliente sempre parcela no máximo do sistema (ex.: 10x). O N que o marceneiro
+  // aceitou subsidiar fica INTERNO — só abate um pouco o valor do parcelado.
+  const nClient = maxClientInstallments(config);
+
   return rows.map((r) => {
-    const s = Number(r.dilutionSharePct);
+    const subsidizes = r.maxInstallments > 1; // marceneiro aceitou "perder" p/ parcelar
+    const s = subsidizes ? Number(r.dilutionSharePct) : 0;
     const avista = quotePricing({
       baseValueCents: r.baseValueCents,
       config,
@@ -61,16 +67,17 @@ export async function getReceivedQuotes(projectId: string): Promise<ReceivedQuot
     });
     let parceladoCents: number | null = null;
     let installmentValueCents: number | null = null;
-    if (r.maxInstallments > 1) {
+    if (nClient > 1) {
       const parc = quotePricing({
         baseValueCents: r.baseValueCents,
         config,
-        installments: r.maxInstallments,
+        installments: subsidizes ? r.maxInstallments : 1, // teto do subsídio (interno)
+        clientInstallments: nClient, // o que o cliente realmente parcela
         method: 'CARD',
         carpenterDilutionSharePct: s,
       });
       parceladoCents = parc.displayedAmountCents;
-      installmentValueCents = Math.round(parc.displayedAmountCents / r.maxInstallments);
+      installmentValueCents = Math.round(parc.displayedAmountCents / nClient);
     }
     return {
       id: r.id,
@@ -78,7 +85,7 @@ export async function getReceivedQuotes(projectId: string): Promise<ReceivedQuot
       status: r.status,
       note: r.note,
       avistaCents: avista.displayedAmountCents,
-      maxInstallments: r.maxInstallments,
+      clientInstallments: nClient,
       parceladoCents,
       installmentValueCents,
     };

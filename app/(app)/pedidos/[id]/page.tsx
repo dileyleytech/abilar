@@ -87,7 +87,7 @@ export default async function PedidoDetailPage({ params }: { params: Promise<{ i
                         </span>
                         {q.parceladoCents != null && q.installmentValueCents != null && (
                           <span className="text-sm text-muted">
-                            Em {q.maxInstallments}x de{' '}
+                            Em até {q.clientInstallments}x de{' '}
                             <strong className="text-charcoal">{formatBRL(q.installmentValueCents)}</strong>{' '}
                             <span className="text-subtle">({formatBRL(q.parceladoCents)})</span>
                           </span>

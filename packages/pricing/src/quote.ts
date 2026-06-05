@@ -10,6 +10,15 @@ export function resolvePricingConfig(config: PricingConfig): PricingConfig {
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
+/** Máximo de parcelas que o sistema oferece ao cliente (maior N da tabela).
+ *  É o "10x do sistema": o cliente sempre pode parcelar até aqui. */
+export function maxClientInstallments(config: PricingConfig): number {
+  const keys = Object.keys(config.installmentTable)
+    .map(Number)
+    .filter((n) => Number.isFinite(n));
+  return keys.length ? Math.max(...keys) : 1;
+}
+
 /**
  * Calcula o preço exibido ao cliente, o payout do marceneiro, repasse do
  * arquiteto, taxa da adquirente e a margem líquida da plataforma — à vista
@@ -56,11 +65,15 @@ export function quotePricing(input: QuotePricingInput): QuotePricingResult {
     };
   }
 
-  // Cartão: precisa de taxa configurada para n.
-  const n = input.installments;
-  const row = cfg.installmentTable[n];
-  if (!row) {
-    warnings.push(`Sem taxa configurada para ${n}x.`);
+  // Cartão. O cliente sempre parcela até nClient (máx do sistema); o marceneiro
+  // só subsidia a taxa até o N dele (input.installments). A taxa REAL da
+  // transação é a do nClient; a absorção do marceneiro tem como base a taxa do N
+  // dele (teto), por isso são duas faixas distintas.
+  const nCarp = input.installments; // teto do subsídio do marceneiro
+  const nClient = input.clientInstallments ?? nCarp; // parcelas reais do cliente
+  const rowClient = cfg.installmentTable[nClient];
+  if (!rowClient) {
+    warnings.push(`Sem taxa configurada para ${nClient}x.`);
     return {
       displayedAmountCents: precoBase,
       carpenterPayoutCents: payoutAvista,
@@ -73,28 +86,33 @@ export function quotePricing(input: QuotePricingInput): QuotePricingResult {
     };
   }
 
-  // Diluição escolhida pelo marceneiro.
+  // O marceneiro só "perde dinheiro" se aceitou subsidiar (nCarp > 1). Nesse caso
+  // valida a diluição s; senão, não há absorção nem incentivo (recebe o à vista).
+  const subsidizes = nCarp > 1;
+  const rowCarp = subsidizes ? cfg.installmentTable[nCarp] : undefined;
   const s = input.carpenterDilutionSharePct;
-  if (s < cfg.dilutionMinCarpenterSharePct || s > 100) {
+  if (subsidizes && (s < cfg.dilutionMinCarpenterSharePct || s > 100)) {
     valid = false;
     warnings.push(`Diluição deve estar entre ${cfg.dilutionMinCarpenterSharePct}% e 100%.`);
   }
-  const sSafe = clamp(s, 0, 100);
+  const sSafe = subsidizes ? clamp(s, 0, 100) : 0;
 
-  // Incentivo: nas vendas PARCELADAS o marceneiro paga uma comissão tm reduzida
-  // (desconto em pontos). À vista mantém o tm cheio. Default 0 (sem incentivo).
-  const discount = cfg.carpenterInstallmentDiscountPct ?? 0;
+  // Incentivo: nas vendas PARCELADAS subsidiadas o marceneiro paga uma comissão
+  // tm reduzida (desconto em pontos). Sem subsídio, mantém o tm cheio (= à vista).
+  const discount = subsidizes ? (cfg.carpenterInstallmentDiscountPct ?? 0) : 0;
   const effTm = Math.max(0, tm - discount);
   const payoutBaseEff = V - applyPercent(V, effTm);
 
-  const custoParc = applyPercent(precoBase, row.mdrPct);
-  const carpenterAbsorb = applyPercent(custoParc, sSafe);
+  // Base de subsídio: taxa do N do marceneiro (teto). Sem subsídio = 0.
+  const subsidyBasis = rowCarp ? applyPercent(precoBase, rowCarp.mdrPct) : 0;
+  const custoParcClient = applyPercent(precoBase, rowClient.mdrPct); // taxa real (nClient)
+  const carpenterAbsorb = applyPercent(subsidyBasis, sSafe);
   const payoutParc = payoutBaseEff - carpenterAbsorb;
-  const clientFromCusto = custoParc - carpenterAbsorb; // (1 - s) * custoParc
+  const clientFromCusto = Math.max(0, custoParcClient - carpenterAbsorb);
   const platformMarginPortion = applyPercent(precoBase, cfg.dilutionPlatformMarginPct);
   const acrescimo = clientFromCusto + platformMarginPortion;
   const displayed = precoBase + acrescimo;
-  const gatewayFee = applyPercent(displayed, row.mdrPct);
+  const gatewayFee = applyPercent(displayed, rowClient.mdrPct);
   const platformNetParc = displayed - gatewayFee - payoutParc - architectPayout;
   const delta = platformNetParc - platformNetAvista; // pode ser < 0 (incentivo)
 
