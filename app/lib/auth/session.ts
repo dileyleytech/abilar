@@ -1,14 +1,23 @@
 import 'server-only';
+import { cache } from 'react';
 import { notFound, redirect } from 'next/navigation';
+import type { User } from '@supabase/supabase-js';
 import type { Role } from '@abilar/shared';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
-/** Id do usuário autenticado; redireciona p/ /entrar se deslogado. */
-export async function requireUserId(): Promise<string> {
+// Valida o JWT no Supabase Auth (1 ida à rede). `cache` deduplica por request:
+// vários helpers no mesmo render/ação compartilham a mesma chamada.
+const getAuthUser = cache(async (): Promise<User | null> => {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  return user;
+});
+
+/** Id do usuário autenticado; redireciona p/ /entrar se deslogado. */
+export async function requireUserId(): Promise<string> {
+  const user = await getAuthUser();
   if (!user) redirect('/entrar');
   return user.id;
 }
@@ -29,14 +38,12 @@ export async function requireRole(role: Role): Promise<SessionProfile> {
   return profile;
 }
 
-/** Usuário autenticado + seu profile (lido via RLS: só lê o próprio). Null se deslogado. */
-export async function getSessionProfile(): Promise<SessionProfile | null> {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+/** Usuário autenticado + seu profile. Cacheado por request. */
+export const getSessionProfile = cache(async (): Promise<SessionProfile | null> => {
+  const user = await getAuthUser();
   if (!user) return null;
 
+  const supabase = await createSupabaseServerClient();
   const { data: profile } = await supabase
     .from('profiles')
     .select('id, role, name, phone, email')
@@ -54,4 +61,4 @@ export async function getSessionProfile(): Promise<SessionProfile | null> {
     };
   }
   return profile as SessionProfile;
-}
+});

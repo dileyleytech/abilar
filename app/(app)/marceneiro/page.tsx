@@ -85,6 +85,11 @@ export default async function MarceneiroPage() {
                             📷 {c.photoUrls.length}
                           </span>
                         )}
+                        {c.quoted && (
+                          <span className="absolute left-2 top-2 rounded-pill bg-brand-secondary px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm">
+                            ✓ Orçamento enviado
+                          </span>
+                        )}
                       </div>
 
                       {c.photoUrls.length > 1 && (

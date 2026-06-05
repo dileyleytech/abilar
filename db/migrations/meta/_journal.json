@@ -99,6 +99,20 @@
       "when": 1780690032695,
       "tag": "0013_fase4_carpenter_feed_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1780691753421,
+      "tag": "0014_fase4_quotes",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1780691753912,
+      "tag": "0015_fase4_quotes_rls",
+      "breakpoints": true
     }
   ]
 }

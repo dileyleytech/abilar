@@ -1,5 +1,5 @@
 import 'server-only';
-import { projects, modules, projectPhotos, and, asc, desc, eq, exists, inArray, sql } from '@abilar/db';
+import { projects, modules, projectPhotos, quotes, and, asc, desc, eq, exists, inArray, sql } from '@abilar/db';
 import type { CarpenterProfile, Project, Module, ProjectPhoto } from '@abilar/db';
 import { isWithinRadius } from '@abilar/shared';
 import { getDb } from '@/lib/db';
@@ -11,6 +11,7 @@ export type FeedItem = {
   moduleCount: number;
   categories: string[];
   photoPaths: string[];
+  quoted: boolean;
 };
 
 /** O projeto está na área de atendimento do marceneiro? (mesma cidade OU dentro do raio) */
@@ -51,7 +52,7 @@ export async function getCarpenterFeed(carpenter: CarpenterProfile): Promise<Fee
   if (eligible.length === 0) return [];
   const ids = eligible.map((p) => p.id);
 
-  const [photos, mods] = await Promise.all([
+  const [photos, mods, myQuotes] = await Promise.all([
     db
       .select({ projectId: projectPhotos.projectId, path: projectPhotos.path })
       .from(projectPhotos)
@@ -61,7 +62,12 @@ export async function getCarpenterFeed(carpenter: CarpenterProfile): Promise<Fee
       .select({ projectId: modules.projectId, type: modules.type })
       .from(modules)
       .where(inArray(modules.projectId, ids)),
+    db
+      .select({ projectId: quotes.projectId })
+      .from(quotes)
+      .where(and(eq(quotes.carpenterId, carpenter.userId), inArray(quotes.projectId, ids))),
   ]);
+  const quotedSet = new Set(myQuotes.map((q) => q.projectId));
 
   const photosByProject = new Map<string, string[]>();
   for (const ph of photos) {
@@ -85,6 +91,7 @@ export async function getCarpenterFeed(carpenter: CarpenterProfile): Promise<Fee
     moduleCount: count.get(p.id) ?? 0,
     categories: [...(catsByProject.get(p.id) ?? [])],
     photoPaths: photosByProject.get(p.id) ?? [],
+    quoted: quotedSet.has(p.id),
   }));
 }
 

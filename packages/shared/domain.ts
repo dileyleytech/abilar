@@ -53,3 +53,8 @@ export type PhotoKind = z.infer<typeof photoKindSchema>;
 export const KYC_STATUS = ['PENDING', 'APPROVED', 'REJECTED'] as const;
 export const kycStatusSchema = z.enum(KYC_STATUS);
 export type KycStatus = z.infer<typeof kycStatusSchema>;
+
+// Status do orçamento (Quote) — §3.
+export const QUOTE_STATUS = ['SENT', 'PRE_APPROVED', 'ACCEPTED', 'REJECTED', 'EXPIRED', 'PAID'] as const;
+export const quoteStatusSchema = z.enum(QUOTE_STATUS);
+export type QuoteStatus = z.infer<typeof quoteStatusSchema>;

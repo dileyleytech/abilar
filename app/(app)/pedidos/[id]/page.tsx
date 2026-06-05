@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { formatBRL } from '@abilar/shared';
 import { requireUserId } from '@/lib/auth/session';
 import { getProjectDetail } from '@/lib/projects/queries';
+import { getReceivedQuotes } from '@/lib/quotes/queries';
 import { signedProjectPhotoUrl } from '@/lib/storage';
 import { StatusBadge } from '@/components/StatusBadge';
 import { ProjectActions } from './_components/ProjectActions';
@@ -23,6 +25,7 @@ export default async function PedidoDetailPage({ params }: { params: Promise<{ i
   const modulePhoto = new Map<string, string | null>();
   for (const p of signed) if (p.moduleId) modulePhoto.set(p.moduleId, p.url);
 
+  const quotes = await getReceivedQuotes(id);
   const editable = ['DRAFT', 'OPEN_FOR_QUOTES', 'IN_NEGOTIATION'].includes(project.status);
   const moduleViews: ModuleView[] = modules.map((m) => ({
     id: m.id,
@@ -54,9 +57,49 @@ export default async function PedidoDetailPage({ params }: { params: Promise<{ i
       </header>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Conteúdo principal: móveis por cômodo */}
-        <div className="lg:col-span-2">
+        {/* Conteúdo principal: móveis + orçamentos recebidos */}
+        <div className="flex flex-col gap-6 lg:col-span-2">
           <ModulesSection projectId={project.id} modules={moduleViews} editable={editable} />
+
+          {(project.status === 'OPEN_FOR_QUOTES' || quotes.length > 0) && (
+            <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
+              <h2 className="mb-4 text-lg font-semibold text-charcoal">
+                Orçamentos recebidos {quotes.length > 0 && <span className="text-muted">({quotes.length})</span>}
+              </h2>
+              {quotes.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-subtle p-6 text-center text-muted">
+                  Nenhum orçamento ainda. Marceneiros da sua região vão enviar propostas aqui.
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-3">
+                  {quotes.map((q) => (
+                    <li key={q.id} className="rounded-xl border border-subtle p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-semibold text-charcoal">{q.carpenterName}</p>
+                        <span className="rounded-pill bg-brand-secondary/15 px-2.5 py-0.5 text-xs font-semibold text-brand-secondary">
+                          {q.status === 'SENT' ? 'Recebido' : q.status}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-baseline gap-x-6 gap-y-1">
+                        <span className="text-sm text-muted">
+                          À vista: <strong className="text-charcoal">{formatBRL(q.avistaCents)}</strong>
+                        </span>
+                        {q.parceladoCents != null && q.installmentValueCents != null && (
+                          <span className="text-sm text-muted">
+                            Em {q.maxInstallments}x de{' '}
+                            <strong className="text-charcoal">{formatBRL(q.installmentValueCents)}</strong>{' '}
+                            <span className="text-subtle">({formatBRL(q.parceladoCents)})</span>
+                          </span>
+                        )}
+                      </div>
+                      {q.note && <p className="mt-2 text-sm text-charcoal/80">“{q.note}”</p>}
+                      {/* TODO(Fase 4.4): pré-aprovar → abre chat com o marceneiro. */}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
         </div>
 
         {/* Aside: local da obra + documentos + ações */}

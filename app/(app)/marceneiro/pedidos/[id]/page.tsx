@@ -5,17 +5,34 @@ import { requireRole } from '@/lib/auth/session';
 import { getCarpenterProfile } from '@/lib/carpenter/profile';
 import { getProjectForCarpenter } from '@/lib/carpenter/feed';
 import { signedProjectPhotoUrl } from '@/lib/storage';
+import { getActivePricingConfig } from '@/lib/pricing/config';
+import { getCarpenterQuote } from '@/lib/quotes/queries';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
+import { QuoteForm, type QuoteInitial } from './_components/QuoteForm';
 
 export default async function CarpenterPedidoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const profile = await requireRole('CARPENTER');
-  const carpenter = await getCarpenterProfile(profile.id);
+  // Queries independentes em paralelo (1 ida em vez de 3 sequenciais).
+  const [carpenter, config, existing] = await Promise.all([
+    getCarpenterProfile(profile.id),
+    getActivePricingConfig(),
+    getCarpenterQuote(id, profile.id),
+  ]);
   if (!carpenter) notFound();
 
   const detail = await getProjectForCarpenter(id, carpenter);
   if (!detail) notFound();
   const { project, modules, photos } = detail;
+  const quoteInitial: QuoteInitial | undefined = existing
+    ? {
+        baseValueReais: String(existing.baseValueCents / 100),
+        maxInstallments: existing.maxInstallments,
+        dilutionSharePct: Number(existing.dilutionSharePct),
+        note: existing.note ?? '',
+        status: existing.status,
+      }
+    : undefined;
 
   const signed = await Promise.all(photos.map(async (p) => ({ ...p, url: await signedProjectPhotoUrl(p.path) })));
   const roomPhotos = signed.filter((p) => !p.moduleId);
@@ -107,12 +124,12 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
           )}
 
           <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
-            <h2 className="mb-2 text-lg font-semibold text-charcoal">Quer este trabalho?</h2>
-            {/* TODO(Fase 4.3): construtor de orçamento (V, itens, parcelas, diluição). */}
-            <button type="button" disabled className="w-full cursor-not-allowed rounded-xl bg-brand-primary/40 px-5 py-4 text-lg font-semibold text-white">
-              Enviar orçamento (em breve)
-            </button>
-            <p className="mt-2 text-sm text-muted">O construtor de orçamento chega na próxima etapa.</p>
+            <h2 className="mb-3 text-lg font-semibold text-charcoal">Seu orçamento</h2>
+            {config ? (
+              <QuoteForm projectId={project.id} config={config} initial={quoteInitial} />
+            ) : (
+              <p className="text-muted">Configuração de preço indisponível.</p>
+            )}
           </section>
         </aside>
       </div>
