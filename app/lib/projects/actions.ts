@@ -59,6 +59,10 @@ export async function createProject(input: {
       clientId: userId,
       title: p.data.title,
       sourceType: p.data.sourceType,
+      city: p.data.city ?? null,
+      cep: p.data.cep ?? null,
+      lat: p.data.lat != null ? String(p.data.lat) : null,
+      lng: p.data.lng != null ? String(p.data.lng) : null,
     })
     .returning({ id: projects.id });
 

@@ -9,10 +9,15 @@ export const cmDimensionSchema = z
   .positive('Informe a medida')
   .transform((cm) => cmToMm(cm));
 
-/** Projeto = container com NOME (categoria/workType vivem nos móveis). */
+/** Projeto = container com NOME (categoria/workType vivem nos móveis).
+ *  Local da obra (cidade/CEP/coords) alimenta o matching com o marceneiro. */
 export const createProjectSchema = z.object({
   title: z.string().trim().min(2, 'Dê um nome ao pedido').max(120),
   sourceType: z.enum(SOURCE_TYPES).default('AI_GENERATED'),
+  city: z.string().trim().min(2).optional(),
+  cep: z.string().trim().optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
 });
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 

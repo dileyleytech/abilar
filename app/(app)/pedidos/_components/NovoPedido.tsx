@@ -19,11 +19,32 @@ export function NovoPedido() {
   const [step, setStep] = useState<Step>('path');
   const [path, setPath] = useState<Path>('AI');
   const [title, setTitle] = useState('');
+  const [cep, setCep] = useState('');
+  const [city, setCity] = useState('');
+  const [loc, setLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [cepStatus, setCepStatus] = useState<'idle' | 'loading' | 'found' | 'error'>('idle');
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<'idle' | 'creating' | 'uploading'>('idle');
   const [error, setError] = useState<string | null>(null);
   const busy = status !== 'idle';
-  const nameOk = title.trim().length >= 2;
+  const nameOk = title.trim().length >= 2 && city.trim().length >= 2;
+
+  const onCepChange = (raw: string) => {
+    setCep(raw);
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length !== 8) return setCepStatus('idle');
+    setCepStatus('loading');
+    fetch(`/api/cep?cep=${digits}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.ok) {
+          if (d.city) setCity(d.city);
+          if (typeof d.lat === 'number' && typeof d.lng === 'number') setLoc({ lat: d.lat, lng: d.lng });
+          setCepStatus('found');
+        } else setCepStatus('error');
+      })
+      .catch(() => setCepStatus('error'));
+  };
 
   const submit = async () => {
     if (!nameOk) return;
@@ -32,7 +53,14 @@ export function NovoPedido() {
     try {
       const isArchitect = path === 'ARCHITECT';
       const res = await createProject({
-        project: { title: title.trim(), sourceType: isArchitect ? 'ARCHITECT_PROJECT' : 'AI_GENERATED' },
+        project: {
+          title: title.trim(),
+          sourceType: isArchitect ? 'ARCHITECT_PROJECT' : 'AI_GENERATED',
+          city: city.trim() || undefined,
+          cep: cep.trim() || undefined,
+          lat: loc?.lat,
+          lng: loc?.lng,
+        },
       });
       if (!res.ok) {
         setError(res.error);
@@ -88,6 +116,17 @@ export function NovoPedido() {
           onChange={(e) => setTitle(e.target.value)}
           autoFocus
         />
+        <label className="flex flex-col gap-1">
+          <span className="text-base text-charcoal">CEP da obra</span>
+          <input className={fld} inputMode="numeric" placeholder="00000-000" value={cep} onChange={(e) => onCepChange(e.target.value)} />
+        </label>
+        {cepStatus === 'loading' && <p className="text-sm text-muted">Buscando endereço…</p>}
+        {cepStatus === 'error' && <p className="text-sm text-ochre">CEP não encontrado — confira o número.</p>}
+        <label className="flex flex-col gap-1">
+          <span className="text-base text-charcoal">Cidade da obra</span>
+          <input className={fld} placeholder="Preenche pelo CEP" value={city} onChange={(e) => setCity(e.target.value)} />
+        </label>
+        <p className="text-sm text-muted">Usamos a cidade para mostrar seu pedido aos marceneiros da região.</p>
         {path === 'AI' ? (
           <button type="button" className={`${big} bg-brand-primary text-white`} disabled={!nameOk || busy} onClick={submit}>
             {status === 'creating' ? 'Criando…' : 'Criar pedido'}

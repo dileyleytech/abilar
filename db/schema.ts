@@ -131,6 +131,11 @@ export const projects = pgTable(
     title: text('title').notNull(), // nome do projeto (dado pelo cliente)
     status: projectStatusEnum('status').notNull().default('DRAFT'),
     sourceType: sourceTypeEnum('source_type').notNull().default('AI_GENERATED'),
+    // Local da obra (para matching cidade/raio com o marceneiro).
+    city: text('city'),
+    cep: text('cep'),
+    lat: numeric('lat', { precision: 9, scale: 6 }),
+    lng: numeric('lng', { precision: 9, scale: 6 }),
     architectId: uuid('architect_id').references(() => profiles.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

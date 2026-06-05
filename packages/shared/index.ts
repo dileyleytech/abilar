@@ -6,5 +6,6 @@ export * from './br';
 export * from './auth-schemas';
 export * from './project-status';
 export * from './project-schemas';
+export * from './geo';
 export * as tokens from './tokens';
 export { default as designTokens } from './tokens';
