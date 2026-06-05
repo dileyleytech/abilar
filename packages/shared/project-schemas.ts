@@ -30,6 +30,16 @@ export const updateProjectLocationSchema = z.object({
 });
 export type UpdateProjectLocationInput = z.infer<typeof updateProjectLocationSchema>;
 
+/** Orçamento do marceneiro (§5/§7). Valor em centavos; servidor recalcula o preço. */
+export const quoteInputSchema = z.object({
+  baseValueCents: z.number().int().positive('Informe o valor do serviço'),
+  maxInstallments: z.number().int().min(1, 'Mínimo 1x').max(24, 'Máximo 24x'),
+  dilutionSharePct: z.number().min(0).max(100),
+  carpenterCostCents: z.number().int().min(0).optional(),
+  note: z.string().trim().max(600).optional(),
+});
+export type QuoteInput = z.infer<typeof quoteInputSchema>;
+
 /** Módulo (móvel): a UI envia cm; o schema entrega *Mm prontos para o banco. */
 export const moduleInputSchema = z.object({
   ambiente: z.string().trim().max(60).optional(), // cômodo (ex.: "Cozinha")

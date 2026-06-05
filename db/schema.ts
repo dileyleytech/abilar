@@ -29,6 +29,7 @@ import {
   WORK_TYPES,
   SOURCE_TYPES,
   PHOTO_KINDS,
+  QUOTE_STATUS,
 } from '@abilar/shared';
 
 // Enums (fonte única dos literais em @abilar/shared/domain).
@@ -41,6 +42,7 @@ export const workTypeEnum = pgEnum('work_type', WORK_TYPES);
 export const sourceTypeEnum = pgEnum('source_type', SOURCE_TYPES);
 export const photoKindEnum = pgEnum('photo_kind', PHOTO_KINDS);
 export const pricingScopeEnum = pgEnum('pricing_scope', ['GLOBAL', 'PROMO']);
+export const quoteStatusEnum = pgEnum('quote_status', QUOTE_STATUS);
 
 /** Perfil 1:1 com auth.users (id = auth.uid()). `role` é a fonte de verdade
  *  do papel (NÃO confiar em user_metadata para autorização). */
@@ -227,6 +229,42 @@ export type Module = typeof modules.$inferSelect;
 export type NewModule = typeof modules.$inferInsert;
 export type ProjectPhoto = typeof projectPhotos.$inferSelect;
 export type NewProjectPhoto = typeof projectPhotos.$inferInsert;
+
+// ── Fase 4: Orçamentos (Quote) ──────────────────────────────────────────────
+
+/** Orçamento do marceneiro para um pedido. V = valor do serviço (BIGINT centavos).
+ *  O preço exibido ao cliente é recalculado pelo motor (packages/pricing). */
+export const quotes = pgTable(
+  'quotes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    carpenterId: uuid('carpenter_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    baseValueCents: bigint('base_value_cents', { mode: 'number' }).notNull(), // V
+    carpenterCostCents: bigint('carpenter_cost_cents', { mode: 'number' }), // proteção de margem
+    maxInstallments: integer('max_installments').notNull().default(1),
+    dilutionSharePct: numeric('dilution_share_pct', { precision: 6, scale: 3 }).notNull().default('100'),
+    note: text('note'), // mensagem ao cliente
+    lineItems: jsonb('line_items').notNull().default(sql`'[]'::jsonb`), // itens (Fase 4.3b)
+    status: quoteStatusEnum('status').notNull().default('SENT'),
+    validUntil: timestamp('valid_until', { withTimezone: true }),
+    pdfUrl: text('pdf_url'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('quotes_project_carpenter_idx').on(t.projectId, t.carpenterId),
+    index('quotes_project_idx').on(t.projectId),
+    index('quotes_carpenter_status_idx').on(t.carpenterId, t.status),
+  ],
+);
+
+export type Quote = typeof quotes.$inferSelect;
+export type NewQuote = typeof quotes.$inferInsert;
 
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;
