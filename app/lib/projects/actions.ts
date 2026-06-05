@@ -12,17 +12,13 @@ import {
 } from '@abilar/shared';
 import { projects, modules, projectPhotos, and, eq, sql } from '@abilar/db';
 import { getDb } from '@/lib/db';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getUserId } from '@/lib/auth/session';
 
 type Result<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
-async function uid(): Promise<string | null> {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user?.id ?? null;
-}
+// Id do usuário via JWT (local, sem ida à rede). RLS + ownProject seguem garantindo
+// a autorização — o id vem de um token verificado pelo middleware/getClaims.
+const uid = getUserId;
 
 /** Confirma que o projeto é do usuário (autorização explícita — Drizzle é serviço). */
 async function ownProject(projectId: string, userId: string) {

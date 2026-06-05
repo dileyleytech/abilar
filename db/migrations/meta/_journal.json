@@ -141,6 +141,13 @@
       "when": 1780694409000,
       "tag": "0019_chat_read_state",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1780694409500,
+      "tag": "0020_auth_token_hook",
+      "breakpoints": true
     }
   ]
 }
