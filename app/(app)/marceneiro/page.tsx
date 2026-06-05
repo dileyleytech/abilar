@@ -13,7 +13,12 @@ export default async function MarceneiroPage() {
   const carpenter = await getCarpenterProfile(profile.id);
   const feed = carpenter ? await getCarpenterFeed(carpenter) : [];
   const cards = await Promise.all(
-    feed.map(async (f) => ({ ...f, coverUrl: f.coverPath ? await signedProjectPhotoUrl(f.coverPath) : null })),
+    feed.map(async (f) => ({
+      ...f,
+      photoUrls: (await Promise.all(f.photoPaths.map((p) => signedProjectPhotoUrl(p)))).filter(
+        (u): u is string => !!u,
+      ),
+    })),
   );
 
   return (
@@ -68,19 +73,41 @@ export default async function MarceneiroPage() {
                       href={`/marceneiro/pedidos/${c.id}`}
                       className="flex h-full flex-col overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm transition hover:-translate-y-0.5 hover:border-brand-primary/40 hover:shadow-md"
                     >
-                      <div className="flex aspect-[4/3] items-center justify-center bg-deep">
-                        {c.coverUrl ? (
+                      <div className="relative flex aspect-[4/3] items-center justify-center bg-deep">
+                        {c.photoUrls[0] ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={c.coverUrl} alt="" className="h-full w-full object-cover" />
+                          <img src={c.photoUrls[0]} alt="" className="h-full w-full object-cover" />
                         ) : (
                           <span className="text-5xl" aria-hidden>🛋️</span>
                         )}
+                        {c.photoUrls.length > 1 && (
+                          <span className="absolute bottom-2 right-2 rounded-pill bg-charcoal/70 px-2 py-0.5 text-xs font-medium text-white">
+                            📷 {c.photoUrls.length}
+                          </span>
+                        )}
                       </div>
-                      <div className="p-4">
+
+                      {c.photoUrls.length > 1 && (
+                        <div className="flex gap-1 px-2 pt-2">
+                          {c.photoUrls.slice(1, 5).map((u, i) => (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img key={i} src={u} alt="" className="h-12 w-12 rounded-md object-cover" />
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex flex-1 flex-col gap-2 p-4">
                         <h3 className="text-lg font-semibold text-charcoal">{c.title}</h3>
                         <p className="text-sm text-muted">
                           📍 {c.city ?? '—'} · {c.moduleCount} {c.moduleCount === 1 ? 'móvel' : 'móveis'}
                         </p>
+                        <div className="mt-auto flex flex-wrap gap-1.5">
+                          {c.categories.map((cat) => (
+                            <span key={cat} className="rounded-pill bg-deep px-2.5 py-0.5 text-xs font-medium text-charcoal">
+                              {CATEGORY_LABELS[cat as Category] ?? cat}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </Link>
                   </li>

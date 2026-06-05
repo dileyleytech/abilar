@@ -51,7 +51,7 @@ export async function verifyPhoneOtp(input: unknown): Promise<ActionResult> {
     type: 'sms',
   });
   if (error) return { ok: false, error: authErrorMessage(error, 'Código incorreto ou expirado.') };
-  redirect('/conta');
+  redirect('/'); // a home roteia por papel (cliente/marceneiro/admin)
 }
 
 /** Envia magic link por e-mail (opção gratuita). */
@@ -85,7 +85,7 @@ export async function signInWithPassword(input: unknown): Promise<ActionResult> 
 
   const { error } = await supabase.auth.signInWithPassword(credential);
   if (error) return { ok: false, error: authErrorMessage(error, 'Telefone/e-mail ou senha incorretos.') };
-  redirect('/conta');
+  redirect('/'); // a home roteia por papel
 }
 
 /** Define/atualiza a senha do usuário logado (ex.: quem entrou por OTP). */

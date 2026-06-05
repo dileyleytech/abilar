@@ -9,7 +9,8 @@ export type FeedItem = {
   title: string;
   city: string | null;
   moduleCount: number;
-  coverPath: string | null;
+  categories: string[];
+  photoPaths: string[];
 };
 
 /** O projeto está na área de atendimento do marceneiro? (mesma cidade OU dentro do raio) */
@@ -50,29 +51,40 @@ export async function getCarpenterFeed(carpenter: CarpenterProfile): Promise<Fee
   if (eligible.length === 0) return [];
   const ids = eligible.map((p) => p.id);
 
-  const [photos, counts] = await Promise.all([
+  const [photos, mods] = await Promise.all([
     db
       .select({ projectId: projectPhotos.projectId, path: projectPhotos.path })
       .from(projectPhotos)
       .where(inArray(projectPhotos.projectId, ids))
       .orderBy(asc(projectPhotos.createdAt)),
     db
-      .select({ projectId: modules.projectId, n: sql<number>`count(*)::int` })
+      .select({ projectId: modules.projectId, type: modules.type })
       .from(modules)
-      .where(inArray(modules.projectId, ids))
-      .groupBy(modules.projectId),
+      .where(inArray(modules.projectId, ids)),
   ]);
-  const cover = new Map<string, string>();
-  for (const ph of photos) if (!cover.has(ph.projectId)) cover.set(ph.projectId, ph.path);
+
+  const photosByProject = new Map<string, string[]>();
+  for (const ph of photos) {
+    const arr = photosByProject.get(ph.projectId) ?? [];
+    if (arr.length < 6) arr.push(ph.path);
+    photosByProject.set(ph.projectId, arr);
+  }
   const count = new Map<string, number>();
-  for (const c of counts) count.set(c.projectId, c.n);
+  const catsByProject = new Map<string, Set<string>>();
+  for (const m of mods) {
+    count.set(m.projectId, (count.get(m.projectId) ?? 0) + 1);
+    const set = catsByProject.get(m.projectId) ?? new Set<string>();
+    set.add(m.type);
+    catsByProject.set(m.projectId, set);
+  }
 
   return eligible.map((p) => ({
     id: p.id,
     title: p.title,
     city: p.city,
     moduleCount: count.get(p.id) ?? 0,
-    coverPath: cover.get(p.id) ?? null,
+    categories: [...(catsByProject.get(p.id) ?? [])],
+    photoPaths: photosByProject.get(p.id) ?? [],
   }));
 }
 
