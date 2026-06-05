@@ -1,5 +1,5 @@
 import 'server-only';
-import { projects, modules, projectPhotos, and, asc, desc, eq, inArray, sql } from '@abilar/db';
+import { projects, modules, projectPhotos, and, asc, desc, eq, exists, inArray, sql } from '@abilar/db';
 import type { CarpenterProfile, Project, Module, ProjectPhoto } from '@abilar/db';
 import { isWithinRadius } from '@abilar/shared';
 import { getDb } from '@/lib/db';
@@ -35,15 +35,15 @@ export async function getCarpenterFeed(carpenter: CarpenterProfile): Promise<Fee
   const db = getDb();
 
   // Candidatos: abertos + têm ao menos um móvel numa categoria que ele atende.
+  const hasMatchingModule = db
+    .select({ one: sql`1` })
+    .from(modules)
+    .where(and(eq(modules.projectId, projects.id), inArray(modules.type, cats)));
+
   const candidates = await db
     .select({ id: projects.id, title: projects.title, city: projects.city, lat: projects.lat, lng: projects.lng })
     .from(projects)
-    .where(
-      and(
-        eq(projects.status, 'OPEN_FOR_QUOTES'),
-        sql`exists (select 1 from ${modules} m where m.project_id = ${projects.id} and m.type = any(${cats}))`,
-      ),
-    )
+    .where(and(eq(projects.status, 'OPEN_FOR_QUOTES'), exists(hasMatchingModule)))
     .orderBy(desc(projects.createdAt));
 
   const eligible = candidates.filter((p) => inServiceArea(carpenter, p));
