@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { reaisToCents, formatBRL } from '@abilar/shared';
-import { quotePricing, type PricingConfig } from '@abilar/pricing';
+import { quotePricing, maxClientInstallments, type PricingConfig } from '@abilar/pricing';
 import { sendQuote, withdrawQuote } from '@/lib/quotes/actions';
 
 const fld =
@@ -31,6 +31,7 @@ export function QuoteForm({
   const [error, setError] = useState<string | null>(null);
 
   const minS = config.dilutionMinCarpenterSharePct;
+  const systemMax = useMemo(() => maxClientInstallments(config), [config]);
   const installmentOptions = useMemo(
     () => Object.keys(config.installmentTable).map(Number).sort((a, b) => a - b),
     [config],
@@ -48,15 +49,26 @@ export function QuoteForm({
   const sliderMax = useMemo(() => Math.max(50000, Math.ceil(valorNum / 50000) * 50000), [valorNum]);
 
   // Preview ao vivo — cálculo INSTANTÂNEO no client (motor puro).
+  // O cliente SEMPRE parcela em até `systemMax`; o N do marceneiro é só o teto
+  // do subsídio (interno). Sem subsídio (maxInst = 1), o cliente paga a taxa cheia.
   const preview = useMemo(() => {
     if (cents <= 0) return null;
-    const avista = quotePricing({ baseValueCents: cents, config, installments: 1, method: 'PIX', carpenterDilutionSharePct: s });
+    const subsidizes = maxInst > 1;
+    const sEff = subsidizes ? s : 0;
+    const avista = quotePricing({ baseValueCents: cents, config, installments: 1, method: 'PIX', carpenterDilutionSharePct: sEff });
     const parc =
-      maxInst > 1
-        ? quotePricing({ baseValueCents: cents, config, installments: maxInst, method: 'CARD', carpenterDilutionSharePct: s })
+      systemMax > 1
+        ? quotePricing({
+            baseValueCents: cents,
+            config,
+            installments: subsidizes ? maxInst : 1,
+            clientInstallments: systemMax,
+            method: 'CARD',
+            carpenterDilutionSharePct: sEff,
+          })
         : null;
-    return { avista, parc };
-  }, [cents, maxInst, s, config]);
+    return { avista, parc, subsidizes };
+  }, [cents, maxInst, s, config, systemMax]);
 
   const submit = () =>
     start(async () => {
@@ -68,6 +80,8 @@ export function QuoteForm({
         note: note.trim() || undefined,
       });
       if (!r.ok) return setError(r.error);
+      // Enviou/atualizou o orçamento → volta para a lista de pedidos da região.
+      router.push('/marceneiro');
       router.refresh();
     });
 
@@ -107,20 +121,24 @@ export function QuoteForm({
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-charcoal">Aceita parcelar no cartão até</span>
+        <span className="text-sm font-medium text-charcoal">Você topa abater a taxa do cartão até</span>
         <select className={fld} value={maxInst} onChange={(e) => setMaxInst(Number(e.target.value))}>
           {installmentOptions.map((n) => (
             <option key={n} value={n}>
-              {n === 1 ? 'Só à vista (Pix/boleto)' : `${n}x`}
+              {n === 1 ? 'Não abato (cliente paga a taxa cheia)' : `${n}x`}
             </option>
           ))}
         </select>
+        <p className="text-sm text-muted">
+          O cliente sempre pode parcelar em até {systemMax}x. Aqui você decide até quanto quer abrir mão de
+          uma parte da taxa para baratear o parcelamento dele.
+        </p>
       </label>
 
       {maxInst > 1 && (
         <div>
           <div className="flex items-baseline justify-between">
-            <span className="text-sm font-medium text-charcoal">Quanto da taxa do cartão você absorve</span>
+            <span className="text-sm font-medium text-charcoal">Quanto da taxa (até {maxInst}x) você absorve</span>
             <span className="font-mono text-base text-brand-primary">{s}%</span>
           </div>
           <input type="range" min={minS} max={100} step={1} value={s} onChange={(e) => setS(Number(e.target.value))} className="mt-2 w-full accent-brand-primary" />
@@ -133,15 +151,15 @@ export function QuoteForm({
           <Scenario title="À vista (Pix)" youGet={preview.avista.carpenterPayoutCents} clientPays={preview.avista.displayedAmountCents} />
           {preview.parc ? (
             <Scenario
-              title={`Em ${maxInst}x no cartão`}
+              title={preview.subsidizes ? `Cliente parcela (até ${systemMax}x)` : `Se o cliente parcelar (até ${systemMax}x)`}
               youGet={preview.parc.carpenterPayoutCents}
               clientPays={preview.parc.displayedAmountCents}
-              installment={Math.round(preview.parc.displayedAmountCents / maxInst)}
-              n={maxInst}
+              installment={Math.round(preview.parc.displayedAmountCents / systemMax)}
+              n={systemMax}
             />
           ) : (
             <div className="flex items-center justify-center rounded-lg bg-deep p-4 text-center text-sm text-muted">
-              Você só aceita à vista.
+              Sem parcelamento configurado.
             </div>
           )}
         </div>

@@ -39,10 +39,14 @@ export type PaymentMethod = 'PIX' | 'BOLETO' | 'CARD';
 export interface QuotePricingInput {
   baseValueCents: Cents; // V
   config: PricingConfig;
-  installments: number; // 1 = à vista
+  installments: number; // 1 = à vista. No cartão: N que o marceneiro aceita SUBSIDIAR (teto).
   method: PaymentMethod;
   carpenterDilutionSharePct: number; // s, escolhido pelo marceneiro
   carpenterCostCents?: Cents; // proteção de margem (nunca pagar abaixo do custo)
+  /** Nº de parcelas que o CLIENTE realmente usa (máx do sistema). O cliente sempre
+   *  pode parcelar até aqui; o marceneiro só subsidia a taxa até `installments`.
+   *  Omitido = igual a `installments` (comportamento antigo, faixa única). */
+  clientInstallments?: number;
 }
 
 export interface QuotePricingResult {

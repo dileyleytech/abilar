@@ -30,6 +30,7 @@ import {
   SOURCE_TYPES,
   PHOTO_KINDS,
   QUOTE_STATUS,
+  CONVERSATION_STATUS,
 } from '@abilar/shared';
 
 // Enums (fonte única dos literais em @abilar/shared/domain).
@@ -43,6 +44,7 @@ export const sourceTypeEnum = pgEnum('source_type', SOURCE_TYPES);
 export const photoKindEnum = pgEnum('photo_kind', PHOTO_KINDS);
 export const pricingScopeEnum = pgEnum('pricing_scope', ['GLOBAL', 'PROMO']);
 export const quoteStatusEnum = pgEnum('quote_status', QUOTE_STATUS);
+export const conversationStatusEnum = pgEnum('conversation_status', CONVERSATION_STATUS);
 
 /** Perfil 1:1 com auth.users (id = auth.uid()). `role` é a fonte de verdade
  *  do papel (NÃO confiar em user_metadata para autorização). */
@@ -265,6 +267,60 @@ export const quotes = pgTable(
 
 export type Quote = typeof quotes.$inferSelect;
 export type NewQuote = typeof quotes.$inferInsert;
+
+// ── Fase 4.4: Conversa e mensagens (chat após pré-aprovação) ────────────────
+
+/** Conversa cliente↔marceneiro, criada quando o cliente PRÉ-APROVA um orçamento. */
+export const conversations = pgTable(
+  'conversations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    clientId: uuid('client_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    carpenterId: uuid('carpenter_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    quoteId: uuid('quote_id').references(() => quotes.id, { onDelete: 'set null' }),
+    status: conversationStatusEnum('status').notNull().default('ACTIVE'),
+    // Até quando cada participante leu (para contar mensagens não lidas).
+    clientLastReadAt: timestamp('client_last_read_at', { withTimezone: true }),
+    carpenterLastReadAt: timestamp('carpenter_last_read_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('conversations_project_carpenter_idx').on(t.projectId, t.carpenterId),
+    index('conversations_client_idx').on(t.clientId),
+    index('conversations_carpenter_idx').on(t.carpenterId),
+  ],
+);
+
+/** Mensagem do chat. `body` = original; `redactedBody` = com contato mascarado. */
+export const messages = pgTable(
+  'messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    conversationId: uuid('conversation_id')
+      .notNull()
+      .references(() => conversations.id, { onDelete: 'cascade' }),
+    senderId: uuid('sender_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    body: text('body').notNull(),
+    redactedBody: text('redacted_body'),
+    flaggedReason: text('flagged_reason'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('messages_conversation_idx').on(t.conversationId, t.createdAt)],
+);
+
+export type Conversation = typeof conversations.$inferSelect;
+export type NewConversation = typeof conversations.$inferInsert;
+export type Message = typeof messages.$inferSelect;
+export type NewMessage = typeof messages.$inferInsert;
 
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;

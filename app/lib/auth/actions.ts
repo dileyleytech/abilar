@@ -16,6 +16,7 @@ import {
 import { profiles, eq, sql } from '@abilar/db';
 import { getDb } from '@/lib/db';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getUserId } from '@/lib/auth/session';
 import { authErrorMessage } from '@/lib/auth/errors';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -93,12 +94,9 @@ export async function setPassword(input: unknown): Promise<ActionResult> {
   const parsed = setPasswordSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: 'A senha precisa de ao menos 8 caracteres.' };
 
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: 'Faça login primeiro.' };
+  if (!(await currentUserId())) return { ok: false, error: 'Faça login primeiro.' };
 
+  const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) return { ok: false, error: authErrorMessage(error, 'Não foi possível salvar a senha.') };
   return { ok: true };
@@ -106,12 +104,9 @@ export async function setPassword(input: unknown): Promise<ActionResult> {
 
 // ── Meu perfil ───────────────────────────────────────────────────────────────
 
+// Id via JWT (local, sem rede). O middleware já validou/renovou a sessão.
 async function currentUserId(): Promise<string | null> {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user?.id ?? null;
+  return getUserId();
 }
 
 /** Atualiza o nome (profiles + metadata do auth). */

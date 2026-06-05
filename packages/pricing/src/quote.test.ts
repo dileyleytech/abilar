@@ -173,6 +173,72 @@ describe('quotePricing — §5 (motor de pricing, crítico)', () => {
     });
   });
 
+  // O cliente SEMPRE parcela no máximo do sistema (nClient). O marceneiro só
+  // subsidia a taxa "até o N dele" (installments) — acima disso o cliente paga
+  // a taxa cheia. Quando nClient == installments, reduz à fórmula antiga.
+  describe('duas faixas: cliente no 10x, subsídio só até o N do marceneiro', () => {
+    // Tabela com uma faixa intermediária (3x) além de 1x e 10x.
+    const cfg3: PricingConfig = {
+      ...baseConfig,
+      installmentTable: { 1: { mdrPct: 0 }, 3: { mdrPct: 2 }, 10: { mdrPct: 4.5 } },
+    };
+
+    it('marceneiro subsidia até 3x, cliente paga 10x: absorção limitada à taxa do 3x', () => {
+      const r = quotePricing({
+        baseValueCents: V,
+        config: cfg3,
+        installments: 3, // N que o marceneiro aceita subsidiar
+        clientInstallments: 10, // o cliente sempre parcela no máx do sistema
+        method: 'CARD',
+        carpenterDilutionSharePct: 50,
+      });
+      // absorção = 50% da taxa do 3x (2% de 2.160.000 = 43.200) = 21.600
+      expect(r.carpenterPayoutCents).toBe(1_778_400); // 1.800.000 − 21.600
+      // cliente paga a taxa do 10x (97.200) − 21.600 + margem 1% (21.600)
+      expect(r.displayedAmountCents).toBe(2_257_200);
+      expect(r.gatewayFeeCents).toBe(101_574); // 2.257.200 × 4,5%
+      expect(r.valid).toBe(true);
+      // conservação
+      expect(r.gatewayFeeCents + r.carpenterPayoutCents + r.architectPayoutCents + r.platformNetCents).toBe(
+        r.displayedAmountCents,
+      );
+    });
+
+    it('subsídio até 3x é mais caro p/ o cliente que subsídio até 10x', () => {
+      const ate3 = quotePricing({ baseValueCents: V, config: cfg3, installments: 3, clientInstallments: 10, method: 'CARD', carpenterDilutionSharePct: 50 });
+      const ate10 = quotePricing({ baseValueCents: V, config: cfg3, installments: 10, clientInstallments: 10, method: 'CARD', carpenterDilutionSharePct: 50 });
+      expect(ate3.displayedAmountCents).toBeGreaterThan(ate10.displayedAmountCents);
+      // e o marceneiro perde menos quando subsidia só até 3x
+      expect(ate3.carpenterPayoutCents).toBeGreaterThan(ate10.carpenterPayoutCents);
+    });
+
+    it('marceneiro NÃO subsidia (só à vista), cliente ainda parcela em 10x pagando a taxa cheia', () => {
+      const r = quotePricing({
+        baseValueCents: V,
+        config: cfg3,
+        installments: 1, // não aceita perder dinheiro
+        clientInstallments: 10,
+        method: 'CARD',
+        carpenterDilutionSharePct: 0,
+      });
+      // marceneiro recebe o equivalente à vista (sem absorção, sem incentivo)
+      expect(r.carpenterPayoutCents).toBe(1_800_000);
+      // cliente paga a taxa cheia do 10x + margem da plataforma
+      expect(r.displayedAmountCents).toBe(2_278_800); // 2.160.000 + 97.200 + 21.600
+      expect(r.valid).toBe(true);
+      expect(r.gatewayFeeCents + r.carpenterPayoutCents + r.architectPayoutCents + r.platformNetCents).toBe(
+        r.displayedAmountCents,
+      );
+    });
+
+    it('clientInstallments omitido = comportamento antigo (nCliente = N do marceneiro)', () => {
+      const omit = quotePricing({ baseValueCents: V, config: baseConfig, installments: 10, method: 'CARD', carpenterDilutionSharePct: 50 });
+      const eq = quotePricing({ baseValueCents: V, config: baseConfig, installments: 10, clientInstallments: 10, method: 'CARD', carpenterDilutionSharePct: 50 });
+      expect(omit.displayedAmountCents).toBe(eq.displayedAmountCents);
+      expect(omit.carpenterPayoutCents).toBe(eq.carpenterPayoutCents);
+    });
+  });
+
   describe('soma fecha (conservação de centavos)', () => {
     it('cliente pago = gateway + marceneiro + arquiteto + plataforma (10x)', () => {
       const r = quotePricing({ baseValueCents: V, config: baseConfig, installments: 10, method: 'CARD', carpenterDilutionSharePct: 50 });

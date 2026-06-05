@@ -10,6 +10,10 @@ export default defineConfig({
       '@abilar/pricing': resolve(__dirname, 'packages/pricing/src/index.ts'),
       '@abilar/ai-vision': resolve(__dirname, 'packages/ai-vision/src/index.ts'),
       '@abilar/db': resolve(__dirname, 'db/index.ts'),
+      // App usa o alias `@/` (tsconfig) e os marcadores server-only/client-only do Next.
+      '@': resolve(__dirname, 'app'),
+      'server-only': resolve(__dirname, 'test/stubs/empty.ts'),
+      'client-only': resolve(__dirname, 'test/stubs/empty.ts'),
     },
   },
   test: {

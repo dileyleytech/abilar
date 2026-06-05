@@ -59,7 +59,22 @@
       "Bash(curl -s -o /dev/null -w \"/ %{http_code}\\\\n\" http://localhost:3001/)",
       "Bash(curl -s -o /dev/null -w \"/admin/precos \\(sem login\\) %{http_code} -> %{redirect_url}\\\\n\" http://localhost:3001/admin/precos)",
       "Bash(curl -s -o /dev/null -w \"/admin/precos %{http_code}\\\\n\" http://localhost:3001/admin/precos)",
-      "Bash(grep -qE \"\\(eslint|error TS|Done$\\)\" /private/tmp/claude-501/-Users-rodrigodiley-Documents-Projetos-Leytech-abilar/b1eeda97-9e6c-45c8-9a69-0e6ee2da2b2b/tasks/bqj03y7kt.output)"
+      "Bash(grep -qE \"\\(eslint|error TS|Done$\\)\" /private/tmp/claude-501/-Users-rodrigodiley-Documents-Projetos-Leytech-abilar/b1eeda97-9e6c-45c8-9a69-0e6ee2da2b2b/tasks/bqj03y7kt.output)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001/)",
+      "Bash(sed -n '1,12p' db/migrations/meta/_journal.json)",
+      "Bash(sed -n '118,140p' db/migrations/meta/_journal.json)",
+      "Bash(sed -n '1,60p' app/lib/labels.ts)",
+      "Bash(sed -n '1,60p' app/components/StatusBadge.tsx)",
+      "Bash(perl -i -pe \"s/\\\\.replace\\\\\\(\\\\/\\\\[.*?\\\\]\\\\/g, ''\\\\\\)\\\\.toLowerCase/.replace\\(\\\\/[\\\\\\\\\\\\\\\\u0300-\\\\\\\\\\\\\\\\u036f]\\\\/g, ''\\).toLowerCase/\" \"app/\\(app\\)/marceneiro/_components/MarceneiroFeed.tsx\")",
+      "Bash(pnpm db:migrate)",
+      "Bash(pnpm vitest *)",
+      "Bash(lsof -ti:3001)",
+      "Bash(kill 26626 26620)",
+      "Bash(xargs kill -9)",
+      "Bash(echo \"porta 3001 livre? $\\(lsof -ti:3001)",
+      "Bash(echo \"iniciado, pid $!\")",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} em %{time_total}s\\\\n\" http://localhost:3001/)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} em %{time_total}s\\\\n\" http://localhost:3001/entrar)"
     ],
     "additionalDirectories": [
       "/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/brand/svg"

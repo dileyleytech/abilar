@@ -1,6 +1,7 @@
 import 'server-only';
-import { projects, modules, projectPhotos, quotes, and, asc, desc, eq, exists, inArray, sql } from '@abilar/db';
+import { projects, modules, projectPhotos, quotes, conversations, and, asc, desc, eq, exists, inArray, sql } from '@abilar/db';
 import type { CarpenterProfile, Project, Module, ProjectPhoto } from '@abilar/db';
+import type { ProjectStatus, QuoteStatus } from '@abilar/shared';
 import { isWithinRadius } from '@abilar/shared';
 import { getDb } from '@/lib/db';
 
@@ -11,7 +12,6 @@ export type FeedItem = {
   moduleCount: number;
   categories: string[];
   photoPaths: string[];
-  quoted: boolean;
 };
 
 /** O projeto está na área de atendimento do marceneiro? (mesma cidade OU dentro do raio) */
@@ -84,14 +84,93 @@ export async function getCarpenterFeed(carpenter: CarpenterProfile): Promise<Fee
     catsByProject.set(m.projectId, set);
   }
 
-  return eligible.map((p) => ({
-    id: p.id,
-    title: p.title,
-    city: p.city,
-    moduleCount: count.get(p.id) ?? 0,
-    categories: [...(catsByProject.get(p.id) ?? [])],
-    photoPaths: photosByProject.get(p.id) ?? [],
-    quoted: quotedSet.has(p.id),
+  // Os pedidos que ele JÁ orçou saem do feed aberto — vão para "Meus orçamentos".
+  return eligible
+    .filter((p) => !quotedSet.has(p.id))
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      city: p.city,
+      moduleCount: count.get(p.id) ?? 0,
+      categories: [...(catsByProject.get(p.id) ?? [])],
+      photoPaths: photosByProject.get(p.id) ?? [],
+    }));
+}
+
+export type MyQuoteItem = {
+  projectId: string;
+  title: string;
+  city: string | null;
+  moduleCount: number;
+  categories: string[];
+  photoPaths: string[];
+  quoteStatus: QuoteStatus;
+  projectStatus: ProjectStatus;
+  conversationId: string | null;
+};
+
+/** Pedidos que ESTE marceneiro já orçou (qualquer status), com o status do
+ *  orçamento, do pedido e a conversa (se já houver chat liberado). */
+export async function getCarpenterQuotedProjects(carpenter: CarpenterProfile): Promise<MyQuoteItem[]> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      projectId: projects.id,
+      title: projects.title,
+      city: projects.city,
+      projectStatus: projects.status,
+      quoteStatus: quotes.status,
+    })
+    .from(quotes)
+    .innerJoin(projects, eq(projects.id, quotes.projectId))
+    .where(eq(quotes.carpenterId, carpenter.userId))
+    .orderBy(desc(quotes.updatedAt));
+  if (rows.length === 0) return [];
+  const ids = rows.map((r) => r.projectId);
+
+  const [photos, mods, convs] = await Promise.all([
+    db
+      .select({ projectId: projectPhotos.projectId, path: projectPhotos.path })
+      .from(projectPhotos)
+      .where(inArray(projectPhotos.projectId, ids))
+      .orderBy(asc(projectPhotos.createdAt)),
+    db
+      .select({ projectId: modules.projectId, type: modules.type })
+      .from(modules)
+      .where(inArray(modules.projectId, ids)),
+    db
+      .select({ projectId: conversations.projectId, id: conversations.id })
+      .from(conversations)
+      .where(and(eq(conversations.carpenterId, carpenter.userId), inArray(conversations.projectId, ids))),
+  ]);
+
+  const photosByProject = new Map<string, string[]>();
+  for (const ph of photos) {
+    const arr = photosByProject.get(ph.projectId) ?? [];
+    if (arr.length < 6) arr.push(ph.path);
+    photosByProject.set(ph.projectId, arr);
+  }
+  const count = new Map<string, number>();
+  const catsByProject = new Map<string, Set<string>>();
+  for (const m of mods) {
+    count.set(m.projectId, (count.get(m.projectId) ?? 0) + 1);
+    const set = catsByProject.get(m.projectId) ?? new Set<string>();
+    set.add(m.type);
+    catsByProject.set(m.projectId, set);
+  }
+  const convByProject = new Map<string, string>();
+  for (const c of convs) if (!convByProject.has(c.projectId)) convByProject.set(c.projectId, c.id);
+
+  return rows.map((r) => ({
+    projectId: r.projectId,
+    title: r.title,
+    city: r.city,
+    moduleCount: count.get(r.projectId) ?? 0,
+    categories: [...(catsByProject.get(r.projectId) ?? [])],
+    photoPaths: photosByProject.get(r.projectId) ?? [],
+    quoteStatus: r.quoteStatus,
+    projectStatus: r.projectStatus,
+    conversationId: convByProject.get(r.projectId) ?? null,
   }));
 }
 

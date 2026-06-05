@@ -1,28 +1,29 @@
 import Link from 'next/link';
-import type { Category } from '@abilar/shared';
 import { requireRole } from '@/lib/auth/session';
 import { getCarpenterProfile } from '@/lib/carpenter/profile';
-import { getCarpenterFeed } from '@/lib/carpenter/feed';
+import { getCarpenterFeed, getCarpenterQuotedProjects } from '@/lib/carpenter/feed';
 import { signedProjectPhotoUrl } from '@/lib/storage';
-import { CATEGORY_LABELS } from '@/lib/labels';
+import { MarceneiroFeed } from './_components/MarceneiroFeed';
+import { ServiceAreaPanel } from './_components/ServiceAreaPanel';
 
 export const metadata = { title: 'Área do marceneiro — Abilar' };
+
+const signPaths = async (paths: string[]) =>
+  (await Promise.all(paths.map((p) => signedProjectPhotoUrl(p)))).filter((u): u is string => !!u);
 
 export default async function MarceneiroPage() {
   const profile = await requireRole('CARPENTER');
   const carpenter = await getCarpenterProfile(profile.id);
-  const feed = carpenter ? await getCarpenterFeed(carpenter) : [];
-  const cards = await Promise.all(
-    feed.map(async (f) => ({
-      ...f,
-      photoUrls: (await Promise.all(f.photoPaths.map((p) => signedProjectPhotoUrl(p)))).filter(
-        (u): u is string => !!u,
-      ),
-    })),
-  );
+  const [feed, quotedRaw] = carpenter
+    ? await Promise.all([getCarpenterFeed(carpenter), getCarpenterQuotedProjects(carpenter)])
+    : [[], []];
+  const [openCards, quotedCards] = await Promise.all([
+    Promise.all(feed.map(async (f) => ({ ...f, photoUrls: await signPaths(f.photoPaths) }))),
+    Promise.all(quotedRaw.map(async (q) => ({ ...q, photoUrls: await signPaths(q.photoPaths) }))),
+  ]);
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="mx-auto w-full max-w-screen-2xl px-4 py-8 sm:px-6 lg:px-8">
       <h1 className="mb-6 text-2xl font-bold text-charcoal sm:text-3xl">
         Olá, {carpenter?.name ?? profile.name ?? 'marceneiro'} 👋
       </h1>
@@ -37,89 +38,22 @@ export default async function MarceneiroPage() {
           </Link>
         </div>
       ) : (
-        <div className="flex flex-col gap-6">
-          <section className="rounded-2xl border border-subtle bg-surface p-6 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <h2 className="text-lg font-semibold text-charcoal">Seu atendimento</h2>
-              <Link href="/marceneiro/perfil" className="text-sm font-medium text-brand-primary hover:underline">
-                Editar
-              </Link>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
+          {/* Feed (Meus orçamentos + Pedidos da região, lado a lado) */}
+          <div className="order-2 lg:order-1">
+            <MarceneiroFeed open={openCards} quoted={quotedCards} />
+          </div>
+
+          {/* Lateral direita: área de atendimento editável (filtra o feed) */}
+          <aside className="order-1 lg:order-2">
+            <div className="lg:sticky lg:top-20">
+              <ServiceAreaPanel
+                city={carpenter.serviceCity}
+                radiusKm={carpenter.serviceRadiusKm}
+                categories={carpenter.categories as string[]}
+              />
             </div>
-            <p className="mt-2 text-base text-charcoal">
-              📍 {carpenter.serviceCity} · raio de {carpenter.serviceRadiusKm} km
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {carpenter.categories.map((c) => (
-                <span key={c} className="rounded-pill bg-deep px-3 py-1 text-sm text-charcoal">
-                  {CATEGORY_LABELS[c as Category] ?? c}
-                </span>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <h2 className="mb-3 text-xl font-bold text-charcoal">Pedidos da sua região</h2>
-            {cards.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-subtle bg-surface p-10 text-center text-muted">
-                <span className="text-3xl" aria-hidden>📭</span>
-                <p className="mt-2 font-medium text-charcoal">Nenhum pedido aberto agora</p>
-                <p>Assim que aparecer um pedido na sua cidade/raio e categoria, ele surge aqui.</p>
-              </div>
-            ) : (
-              <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {cards.map((c) => (
-                  <li key={c.id}>
-                    <Link
-                      href={`/marceneiro/pedidos/${c.id}`}
-                      className="flex h-full flex-col overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm transition hover:-translate-y-0.5 hover:border-brand-primary/40 hover:shadow-md"
-                    >
-                      <div className="relative flex aspect-[4/3] items-center justify-center bg-deep">
-                        {c.photoUrls[0] ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={c.photoUrls[0]} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <span className="text-5xl" aria-hidden>🛋️</span>
-                        )}
-                        {c.photoUrls.length > 1 && (
-                          <span className="absolute bottom-2 right-2 rounded-pill bg-charcoal/70 px-2 py-0.5 text-xs font-medium text-white">
-                            📷 {c.photoUrls.length}
-                          </span>
-                        )}
-                        {c.quoted && (
-                          <span className="absolute left-2 top-2 rounded-pill bg-brand-secondary px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm">
-                            ✓ Orçamento enviado
-                          </span>
-                        )}
-                      </div>
-
-                      {c.photoUrls.length > 1 && (
-                        <div className="flex gap-1 px-2 pt-2">
-                          {c.photoUrls.slice(1, 5).map((u, i) => (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img key={i} src={u} alt="" className="h-12 w-12 rounded-md object-cover" />
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="flex flex-1 flex-col gap-2 p-4">
-                        <h3 className="text-lg font-semibold text-charcoal">{c.title}</h3>
-                        <p className="text-sm text-muted">
-                          📍 {c.city ?? '—'} · {c.moduleCount} {c.moduleCount === 1 ? 'móvel' : 'móveis'}
-                        </p>
-                        <div className="mt-auto flex flex-wrap gap-1.5">
-                          {c.categories.map((cat) => (
-                            <span key={cat} className="rounded-pill bg-deep px-2.5 py-0.5 text-xs font-medium text-charcoal">
-                              {CATEGORY_LABELS[cat as Category] ?? cat}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+          </aside>
         </div>
       )}
     </main>

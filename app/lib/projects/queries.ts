@@ -1,5 +1,5 @@
 import 'server-only';
-import { projects, modules, projectPhotos, and, asc, desc, eq, inArray, sql } from '@abilar/db';
+import { projects, modules, projectPhotos, quotes, and, asc, desc, eq, inArray, sql } from '@abilar/db';
 import type { Project, Module, ProjectPhoto } from '@abilar/db';
 import { getDb } from '@/lib/db';
 
@@ -16,13 +16,13 @@ export async function listMyProjects(userId: string): Promise<Project[]> {
 /** Pedidos + foto de capa + nº de móveis, para a listagem. */
 export async function listMyProjectsWithCover(
   userId: string,
-): Promise<(Project & { coverPath: string | null; moduleCount: number })[]> {
+): Promise<(Project & { coverPath: string | null; moduleCount: number; quoteCount: number })[]> {
   const db = getDb();
   const rows = await listMyProjects(userId);
   if (rows.length === 0) return [];
   const ids = rows.map((p) => p.id);
 
-  const [photos, counts] = await Promise.all([
+  const [photos, counts, quoteCounts] = await Promise.all([
     db
       .select({ projectId: projectPhotos.projectId, path: projectPhotos.path })
       .from(projectPhotos)
@@ -33,17 +33,25 @@ export async function listMyProjectsWithCover(
       .from(modules)
       .where(inArray(modules.projectId, ids))
       .groupBy(modules.projectId),
+    db
+      .select({ projectId: quotes.projectId, n: sql<number>`count(*)::int` })
+      .from(quotes)
+      .where(inArray(quotes.projectId, ids))
+      .groupBy(quotes.projectId),
   ]);
 
   const cover = new Map<string, string>();
   for (const ph of photos) if (!cover.has(ph.projectId)) cover.set(ph.projectId, ph.path);
   const count = new Map<string, number>();
   for (const c of counts) count.set(c.projectId, c.n);
+  const quoteCount = new Map<string, number>();
+  for (const q of quoteCounts) quoteCount.set(q.projectId, q.n);
 
   return rows.map((p) => ({
     ...p,
     coverPath: cover.get(p.id) ?? null,
     moduleCount: count.get(p.id) ?? 0,
+    quoteCount: quoteCount.get(p.id) ?? 0,
   }));
 }
 

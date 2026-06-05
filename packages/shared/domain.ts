@@ -58,3 +58,8 @@ export type KycStatus = z.infer<typeof kycStatusSchema>;
 export const QUOTE_STATUS = ['SENT', 'PRE_APPROVED', 'ACCEPTED', 'REJECTED', 'EXPIRED', 'PAID'] as const;
 export const quoteStatusSchema = z.enum(QUOTE_STATUS);
 export type QuoteStatus = z.infer<typeof quoteStatusSchema>;
+
+// Status da conversa (chat cliente↔marceneiro) — §7.8.
+export const CONVERSATION_STATUS = ['ACTIVE', 'CLOSED', 'BLOCKED'] as const;
+export const conversationStatusSchema = z.enum(CONVERSATION_STATUS);
+export type ConversationStatus = z.infer<typeof conversationStatusSchema>;
