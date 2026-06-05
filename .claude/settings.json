@@ -65,7 +65,8 @@
       "Bash(sed -n '118,140p' db/migrations/meta/_journal.json)",
       "Bash(sed -n '1,60p' app/lib/labels.ts)",
       "Bash(sed -n '1,60p' app/components/StatusBadge.tsx)",
-      "Bash(perl -i -pe \"s/\\\\.replace\\\\\\(\\\\/\\\\[.*?\\\\]\\\\/g, ''\\\\\\)\\\\.toLowerCase/.replace\\(\\\\/[\\\\\\\\\\\\\\\\u0300-\\\\\\\\\\\\\\\\u036f]\\\\/g, ''\\).toLowerCase/\" \"app/\\(app\\)/marceneiro/_components/MarceneiroFeed.tsx\")"
+      "Bash(perl -i -pe \"s/\\\\.replace\\\\\\(\\\\/\\\\[.*?\\\\]\\\\/g, ''\\\\\\)\\\\.toLowerCase/.replace\\(\\\\/[\\\\\\\\\\\\\\\\u0300-\\\\\\\\\\\\\\\\u036f]\\\\/g, ''\\).toLowerCase/\" \"app/\\(app\\)/marceneiro/_components/MarceneiroFeed.tsx\")",
+      "Bash(pnpm db:migrate)"
     ],
     "additionalDirectories": [
       "/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/brand/svg"

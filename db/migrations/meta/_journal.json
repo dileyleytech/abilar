@@ -127,6 +127,13 @@
       "when": 1780694407998,
       "tag": "0017_fase4_chat_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1780694408500,
+      "tag": "0018_chat_conversations_realtime",
+      "breakpoints": true
     }
   ]
 }
