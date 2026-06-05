@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { createAuthedChannel } from '@/lib/supabase/client';
 import type { ConversationListItem } from '@/lib/chat/queries';
 
 const timeLabel = (iso: string) => {
@@ -30,41 +30,49 @@ export function ConversationList({
   useEffect(() => setItems(initial), [initial]);
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    const channel = supabase
-      .channel(`inbox:${meId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-        const m = payload.new as {
-          conversation_id: string;
-          sender_id: string;
-          body: string;
-          redacted_body: string | null;
-          created_at: string;
-        };
-        setItems((prev) => {
-          const cur = prev.find((c) => c.id === m.conversation_id);
-          if (!cur) {
-            // Mensagem de uma conversa que ainda não está na lista → busca do servidor.
-            router.refresh();
-            return prev;
-          }
-          const fromOther = m.sender_id !== meId;
-          const updated = {
-            ...cur,
-            lastText: m.redacted_body ?? m.body,
-            lastAt: m.created_at,
-            unread: fromOther ? cur.unread + 1 : cur.unread,
+    let cleanup = () => {};
+    let cancelled = false;
+    createAuthedChannel(`inbox:${meId}`).then((res) => {
+      if (cancelled || !res) return;
+      const { supabase, channel } = res;
+      channel
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+          const m = payload.new as {
+            conversation_id: string;
+            sender_id: string;
+            body: string;
+            redacted_body: string | null;
+            created_at: string;
           };
-          const rest = prev.filter((c) => c.id !== m.conversation_id);
-          return [updated, ...rest];
-        });
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversations' }, () => {
-        router.refresh();
-      })
-      .subscribe();
+          setItems((prev) => {
+            const cur = prev.find((c) => c.id === m.conversation_id);
+            if (!cur) {
+              // Mensagem de uma conversa que ainda não está na lista → busca do servidor.
+              router.refresh();
+              return prev;
+            }
+            const fromOther = m.sender_id !== meId;
+            const updated = {
+              ...cur,
+              lastText: m.redacted_body ?? m.body,
+              lastAt: m.created_at,
+              unread: fromOther ? cur.unread + 1 : cur.unread,
+            };
+            const rest = prev.filter((c) => c.id !== m.conversation_id);
+            return [updated, ...rest];
+          });
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversations' }, () => {
+          router.refresh();
+        })
+        .subscribe();
+      cleanup = () => {
+        supabase.removeChannel(channel);
+      };
+    });
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      cleanup();
     };
   }, [meId, router]);
 

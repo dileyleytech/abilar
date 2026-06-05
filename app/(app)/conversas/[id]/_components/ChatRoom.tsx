@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { maskContact } from '@abilar/shared';
 import { sendMessage, markConversationRead } from '@/lib/chat/actions';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { createAuthedChannel } from '@/lib/supabase/client';
 
 type Msg = { id: string; senderId: string; text: string };
 
@@ -35,26 +35,34 @@ export function ChatRoom({
 
   // Realtime: novas mensagens da conversa (a RLS garante só participantes).
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    const channel = supabase
-      .channel(`conv:${conversationId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
-        (payload) => {
-          const m = payload.new as { id: string; sender_id: string; body: string; redacted_body: string | null };
-          const real: Msg = { id: m.id, senderId: m.sender_id, text: m.redacted_body ?? m.body };
-          setMessages((prev) => {
-            if (prev.some((x) => x.id === real.id)) return prev;
-            // remove o otimista do próprio remetente, se houver
-            const cleaned = prev.filter((x) => !(x.id.startsWith('temp-') && x.senderId === real.senderId));
-            return [...cleaned, real];
-          });
-        },
-      )
-      .subscribe();
+    let cleanup = () => {};
+    let cancelled = false;
+    createAuthedChannel(`conv:${conversationId}`).then((res) => {
+      if (cancelled || !res) return;
+      const { supabase, channel } = res;
+      channel
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
+          (payload) => {
+            const m = payload.new as { id: string; sender_id: string; body: string; redacted_body: string | null };
+            const real: Msg = { id: m.id, senderId: m.sender_id, text: m.redacted_body ?? m.body };
+            setMessages((prev) => {
+              if (prev.some((x) => x.id === real.id)) return prev;
+              // remove o otimista do próprio remetente, se houver
+              const cleaned = prev.filter((x) => !(x.id.startsWith('temp-') && x.senderId === real.senderId));
+              return [...cleaned, real];
+            });
+          },
+        )
+        .subscribe();
+      cleanup = () => {
+        supabase.removeChannel(channel);
+      };
+    });
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      cleanup();
     };
   }, [conversationId]);
 

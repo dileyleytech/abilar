@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { createAuthedChannel } from '@/lib/supabase/client';
 import { getMyUnreadCount } from '@/lib/chat/actions';
 
 /** Link "Conversas" no header com bolinha de não lidas, em tempo real.
@@ -26,16 +26,24 @@ export function ConversasNav({ meId, initial }: { meId: string; initial: number 
 
   // Tempo real: nova mensagem de outra pessoa incrementa.
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    const channel = supabase
-      .channel(`nav-unread:${meId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-        const m = payload.new as { sender_id: string };
-        if (m.sender_id !== meId) setCount((c) => c + 1);
-      })
-      .subscribe();
+    let cleanup = () => {};
+    let cancelled = false;
+    createAuthedChannel(`nav-unread:${meId}`).then((res) => {
+      if (cancelled || !res) return;
+      const { supabase, channel } = res;
+      channel
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+          const m = payload.new as { sender_id: string };
+          if (m.sender_id !== meId) setCount((c) => c + 1);
+        })
+        .subscribe();
+      cleanup = () => {
+        supabase.removeChannel(channel);
+      };
+    });
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      cleanup();
     };
   }, [meId]);
 

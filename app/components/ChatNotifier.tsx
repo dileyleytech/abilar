@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { createAuthedChannel } from '@/lib/supabase/client';
 
 type Pending = { conversationId: string };
 
@@ -15,21 +15,29 @@ export function ChatNotifier({ meId }: { meId: string }) {
   const [pending, setPending] = useState<Pending | null>(null);
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    const channel = supabase
-      .channel(`conv-notify:${meId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'conversations' },
-        (payload) => {
-          const c = payload.new as { id: string; carpenter_id: string };
-          // Notifica só o marceneiro da conversa (o cliente já abriu o chat).
-          if (c.carpenter_id === meId) setPending({ conversationId: c.id });
-        },
-      )
-      .subscribe();
+    let cleanup = () => {};
+    let cancelled = false;
+    createAuthedChannel(`conv-notify:${meId}`).then((res) => {
+      if (cancelled || !res) return;
+      const { supabase, channel } = res;
+      channel
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'conversations' },
+          (payload) => {
+            const c = payload.new as { id: string; carpenter_id: string };
+            // Notifica só o marceneiro da conversa (o cliente já abriu o chat).
+            if (c.carpenter_id === meId) setPending({ conversationId: c.id });
+          },
+        )
+        .subscribe();
+      cleanup = () => {
+        supabase.removeChannel(channel);
+      };
+    });
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      cleanup();
     };
   }, [meId]);
 
