@@ -71,6 +71,8 @@ export const carpenterProfiles = pgTable(
     serviceCity: text('service_city').notNull(),
     serviceCep: text('service_cep').notNull(),
     serviceRadiusKm: integer('service_radius_km').notNull().default(20),
+    serviceLat: numeric('service_lat', { precision: 9, scale: 6 }), // base p/ matching por raio
+    serviceLng: numeric('service_lng', { precision: 9, scale: 6 }),
     categories: categoryEnum('categories').array().notNull().default(sql`'{}'`),
     kycStatus: kycStatusEnum('kyc_status').notNull().default('PENDING'),
     rating: numeric('rating', { precision: 2, scale: 1 }),

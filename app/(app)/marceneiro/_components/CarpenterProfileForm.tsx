@@ -2,9 +2,16 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { CATEGORIES, PERSON_TYPES, type Category, type PersonType } from '@abilar/shared';
 import { saveCarpenterProfile } from '@/lib/carpenter/actions';
 import { CATEGORY_LABELS } from '@/lib/labels';
+
+// Mapa só no client (Leaflet usa window).
+const ServiceAreaMap = dynamic(() => import('./ServiceAreaMap'), {
+  ssr: false,
+  loading: () => <div className="h-64 w-full animate-pulse rounded-xl bg-deep" />,
+});
 
 const fld =
   'w-full rounded-xl border border-subtle bg-surface px-4 py-3.5 text-lg text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
@@ -19,6 +26,8 @@ export type CarpenterFormInitial = {
   serviceCity: string;
   serviceCep: string;
   serviceRadiusKm: string;
+  serviceLat: number | null;
+  serviceLng: number | null;
   categories: Category[];
   bio: string;
 };
@@ -35,6 +44,9 @@ export function CarpenterProfileForm({ initial }: { initial?: CarpenterFormIniti
   const [city, setCity] = useState(initial?.serviceCity ?? '');
   const [cep, setCep] = useState(initial?.serviceCep ?? '');
   const [radius, setRadius] = useState(initial?.serviceRadiusKm ?? '20');
+  const [lat, setLat] = useState<number | null>(initial?.serviceLat ?? null);
+  const [lng, setLng] = useState<number | null>(initial?.serviceLng ?? null);
+  const [cepStatus, setCepStatus] = useState<'idle' | 'loading' | 'found' | 'error'>('idle');
   const [cats, setCats] = useState<Category[]>(initial?.categories ?? []);
   const [bio, setBio] = useState(initial?.bio ?? '');
 
@@ -42,6 +54,33 @@ export function CarpenterProfileForm({ initial }: { initial?: CarpenterFormIniti
     setCats((cs) => (cs.includes(c) ? cs.filter((x) => x !== c) : [...cs, c]));
 
   const isPF = personType === 'PF';
+  const radiusKm = Math.max(1, Number(radius) || 1);
+
+  // Busca o CEP (cidade + lat/lng) quando completa 8 dígitos.
+  const onCepChange = (raw: string) => {
+    setCep(raw);
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length !== 8) {
+      setCepStatus('idle');
+      return;
+    }
+    setCepStatus('loading');
+    fetch(`/api/cep?cep=${digits}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.ok) {
+          if (d.city) setCity(d.city);
+          if (typeof d.lat === 'number' && typeof d.lng === 'number') {
+            setLat(d.lat);
+            setLng(d.lng);
+          }
+          setCepStatus('found');
+        } else {
+          setCepStatus('error');
+        }
+      })
+      .catch(() => setCepStatus('error'));
+  };
 
   const save = () =>
     start(async () => {
@@ -54,6 +93,8 @@ export function CarpenterProfileForm({ initial }: { initial?: CarpenterFormIniti
         serviceCity: city.trim(),
         serviceCep: cep.trim(),
         serviceRadiusKm: Number(radius),
+        serviceLat: lat ?? undefined,
+        serviceLng: lng ?? undefined,
         categories: cats,
         bio: bio.trim() || undefined,
       });
@@ -96,17 +137,51 @@ export function CarpenterProfileForm({ initial }: { initial?: CarpenterFormIniti
       </Block>
 
       <Block title="Onde você atende">
-        <Label text="Cidade">
-          <input className={fld} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Sua cidade" />
+        <Label text="CEP da sua oficina">
+          <input
+            className={fld}
+            inputMode="numeric"
+            value={cep}
+            onChange={(e) => onCepChange(e.target.value)}
+            placeholder="00000-000"
+          />
         </Label>
-        <div className="grid grid-cols-2 gap-3">
-          <Label text="CEP base">
-            <input className={fld} inputMode="numeric" value={cep} onChange={(e) => setCep(e.target.value)} placeholder="00000-000" />
-          </Label>
-          <Label text="Raio (km)">
-            <input className={fld} type="number" min={1} max={200} value={radius} onChange={(e) => setRadius(e.target.value)} />
-          </Label>
+        {cepStatus === 'loading' && <p className="text-sm text-muted">Buscando endereço…</p>}
+        {cepStatus === 'error' && <p className="text-sm text-ochre">CEP não encontrado — confira o número.</p>}
+
+        <Label text="Cidade">
+          <input className={fld} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Preenche pelo CEP" />
+        </Label>
+
+        <div>
+          <div className="flex items-baseline justify-between">
+            <span className="text-sm font-medium text-charcoal">Até onde você vai atender</span>
+            <span className="font-mono text-base text-brand-primary">{radiusKm} km</span>
+          </div>
+          <input
+            type="range"
+            min={1}
+            max={100}
+            step={1}
+            value={radiusKm}
+            onChange={(e) => setRadius(e.target.value)}
+            className="mt-2 w-full accent-brand-primary"
+          />
+          <p className="text-sm text-muted">Arraste para aumentar ou diminuir a distância.</p>
         </div>
+
+        {lat != null && lng != null ? (
+          <div className="mt-1">
+            <ServiceAreaMap lat={lat} lng={lng} radiusKm={radiusKm} />
+            <p className="mt-2 text-sm text-muted">
+              🟠 Você atende dentro do círculo (a partir do seu CEP). Ajuste o raio acima.
+            </p>
+          </div>
+        ) : (
+          <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-subtle bg-base text-center text-sm text-muted">
+            Digite o CEP para ver no mapa a área que você atende.
+          </div>
+        )}
       </Block>
 
       <Block title="O que você faz">

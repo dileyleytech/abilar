@@ -19,6 +19,8 @@ export default async function CarpenterPerfilPage() {
         serviceCity: c.serviceCity,
         serviceCep: c.serviceCep,
         serviceRadiusKm: String(c.serviceRadiusKm),
+        serviceLat: c.serviceLat != null ? Number(c.serviceLat) : null,
+        serviceLng: c.serviceLng != null ? Number(c.serviceLng) : null,
         categories: c.categories as Category[],
         bio: c.bio ?? '',
       }

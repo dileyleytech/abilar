@@ -34,6 +34,8 @@ export async function saveCarpenterProfile(input: unknown): Promise<ActionResult
       serviceCity: d.serviceCity,
       serviceCep: d.serviceCep,
       serviceRadiusKm: d.serviceRadiusKm,
+      serviceLat: d.serviceLat != null ? String(d.serviceLat) : null,
+      serviceLng: d.serviceLng != null ? String(d.serviceLng) : null,
       categories: d.categories,
     })
     .onConflictDoUpdate({
@@ -47,6 +49,8 @@ export async function saveCarpenterProfile(input: unknown): Promise<ActionResult
         serviceCity: d.serviceCity,
         serviceCep: d.serviceCep,
         serviceRadiusKm: d.serviceRadiusKm,
+        serviceLat: d.serviceLat != null ? String(d.serviceLat) : null,
+        serviceLng: d.serviceLng != null ? String(d.serviceLng) : null,
         categories: d.categories,
         updatedAt: sql`now()`,
       },
