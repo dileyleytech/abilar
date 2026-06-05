@@ -6,6 +6,7 @@ import { signedProjectPhotoUrl } from '@/lib/storage';
 import { StatusBadge } from '@/components/StatusBadge';
 import { ProjectActions } from './_components/ProjectActions';
 import { ModulesSection, type ModuleView } from './_components/ModulesSection';
+import { ProjectLocation } from './_components/ProjectLocation';
 
 export default async function PedidoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -58,8 +59,10 @@ export default async function PedidoDetailPage({ params }: { params: Promise<{ i
           <ModulesSection projectId={project.id} modules={moduleViews} editable={editable} />
         </div>
 
-        {/* Aside: documentos do projeto (PDF de arquiteto) + ações */}
+        {/* Aside: local da obra + documentos + ações */}
         <aside className="flex flex-col gap-6">
+          <ProjectLocation projectId={project.id} city={project.city} cep={project.cep} editable={editable} />
+
           {roomPhotos.length > 0 && (
             <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
               <h2 className="mb-3 text-lg font-semibold text-charcoal">Documentos do projeto</h2>

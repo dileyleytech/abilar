@@ -21,6 +21,15 @@ export const createProjectSchema = z.object({
 });
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 
+/** Edição do local da obra (cidade/CEP/coords) — alimenta o matching. */
+export const updateProjectLocationSchema = z.object({
+  city: z.string().trim().min(2, 'Informe a cidade'),
+  cep: z.string().trim().optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+});
+export type UpdateProjectLocationInput = z.infer<typeof updateProjectLocationSchema>;
+
 /** Módulo (móvel): a UI envia cm; o schema entrega *Mm prontos para o banco. */
 export const moduleInputSchema = z.object({
   ambiente: z.string().trim().max(60).optional(), // cômodo (ex.: "Cozinha")
