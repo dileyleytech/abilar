@@ -9,6 +9,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { ProjectActions } from './_components/ProjectActions';
 import { ModulesSection, type ModuleView } from './_components/ModulesSection';
 import { ProjectLocation } from './_components/ProjectLocation';
+import { PreApproveButton } from './_components/PreApproveButton';
 
 export default async function PedidoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -93,7 +94,7 @@ export default async function PedidoDetailPage({ params }: { params: Promise<{ i
                         )}
                       </div>
                       {q.note && <p className="mt-2 text-sm text-charcoal/80">“{q.note}”</p>}
-                      {/* TODO(Fase 4.4): pré-aprovar → abre chat com o marceneiro. */}
+                      <PreApproveButton quoteId={q.id} approved={q.status !== 'SENT'} />
                     </li>
                   ))}
                 </ul>

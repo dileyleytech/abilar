@@ -7,6 +7,7 @@ import { getProjectForCarpenter } from '@/lib/carpenter/feed';
 import { signedProjectPhotoUrl } from '@/lib/storage';
 import { getActivePricingConfig } from '@/lib/pricing/config';
 import { getCarpenterQuote } from '@/lib/quotes/queries';
+import { getConversationForProjectCarpenter } from '@/lib/chat/queries';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
 import { QuoteForm, type QuoteInitial } from './_components/QuoteForm';
 
@@ -14,10 +15,11 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
   const { id } = await params;
   const profile = await requireRole('CARPENTER');
   // Queries independentes em paralelo (1 ida em vez de 3 sequenciais).
-  const [carpenter, config, existing] = await Promise.all([
+  const [carpenter, config, existing, conversationId] = await Promise.all([
     getCarpenterProfile(profile.id),
     getActivePricingConfig(),
     getCarpenterQuote(id, profile.id),
+    getConversationForProjectCarpenter(id, profile.id),
   ]);
   if (!carpenter) notFound();
 
@@ -121,6 +123,15 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
                 )}
               </div>
             </section>
+          )}
+
+          {conversationId && (
+            <Link
+              href={`/conversas/${conversationId}`}
+              className="flex items-center justify-center gap-2 rounded-2xl bg-brand-secondary px-5 py-4 text-lg font-semibold text-white shadow-sm transition hover:opacity-90"
+            >
+              💬 Conversar com o cliente
+            </Link>
           )}
 
           <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">

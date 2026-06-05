@@ -113,6 +113,20 @@
       "when": 1780691753912,
       "tag": "0015_fase4_quotes_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1780694407517,
+      "tag": "0016_fase4_chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1780694407998,
+      "tag": "0017_fase4_chat_rls",
+      "breakpoints": true
     }
   ]
 }
