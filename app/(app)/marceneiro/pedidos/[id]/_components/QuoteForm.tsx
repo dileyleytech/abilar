@@ -80,6 +80,8 @@ export function QuoteForm({
         note: note.trim() || undefined,
       });
       if (!r.ok) return setError(r.error);
+      // Enviou/atualizou o orçamento → volta para a lista de pedidos da região.
+      router.push('/marceneiro');
       router.refresh();
     });
 

@@ -90,10 +90,11 @@ export function ChatRoom({
 
       <div className="border-t border-subtle p-3">
         {active ? (
-          <div className="flex gap-2">
-            <input
-              className="flex-1 rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
-              placeholder="Escreva uma mensagem…"
+          <div className="flex items-end gap-2">
+            <textarea
+              rows={1}
+              className="max-h-40 min-h-[3rem] flex-1 resize-none rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+              placeholder="Escreva uma mensagem…  (Enter envia · Shift+Enter quebra linha)"
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => {
@@ -103,7 +104,7 @@ export function ChatRoom({
                 }
               }}
             />
-            <button type="button" onClick={send} className="rounded-xl bg-brand-primary px-5 py-3 font-semibold text-white transition hover:opacity-90">
+            <button type="button" onClick={send} className="shrink-0 rounded-xl bg-brand-primary px-5 py-3 font-semibold text-white transition hover:opacity-90">
               Enviar
             </button>
           </div>

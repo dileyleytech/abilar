@@ -1,4 +1,4 @@
-import type { Category, ProjectStatus } from '@abilar/shared';
+import type { Category, ProjectStatus, QuoteStatus } from '@abilar/shared';
 
 export const CATEGORY_EMOJI: Record<Category, string> = {
   GUARDA_ROUPA: '🚪',
@@ -39,4 +39,23 @@ export const PROJECT_STATUS_BADGE: Record<ProjectStatus, string> = {
   HIRED: 'bg-brand-primary/15 text-brand-primary',
   EXECUTED: 'bg-sage/30 text-charcoal',
   CANCELLED: 'bg-charcoal/10 text-muted line-through',
+};
+
+/** Rótulos do status do orçamento, na ótica do marceneiro. */
+export const QUOTE_STATUS_LABEL: Record<QuoteStatus, string> = {
+  SENT: 'Enviado',
+  PRE_APPROVED: 'Pré-aprovado',
+  ACCEPTED: 'Aceito',
+  REJECTED: 'Recusado',
+  EXPIRED: 'Expirado',
+  PAID: 'Pago',
+};
+
+export const QUOTE_STATUS_BADGE: Record<QuoteStatus, string> = {
+  SENT: 'bg-brand-secondary/15 text-brand-secondary',
+  PRE_APPROVED: 'bg-brand-primary/15 text-brand-primary',
+  ACCEPTED: 'bg-sage/30 text-charcoal',
+  REJECTED: 'bg-charcoal/10 text-muted line-through',
+  EXPIRED: 'bg-deep text-muted',
+  PAID: 'bg-sage/30 text-charcoal',
 };
