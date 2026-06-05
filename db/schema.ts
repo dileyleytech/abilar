@@ -31,6 +31,8 @@ import {
   PHOTO_KINDS,
   QUOTE_STATUS,
   CONVERSATION_STATUS,
+  REPORT_REASONS,
+  REPORT_STATUS,
 } from '@abilar/shared';
 
 // Enums (fonte única dos literais em @abilar/shared/domain).
@@ -45,6 +47,8 @@ export const photoKindEnum = pgEnum('photo_kind', PHOTO_KINDS);
 export const pricingScopeEnum = pgEnum('pricing_scope', ['GLOBAL', 'PROMO']);
 export const quoteStatusEnum = pgEnum('quote_status', QUOTE_STATUS);
 export const conversationStatusEnum = pgEnum('conversation_status', CONVERSATION_STATUS);
+export const reportReasonEnum = pgEnum('report_reason', REPORT_REASONS);
+export const reportStatusEnum = pgEnum('report_status', REPORT_STATUS);
 
 /** Perfil 1:1 com auth.users (id = auth.uid()). `role` é a fonte de verdade
  *  do papel (NÃO confiar em user_metadata para autorização). */
@@ -317,10 +321,35 @@ export const messages = pgTable(
   (t) => [index('messages_conversation_idx').on(t.conversationId, t.createdAt)],
 );
 
+/** Denúncia de conversa/mensagem (moderação §7.8, exigência das lojas). */
+export const reports = pgTable(
+  'reports',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    conversationId: uuid('conversation_id')
+      .notNull()
+      .references(() => conversations.id, { onDelete: 'cascade' }),
+    messageId: uuid('message_id').references(() => messages.id, { onDelete: 'set null' }),
+    reporterId: uuid('reporter_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    reason: reportReasonEnum('reason').notNull(),
+    detail: text('detail'),
+    status: reportStatusEnum('status').notNull().default('OPEN'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('reports_status_idx').on(t.status, t.createdAt),
+    index('reports_conversation_idx').on(t.conversationId),
+  ],
+);
+
 export type Conversation = typeof conversations.$inferSelect;
 export type NewConversation = typeof conversations.$inferInsert;
 export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
+export type Report = typeof reports.$inferSelect;
+export type NewReport = typeof reports.$inferInsert;
 
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;

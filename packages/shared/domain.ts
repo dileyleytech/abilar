@@ -63,3 +63,30 @@ export type QuoteStatus = z.infer<typeof quoteStatusSchema>;
 export const CONVERSATION_STATUS = ['ACTIVE', 'CLOSED', 'BLOCKED'] as const;
 export const conversationStatusSchema = z.enum(CONVERSATION_STATUS);
 export type ConversationStatus = z.infer<typeof conversationStatusSchema>;
+
+/** Só uma conversa ATIVA aceita novas mensagens (encerrada/bloqueada não). */
+export function canMessage(status: ConversationStatus): boolean {
+  return status === 'ACTIVE';
+}
+
+// Moderação do chat (exigência das lojas) — §7.8: denunciar mensagem/conversa.
+export const REPORT_REASONS = [
+  'CONTACT_OUTSIDE', // tentar fechar/pagar por fora da plataforma
+  'HARASSMENT', // assédio, ofensa, discurso de ódio
+  'SCAM', // golpe / fraude
+  'SPAM', // spam / propaganda
+  'OTHER',
+] as const;
+export const reportReasonSchema = z.enum(REPORT_REASONS);
+export type ReportReason = z.infer<typeof reportReasonSchema>;
+
+export const REPORT_STATUS = ['OPEN', 'REVIEWED', 'DISMISSED', 'ACTIONED'] as const;
+export const reportStatusSchema = z.enum(REPORT_STATUS);
+export type ReportStatus = z.infer<typeof reportStatusSchema>;
+
+/** Entrada validada de uma denúncia (razão + detalhe opcional). */
+export const reportInputSchema = z.object({
+  reason: reportReasonSchema,
+  detail: z.string().trim().max(1000).optional(),
+});
+export type ReportInput = z.infer<typeof reportInputSchema>;
