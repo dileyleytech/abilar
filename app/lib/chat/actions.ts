@@ -5,9 +5,17 @@ import { maskContact } from '@abilar/shared';
 import { conversations, messages, quotes, projects, eq, and, sql } from '@abilar/db';
 import { getDb } from '@/lib/db';
 import { getSessionProfile } from '@/lib/auth/session';
+import { countUnreadMessages } from '@/lib/chat/queries';
 
 export type PreApproveResult = { ok: true; conversationId: string } | { ok: false; error: string };
 export type ActionResult = { ok: true } | { ok: false; error: string };
+
+/** Total de mensagens não lidas do usuário logado (badge do header). */
+export async function getMyUnreadCount(): Promise<number> {
+  const profile = await getSessionProfile();
+  if (!profile) return 0;
+  return countUnreadMessages(profile.id);
+}
 
 /** Cliente PRÉ-APROVA um orçamento → cria a conversa e libera o chat (§7.8). */
 export async function preApproveQuote(quoteId: string): Promise<PreApproveResult> {
@@ -106,5 +114,6 @@ export async function sendMessage(conversationId: string, body: string): Promise
     redactedBody: redacted === text ? null : redacted,
   });
   revalidatePath(`/conversas/${conversationId}`);
+  revalidatePath('/conversas'); // atualiza a caixa (prévia + não lidas)
   return { ok: true };
 }

@@ -141,6 +141,12 @@ export async function listConversations(userId: string): Promise<ConversationLis
     .sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
 }
 
+/** Total de mensagens não lidas do usuário (soma de todas as conversas). */
+export async function countUnreadMessages(userId: string): Promise<number> {
+  const items = await listConversations(userId);
+  return items.reduce((acc, c) => acc + c.unread, 0);
+}
+
 export type ChatMessage = Pick<Message, 'id' | 'senderId' | 'createdAt'> & { text: string };
 
 /** Mensagens da conversa (mais antigas primeiro). Mostra o corpo mascarado. */

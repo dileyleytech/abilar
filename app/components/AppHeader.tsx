@@ -1,10 +1,15 @@
 import Link from 'next/link';
 import { getSessionProfile } from '@/lib/auth/session';
+import { countUnreadMessages } from '@/lib/chat/queries';
+import { ConversasNav } from './ConversasNav';
 
 /** Cabeçalho do app (full-width, sticky). Mostra navegação conforme login/papel. */
 export async function AppHeader() {
   const profile = await getSessionProfile();
   const firstName = profile?.name?.split(' ')[0];
+  const chatUserId =
+    profile && (profile.role === 'CLIENT' || profile.role === 'CARPENTER') ? profile.id : null;
+  const unread = chatUserId ? await countUnreadMessages(chatUserId) : 0;
 
   return (
     <header className="sticky top-0 z-20 w-full border-b border-subtle bg-surface/90 backdrop-blur">
@@ -33,14 +38,7 @@ export async function AppHeader() {
                   Minha área
                 </Link>
               )}
-              {(profile.role === 'CLIENT' || profile.role === 'CARPENTER') && (
-                <Link
-                  href="/conversas"
-                  className="rounded-md px-3 py-2 text-sm font-medium text-charcoal hover:bg-deep"
-                >
-                  Conversas
-                </Link>
-              )}
+              {chatUserId && <ConversasNav meId={chatUserId} initial={unread} />}
               {profile.role === 'ADMIN' && (
                 <Link
                   href="/admin/precos"
