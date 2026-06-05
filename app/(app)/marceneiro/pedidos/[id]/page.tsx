@@ -126,12 +126,7 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
           <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
             <h2 className="mb-3 text-lg font-semibold text-charcoal">Seu orçamento</h2>
             {config ? (
-              <QuoteForm
-                projectId={project.id}
-                minDilutionPct={config.dilutionMinCarpenterSharePct}
-                installmentOptions={Object.keys(config.installmentTable).map(Number).sort((a, b) => a - b)}
-                initial={quoteInitial}
-              />
+              <QuoteForm projectId={project.id} config={config} initial={quoteInitial} />
             ) : (
               <p className="text-muted">Configuração de preço indisponível.</p>
             )}

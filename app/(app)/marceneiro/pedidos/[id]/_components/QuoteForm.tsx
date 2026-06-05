@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { reaisToCents, formatBRL } from '@abilar/shared';
-import { sendQuote, withdrawQuote, previewQuote, type QuotePreview } from '@/lib/quotes/actions';
+import { quotePricing, type PricingConfig } from '@abilar/pricing';
+import { sendQuote, withdrawQuote } from '@/lib/quotes/actions';
 
 const fld =
   'w-full rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
@@ -18,45 +19,44 @@ export type QuoteInitial = {
 
 export function QuoteForm({
   projectId,
-  minDilutionPct,
-  installmentOptions,
+  config,
   initial,
 }: {
   projectId: string;
-  minDilutionPct: number;
-  installmentOptions: number[];
+  config: PricingConfig;
   initial?: QuoteInitial;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  const minS = config.dilutionMinCarpenterSharePct;
+  const installmentOptions = useMemo(
+    () => Object.keys(config.installmentTable).map(Number).sort((a, b) => a - b),
+    [config],
+  );
+
   const [valor, setValor] = useState(initial?.baseValueReais ?? '');
   const [maxInst, setMaxInst] = useState<number>(initial?.maxInstallments ?? 1);
-  const [s, setS] = useState<number>(initial?.dilutionSharePct ?? Math.max(minDilutionPct, 100));
+  const [s, setS] = useState<number>(initial?.dilutionSharePct ?? Math.max(minS, 100));
   const [note, setNote] = useState(initial?.note ?? '');
-  const [preview, setPreview] = useState<QuotePreview | null>(null);
 
-  const cents = (() => {
-    const n = Number(valor);
-    return Number.isFinite(n) && n > 0 ? reaisToCents(n) : 0;
-  })();
+  const valorNum = Number(valor) || 0;
+  const cents = valorNum > 0 ? reaisToCents(valorNum) : 0;
 
-  // Preview ao vivo (calculado no servidor, com debounce).
-  const tRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (cents <= 0) {
-      setPreview(null);
-      return;
-    }
-    if (tRef.current) clearTimeout(tRef.current);
-    tRef.current = setTimeout(() => {
-      previewQuote({ baseValueCents: cents, maxInstallments: maxInst, dilutionSharePct: s }).then(setPreview);
-    }, 300);
-    return () => {
-      if (tRef.current) clearTimeout(tRef.current);
-    };
-  }, [cents, maxInst, s]);
+  // A faixa do slider de valor cresce conforme o valor digitado (passo R$ 500).
+  const sliderMax = useMemo(() => Math.max(50000, Math.ceil(valorNum / 50000) * 50000), [valorNum]);
+
+  // Preview ao vivo — cálculo INSTANTÂNEO no client (motor puro).
+  const preview = useMemo(() => {
+    if (cents <= 0) return null;
+    const avista = quotePricing({ baseValueCents: cents, config, installments: 1, method: 'PIX', carpenterDilutionSharePct: s });
+    const parc =
+      maxInst > 1
+        ? quotePricing({ baseValueCents: cents, config, installments: maxInst, method: 'CARD', carpenterDilutionSharePct: s })
+        : null;
+    return { avista, parc };
+  }, [cents, maxInst, s, config]);
 
   const submit = () =>
     start(async () => {
@@ -85,10 +85,26 @@ export function QuoteForm({
         </p>
       )}
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-charcoal">Seu valor pelo serviço (R$)</span>
-        <input className={fld} type="number" inputMode="decimal" min={0} step="0.01" placeholder="0,00" value={valor} onChange={(e) => setValor(e.target.value)} />
-      </label>
+      {/* Valor: barra + campo, atualizam ao vivo */}
+      <div>
+        <div className="flex items-baseline justify-between">
+          <span className="text-sm font-medium text-charcoal">Seu valor pelo serviço</span>
+          <span className="font-mono text-lg font-bold text-brand-primary">{cents > 0 ? formatBRL(cents) : 'R$ 0,00'}</span>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={sliderMax}
+          step={500}
+          value={Math.min(valorNum, sliderMax)}
+          onChange={(e) => setValor(e.target.value)}
+          className="mt-2 w-full accent-brand-primary"
+        />
+        <div className="mt-1 flex items-center gap-2">
+          <span className="text-sm text-muted">Ou digite:</span>
+          <input className={`${fld} max-w-40`} type="number" inputMode="decimal" min={0} step="0.01" placeholder="0,00" value={valor} onChange={(e) => setValor(e.target.value)} />
+        </div>
+      </div>
 
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium text-charcoal">Aceita parcelar no cartão até</span>
@@ -107,21 +123,21 @@ export function QuoteForm({
             <span className="text-sm font-medium text-charcoal">Quanto da taxa do cartão você absorve</span>
             <span className="font-mono text-base text-brand-primary">{s}%</span>
           </div>
-          <input type="range" min={minDilutionPct} max={100} step={1} value={s} onChange={(e) => setS(Number(e.target.value))} className="mt-2 w-full accent-brand-primary" />
+          <input type="range" min={minS} max={100} step={1} value={s} onChange={(e) => setS(Number(e.target.value))} className="mt-2 w-full accent-brand-primary" />
           <p className="text-sm text-muted">Quanto mais você absorve, menos o cliente paga a mais — e você recebe um pouco menos.</p>
         </div>
       )}
 
       {preview && (
         <div className="grid grid-cols-1 gap-3 rounded-xl border border-subtle bg-base p-4 sm:grid-cols-2">
-          <Scenario title="À vista (Pix)" youGet={preview.avista.youGetCents} clientPays={preview.avista.clientPaysCents} />
-          {preview.parcelado ? (
+          <Scenario title="À vista (Pix)" youGet={preview.avista.carpenterPayoutCents} clientPays={preview.avista.displayedAmountCents} />
+          {preview.parc ? (
             <Scenario
-              title={`Em ${preview.parcelado.n}x no cartão`}
-              youGet={preview.parcelado.youGetCents}
-              clientPays={preview.parcelado.clientPaysCents}
-              installment={preview.parcelado.installmentCents}
-              n={preview.parcelado.n}
+              title={`Em ${maxInst}x no cartão`}
+              youGet={preview.parc.carpenterPayoutCents}
+              clientPays={preview.parc.displayedAmountCents}
+              installment={Math.round(preview.parc.displayedAmountCents / maxInst)}
+              n={maxInst}
             />
           ) : (
             <div className="flex items-center justify-center rounded-lg bg-deep p-4 text-center text-sm text-muted">
