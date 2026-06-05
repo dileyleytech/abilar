@@ -65,6 +65,7 @@ export type ConversationListItem = {
   status: string;
   lastText: string | null;
   lastAt: string | null; // ISO
+  unread: number;
 };
 
 /** Todas as conversas do usuário (cliente ou marceneiro), com a outra parte, o
@@ -79,6 +80,8 @@ export async function listConversations(userId: string): Promise<ConversationLis
       carpenterId: conversations.carpenterId,
       status: conversations.status,
       createdAt: conversations.createdAt,
+      clientLastReadAt: conversations.clientLastReadAt,
+      carpenterLastReadAt: conversations.carpenterLastReadAt,
       projectTitle: projects.title,
       clientName: profiles.name,
       carpenterName: carpenterProfiles.name,
@@ -90,11 +93,12 @@ export async function listConversations(userId: string): Promise<ConversationLis
     .where(or(eq(conversations.clientId, userId), eq(conversations.carpenterId, userId)));
   if (rows.length === 0) return [];
 
-  // Última mensagem de cada conversa (mais recente primeiro; fica a 1ª por conversa).
+  // Todas as mensagens das conversas (mais recentes primeiro), p/ prévia + não lidas.
   const ids = rows.map((r) => r.id);
   const msgs = await db
     .select({
       conversationId: messages.conversationId,
+      senderId: messages.senderId,
       body: messages.body,
       redactedBody: messages.redactedBody,
       createdAt: messages.createdAt,
@@ -102,9 +106,20 @@ export async function listConversations(userId: string): Promise<ConversationLis
     .from(messages)
     .where(inArray(messages.conversationId, ids))
     .orderBy(desc(messages.createdAt));
+
   const last = new Map<string, { text: string; at: Date }>();
+  const unreadByConv = new Map<string, number>();
+  const lastReadByConv = new Map<string, Date | null>();
+  for (const r of rows) {
+    lastReadByConv.set(r.id, r.clientId === userId ? r.clientLastReadAt : r.carpenterLastReadAt);
+  }
   for (const m of msgs) {
     if (!last.has(m.conversationId)) last.set(m.conversationId, { text: m.redactedBody ?? m.body, at: m.createdAt });
+    // Não lida = de outra pessoa e mais nova que o meu "último lido".
+    const lr = lastReadByConv.get(m.conversationId) ?? null;
+    if (m.senderId !== userId && (lr === null || m.createdAt > lr)) {
+      unreadByConv.set(m.conversationId, (unreadByConv.get(m.conversationId) ?? 0) + 1);
+    }
   }
 
   return rows
@@ -120,6 +135,7 @@ export async function listConversations(userId: string): Promise<ConversationLis
           (meIsClient ? r.carpenterName : r.clientName) ?? (meIsClient ? 'Marceneiro' : 'Cliente'),
         lastText: l?.text ?? null,
         lastAt: (l?.at ?? r.createdAt).toISOString(),
+        unread: unreadByConv.get(r.id) ?? 0,
       };
     })
     .sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));

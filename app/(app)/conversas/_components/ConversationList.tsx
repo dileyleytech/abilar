@@ -36,6 +36,7 @@ export function ConversationList({
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
         const m = payload.new as {
           conversation_id: string;
+          sender_id: string;
           body: string;
           redacted_body: string | null;
           created_at: string;
@@ -47,7 +48,13 @@ export function ConversationList({
             router.refresh();
             return prev;
           }
-          const updated = { ...cur, lastText: m.redacted_body ?? m.body, lastAt: m.created_at };
+          const fromOther = m.sender_id !== meId;
+          const updated = {
+            ...cur,
+            lastText: m.redacted_body ?? m.body,
+            lastAt: m.created_at,
+            unread: fromOther ? cur.unread + 1 : cur.unread,
+          };
           const rest = prev.filter((c) => c.id !== m.conversation_id);
           return [updated, ...rest];
         });
@@ -87,11 +94,16 @@ export function ConversationList({
                 <p className="truncate font-semibold text-charcoal">{c.otherName}</p>
                 {c.lastAt && <span className="shrink-0 text-xs text-muted">{timeLabel(c.lastAt)}</span>}
               </div>
-              <p className="truncate text-sm text-muted">
+              <p className={`truncate text-sm ${c.unread > 0 ? 'font-semibold text-charcoal' : 'text-muted'}`}>
                 {c.lastText ?? <span className="italic">Sem mensagens ainda</span>}
               </p>
               <p className="truncate text-xs text-subtle">{c.projectTitle}</p>
             </div>
+            {c.unread > 0 && (
+              <span className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-brand-primary px-1.5 text-xs font-bold text-white">
+                {c.unread > 9 ? '9+' : c.unread}
+              </span>
+            )}
           </Link>
         </li>
       ))}

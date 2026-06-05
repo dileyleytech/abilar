@@ -286,6 +286,9 @@ export const conversations = pgTable(
       .references(() => profiles.id, { onDelete: 'cascade' }),
     quoteId: uuid('quote_id').references(() => quotes.id, { onDelete: 'set null' }),
     status: conversationStatusEnum('status').notNull().default('ACTIVE'),
+    // Até quando cada participante leu (para contar mensagens não lidas).
+    clientLastReadAt: timestamp('client_last_read_at', { withTimezone: true }),
+    carpenterLastReadAt: timestamp('carpenter_last_read_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

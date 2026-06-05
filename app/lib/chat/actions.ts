@@ -59,6 +59,25 @@ export async function preApproveQuote(quoteId: string): Promise<PreApproveResult
   return { ok: true, conversationId };
 }
 
+/** Marca a conversa como lida até agora (zera as não lidas para este usuário). */
+export async function markConversationRead(conversationId: string): Promise<ActionResult> {
+  const profile = await getSessionProfile();
+  if (!profile) return { ok: false, error: 'Faça login.' };
+  const db = getDb();
+  const [conv] = await db
+    .select({ clientId: conversations.clientId, carpenterId: conversations.carpenterId })
+    .from(conversations)
+    .where(eq(conversations.id, conversationId))
+    .limit(1);
+  if (!conv || (conv.clientId !== profile.id && conv.carpenterId !== profile.id)) {
+    return { ok: false, error: 'Conversa não encontrada.' };
+  }
+  const col = conv.clientId === profile.id ? { clientLastReadAt: sql`now()` } : { carpenterLastReadAt: sql`now()` };
+  await db.update(conversations).set(col).where(eq(conversations.id, conversationId));
+  revalidatePath('/conversas');
+  return { ok: true };
+}
+
 /** Envia uma mensagem no chat (com mascaramento de contato — §7.8). */
 export async function sendMessage(conversationId: string, body: string): Promise<ActionResult> {
   const profile = await getSessionProfile();

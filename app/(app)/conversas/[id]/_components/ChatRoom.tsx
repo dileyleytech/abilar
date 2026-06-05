@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { maskContact } from '@abilar/shared';
-import { sendMessage } from '@/lib/chat/actions';
+import { sendMessage, markConversationRead } from '@/lib/chat/actions';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 type Msg = { id: string; senderId: string; text: string };
@@ -27,6 +27,11 @@ export function ChatRoom({
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Estou vendo a conversa → marca como lida (ao abrir e a cada nova mensagem).
+  useEffect(() => {
+    void markConversationRead(conversationId);
+  }, [conversationId, messages.length]);
 
   // Realtime: novas mensagens da conversa (a RLS garante só participantes).
   useEffect(() => {
