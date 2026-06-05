@@ -9,12 +9,26 @@ export const cmDimensionSchema = z
   .positive('Informe a medida')
   .transform((cm) => cmToMm(cm));
 
-/** Projeto = container com NOME (categoria/workType vivem nos móveis). */
+/** Projeto = container com NOME (categoria/workType vivem nos móveis).
+ *  Local da obra (cidade/CEP/coords) alimenta o matching com o marceneiro. */
 export const createProjectSchema = z.object({
   title: z.string().trim().min(2, 'Dê um nome ao pedido').max(120),
   sourceType: z.enum(SOURCE_TYPES).default('AI_GENERATED'),
+  city: z.string().trim().min(2).optional(),
+  cep: z.string().trim().optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
 });
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
+
+/** Edição do local da obra (cidade/CEP/coords) — alimenta o matching. */
+export const updateProjectLocationSchema = z.object({
+  city: z.string().trim().min(2, 'Informe a cidade'),
+  cep: z.string().trim().optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+});
+export type UpdateProjectLocationInput = z.infer<typeof updateProjectLocationSchema>;
 
 /** Módulo (móvel): a UI envia cm; o schema entrega *Mm prontos para o banco. */
 export const moduleInputSchema = z.object({

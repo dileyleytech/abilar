@@ -4,4 +4,4 @@ export * from './client';
 
 // Re-export dos operadores Drizzle usados pelo app (evita o app depender
 // diretamente de drizzle-orm).
-export { and, or, eq, ne, desc, asc, sql, inArray } from 'drizzle-orm';
+export { and, or, eq, ne, desc, asc, sql, inArray, exists } from 'drizzle-orm';

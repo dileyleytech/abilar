@@ -13,8 +13,16 @@ export type Database = ReturnType<typeof createDb>;
  * (ex.: env.HYPERDRIVE.connectionString nos Workers).
  */
 export function createDb(connectionString: string) {
-  // Hyperdrive já faz pooling em transaction mode -> desligar prepare/pooling do driver.
-  const sql = postgres(connectionString, { prepare: false, max: 1 });
+  // Hyperdrive/Supavisor já fazem pooling -> desligar prepare/pooling do driver.
+  // idle_timeout/max_lifetime: solta conexões ociosas antes do pooler matá-las
+  // (evita "Failed query" ao reusar uma conexão derrubada).
+  const sql = postgres(connectionString, {
+    prepare: false,
+    max: 1,
+    idle_timeout: 20,
+    max_lifetime: 60 * 30,
+    connect_timeout: 15,
+  });
   return drizzle(sql, { schema });
 }
 

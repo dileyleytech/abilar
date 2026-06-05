@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import {
   createProjectSchema,
   moduleInputSchema,
+  updateProjectLocationSchema,
   photoKindSchema,
   projectStatusSchema,
   assertProjectTransition,
@@ -59,6 +60,10 @@ export async function createProject(input: {
       clientId: userId,
       title: p.data.title,
       sourceType: p.data.sourceType,
+      city: p.data.city ?? null,
+      cep: p.data.cep ?? null,
+      lat: p.data.lat != null ? String(p.data.lat) : null,
+      lng: p.data.lng != null ? String(p.data.lng) : null,
     })
     .returning({ id: projects.id });
 
@@ -124,6 +129,31 @@ export async function addModule(
   if (!created) return { ok: false, error: 'Não foi possível salvar o móvel.' };
   revalidatePath(`/pedidos/${projectId}`);
   return { ok: true, data: { moduleId: created.id } };
+}
+
+/** Atualiza o local da obra (cidade/CEP/coords) do pedido — alimenta o matching. */
+export async function updateProjectLocation(projectId: string, input: unknown): Promise<Result> {
+  const userId = await uid();
+  if (!userId) return { ok: false, error: 'Faça login.' };
+  if (!(await ownProject(projectId, userId))) return { ok: false, error: 'Pedido não encontrado.' };
+
+  const parsed = updateProjectLocationSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Dados inválidos.' };
+  const d = parsed.data;
+
+  const db = getDb();
+  await db
+    .update(projects)
+    .set({
+      city: d.city,
+      cep: d.cep ?? null,
+      lat: d.lat != null ? String(d.lat) : null,
+      lng: d.lng != null ? String(d.lng) : null,
+      updatedAt: sql`now()`,
+    })
+    .where(eq(projects.id, projectId));
+  revalidatePath(`/pedidos/${projectId}`);
+  return { ok: true, data: undefined };
 }
 
 /** Remove um módulo do projeto (com ownership via projeto). */
