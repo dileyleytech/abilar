@@ -41,6 +41,11 @@ export default async function ContaPage() {
             Meus pedidos →
           </Link>
         )}
+        {profile.role === 'CARPENTER' && (
+          <Link href="/marceneiro" className="shrink-0 font-medium text-brand-primary hover:underline">
+            Minha área →
+          </Link>
+        )}
       </div>
 
       <div className="grid gap-4">

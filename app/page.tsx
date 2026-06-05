@@ -17,9 +17,13 @@ const STEPS = [
 ];
 
 export default async function Home() {
-  // Logado: a tela inicial já leva aos pedidos do usuário.
+  // Logado: a tela inicial já leva à área do usuário.
   const profile = await getSessionProfile();
-  if (profile) redirect(profile.role === 'CLIENT' ? '/pedidos' : '/conta');
+  if (profile) {
+    const home =
+      profile.role === 'CLIENT' ? '/pedidos' : profile.role === 'CARPENTER' ? '/marceneiro' : '/conta';
+    redirect(home);
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-base">

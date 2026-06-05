@@ -78,6 +78,13 @@
       "when": 1780403602842,
       "tag": "0010_fase3_carpenter_installment_discount",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1780668576408,
+      "tag": "0011_fase4_carpenter_geo",
+      "breakpoints": true
     }
   ]
 }
