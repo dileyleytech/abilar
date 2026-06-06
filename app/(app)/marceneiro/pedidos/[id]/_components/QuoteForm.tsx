@@ -203,19 +203,31 @@ export function QuoteForm({
                     ))}
                   </select>
                 )}
-                <input className={`${fld} mb-2`} value={l.name} onChange={(e) => patchLine(l.key, { name: e.target.value })} placeholder="Descrição do item" />
-                <div className="grid grid-cols-2 gap-2">
-                  <select className={fld} value={l.category} onChange={(e) => patchLine(l.key, { category: e.target.value as MaterialCategory })}>
-                    {MATERIAL_CATEGORIES.map((c) => (
-                      <option key={c} value={c}>{MATERIAL_CATEGORY_LABEL[c]}</option>
-                    ))}
-                  </select>
-                  <select className={fld} value={l.unit} onChange={(e) => patchLine(l.key, { unit: e.target.value as MaterialUnit })}>
-                    {MATERIAL_UNITS.map((u) => (
-                      <option key={u} value={u}>{MATERIAL_UNIT_LABEL[u]}</option>
-                    ))}
-                  </select>
-                </div>
+                {l.materialId ? (
+                  // Item do catálogo: nome/categoria/unidade vêm do cadastro (não edita).
+                  <div className="mb-2">
+                    <p className="font-medium text-charcoal">{l.name}</p>
+                    <p className="text-xs text-muted">
+                      {MATERIAL_CATEGORY_LABEL[l.category]} · por {MATERIAL_UNIT_LABEL[l.unit]} · do catálogo
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <input className={`${fld} mb-2`} value={l.name} onChange={(e) => patchLine(l.key, { name: e.target.value })} placeholder="Descrição do item" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <select className={fld} value={l.category} onChange={(e) => patchLine(l.key, { category: e.target.value as MaterialCategory })}>
+                        {MATERIAL_CATEGORIES.map((c) => (
+                          <option key={c} value={c}>{MATERIAL_CATEGORY_LABEL[c]}</option>
+                        ))}
+                      </select>
+                      <select className={fld} value={l.unit} onChange={(e) => patchLine(l.key, { unit: e.target.value as MaterialUnit })}>
+                        {MATERIAL_UNITS.map((u) => (
+                          <option key={u} value={u}>{MATERIAL_UNIT_LABEL[u]}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
                 <div className="mt-2 flex items-end gap-2">
                   <label className="flex flex-1 flex-col gap-1">
                     <span className="text-xs text-muted">Qtd ({MATERIAL_UNIT_LABEL[l.unit]})</span>
