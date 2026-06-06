@@ -131,7 +131,7 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
             {[...groups.entries()].map(([room, mods]) => (
               <div key={room}>
                 <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-brand-secondary">{room}</h3>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3">
                   {mods.map((m) => {
                     const url = modulePhoto.get(m.id) ?? null;
                     return (
