@@ -4,7 +4,7 @@ import { getCarpenterProfile } from '@/lib/carpenter/profile';
 import { getCarpenterFeed, getCarpenterQuotedProjects } from '@/lib/carpenter/feed';
 import { signedProjectPhotoUrl } from '@/lib/storage';
 import { MarceneiroFeed } from './_components/MarceneiroFeed';
-import { ServiceAreaPanel } from './_components/ServiceAreaPanel';
+import { ServiceAreaBar } from './_components/ServiceAreaBar';
 
 export const metadata = { title: 'Área do marceneiro — Abilar' };
 
@@ -23,8 +23,8 @@ export default async function MarceneiroPage() {
   ]);
 
   return (
-    <main className="mx-auto w-full max-w-screen-2xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-charcoal sm:text-3xl">
           Olá, {carpenter?.name ?? profile.name ?? 'marceneiro'} 👋
         </h1>
@@ -33,7 +33,7 @@ export default async function MarceneiroPage() {
             href="/marceneiro/catalogo"
             className="rounded-xl border border-subtle bg-surface px-4 py-2.5 text-sm font-semibold text-charcoal shadow-sm transition hover:border-brand-primary/40"
           >
-            📦 Catálogo de custo
+            📦 Meu catálogo
           </Link>
         )}
       </div>
@@ -48,22 +48,15 @@ export default async function MarceneiroPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
-          {/* Feed (Meus orçamentos + Pedidos da região, lado a lado) */}
-          <div className="order-2 lg:order-1">
-            <MarceneiroFeed open={openCards} quoted={quotedCards} />
-          </div>
-
-          {/* Lateral direita: área de atendimento editável (filtra o feed) */}
-          <aside className="order-1 lg:order-2">
-            <div className="lg:sticky lg:top-20">
-              <ServiceAreaPanel
-                city={carpenter.serviceCity}
-                radiusKm={carpenter.serviceRadiusKm}
-                categories={carpenter.categories as string[]}
-              />
-            </div>
-          </aside>
+        <div className="flex flex-col gap-5">
+          {/* Faixa fina de atendimento (resumo + ajustar) */}
+          <ServiceAreaBar
+            city={carpenter.serviceCity}
+            radiusKm={carpenter.serviceRadiusKm}
+            categories={carpenter.categories as string[]}
+          />
+          {/* Abas: novos pedidos + meus orçamentos */}
+          <MarceneiroFeed open={openCards} quoted={quotedCards} />
         </div>
       )}
     </main>

@@ -113,6 +113,18 @@ export const materialInputSchema = z.object({
 });
 export type MaterialInput = z.infer<typeof materialInputSchema>;
 
+/** Linha do orçamento (construtor por itens, §7.6). Vem do catálogo ou é avulsa.
+ *  qty pode ser fracionária (ex.: 4,5 m²); custo em centavos. */
+export const quoteLineItemSchema = z.object({
+  materialId: z.string().uuid().nullable().optional(),
+  name: z.string().trim().min(1, 'Descreva o item').max(120),
+  category: materialCategorySchema,
+  unit: materialUnitSchema,
+  qty: z.number().positive('Quantidade deve ser maior que zero').max(100000),
+  unitCostCents: z.number().int().min(0),
+});
+export type QuoteLineItem = z.infer<typeof quoteLineItemSchema>;
+
 /** Entrada validada de uma denúncia (razão + detalhe opcional). */
 export const reportInputSchema = z.object({
   reason: reportReasonSchema,

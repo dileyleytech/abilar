@@ -176,6 +176,23 @@ export async function getCarpenterQuotedProjects(carpenter: CarpenterProfile): P
 
 export type CarpenterProjectView = { project: Project; modules: Module[]; photos: ProjectPhoto[] } | null;
 
+/** Carrega o pedido (qualquer status) para o marceneiro que JÁ orçou — usado para
+ *  abrir/editar o orçamento depois que o pedido saiu de OPEN_FOR_QUOTES. A autorização
+ *  (o marceneiro ter um orçamento neste pedido) é responsabilidade de quem chama. */
+export async function getProjectDetailById(projectId: string): Promise<CarpenterProjectView> {
+  const db = getDb();
+  const [project] = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
+  if (!project) return null;
+  const [mods, photos] = await Promise.all([
+    db.select().from(modules).where(eq(modules.projectId, projectId)),
+    db
+      .select()
+      .from(projectPhotos)
+      .where(and(eq(projectPhotos.projectId, projectId), eq(projectPhotos.isCurrent, true))),
+  ]);
+  return { project, modules: mods, photos };
+}
+
 /** Detalhe (read-only) de um pedido aberto, se for elegível para este marceneiro. */
 export async function getProjectForCarpenter(
   projectId: string,
