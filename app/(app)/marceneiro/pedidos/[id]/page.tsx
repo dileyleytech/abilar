@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { formatCm, type Category, type QuoteLineItem } from '@abilar/shared';
 import { requireRole } from '@/lib/auth/session';
 import { getCarpenterProfile } from '@/lib/carpenter/profile';
-import { getProjectForCarpenter } from '@/lib/carpenter/feed';
+import { getProjectForCarpenter, getProjectDetailById } from '@/lib/carpenter/feed';
 import { listMaterials } from '@/lib/carpenter/materials';
 import { signedProjectPhotoUrl } from '@/lib/storage';
 import { getActivePricingConfig } from '@/lib/pricing/config';
@@ -25,7 +25,8 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
   ]);
   if (!carpenter) notFound();
 
-  const detail = await getProjectForCarpenter(id, carpenter);
+  // Já orçou → pode abrir/editar em qualquer status; senão, vale a elegibilidade (pedido aberto).
+  const detail = existing ? await getProjectDetailById(id) : await getProjectForCarpenter(id, carpenter);
   if (!detail) notFound();
   const { project, modules, photos } = detail;
 

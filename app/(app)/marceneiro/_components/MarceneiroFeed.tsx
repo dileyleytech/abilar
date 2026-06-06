@@ -130,11 +130,14 @@ export function MarceneiroFeed({ open, quoted }: { open: OpenCard[]; quoted: Quo
           ) : (
             <ul className="flex flex-col gap-3">
               {quotedFiltered.map((q) => {
-                const href = q.conversationId
-                  ? `/conversas/${q.conversationId}`
-                  : q.projectStatus === 'OPEN_FOR_QUOTES'
+                // Em negociação → abre a tela do orçamento (editar + conversar).
+                // Pedido encerrado → cai no chat, se houver.
+                const href =
+                  q.projectStatus === 'OPEN_FOR_QUOTES' || q.projectStatus === 'IN_NEGOTIATION'
                     ? `/marceneiro/pedidos/${q.projectId}`
-                    : null;
+                    : q.conversationId
+                      ? `/conversas/${q.conversationId}`
+                      : null;
                 const inner = (
                   <>
                     <Thumb

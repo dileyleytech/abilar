@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { quoteInputSchema } from '@abilar/shared';
 import { quotePricing, maxClientInstallments, computeItemsBase } from '@abilar/pricing';
-import { quotes, eq, and, sql } from '@abilar/db';
+import { quotes, projects, eq, and, sql } from '@abilar/db';
 import { getDb } from '@/lib/db';
 import { getSessionProfile } from '@/lib/auth/session';
 import { getCarpenterProfile } from '@/lib/carpenter/profile';
@@ -22,9 +22,25 @@ export async function sendQuote(projectId: string, input: unknown): Promise<Acti
   const carpenter = await getCarpenterProfile(profile.id);
   if (!carpenter) return { ok: false, error: 'Complete seu cadastro primeiro.' };
 
-  // Elegibilidade: pedido aberto, na área e categoria do marceneiro.
-  const eligible = await getProjectForCarpenter(projectId, carpenter);
-  if (!eligible) return { ok: false, error: 'Pedido indisponível para orçamento.' };
+  const db = getDb();
+  const [existingQuote] = await db
+    .select({ id: quotes.id })
+    .from(quotes)
+    .where(and(eq(quotes.projectId, projectId), eq(quotes.carpenterId, profile.id)))
+    .limit(1);
+
+  if (existingQuote) {
+    // Já tem orçamento → pode atualizar enquanto o pedido está em negociação.
+    const [proj] = await db.select({ status: projects.status }).from(projects).where(eq(projects.id, projectId)).limit(1);
+    if (!proj) return { ok: false, error: 'Pedido não encontrado.' };
+    if (proj.status !== 'OPEN_FOR_QUOTES' && proj.status !== 'IN_NEGOTIATION') {
+      return { ok: false, error: 'Este pedido não está mais em negociação.' };
+    }
+  } else {
+    // Novo orçamento: exige elegibilidade (pedido aberto, na área e categoria).
+    const eligible = await getProjectForCarpenter(projectId, carpenter);
+    if (!eligible) return { ok: false, error: 'Pedido indisponível para orçamento.' };
+  }
 
   const parsed = quoteInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Dados inválidos.' };
@@ -63,7 +79,6 @@ export async function sendQuote(projectId: string, input: unknown): Promise<Acti
   if (!worst.valid) return { ok: false, error: worst.warnings[0] ?? 'Orçamento inválido.' };
 
   const lineItems = d.lineItems ?? [];
-  const db = getDb();
   await db
     .insert(quotes)
     .values({
