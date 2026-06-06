@@ -33,6 +33,8 @@ import {
   CONVERSATION_STATUS,
   REPORT_REASONS,
   REPORT_STATUS,
+  MATERIAL_CATEGORIES,
+  MATERIAL_UNITS,
 } from '@abilar/shared';
 
 // Enums (fonte única dos literais em @abilar/shared/domain).
@@ -49,6 +51,8 @@ export const quoteStatusEnum = pgEnum('quote_status', QUOTE_STATUS);
 export const conversationStatusEnum = pgEnum('conversation_status', CONVERSATION_STATUS);
 export const reportReasonEnum = pgEnum('report_reason', REPORT_REASONS);
 export const reportStatusEnum = pgEnum('report_status', REPORT_STATUS);
+export const materialCategoryEnum = pgEnum('material_category', MATERIAL_CATEGORIES);
+export const materialUnitEnum = pgEnum('material_unit', MATERIAL_UNITS);
 
 /** Perfil 1:1 com auth.users (id = auth.uid()). `role` é a fonte de verdade
  *  do papel (NÃO confiar em user_metadata para autorização). */
@@ -350,6 +354,31 @@ export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
 export type Report = typeof reports.$inferSelect;
 export type NewReport = typeof reports.$inferInsert;
+
+/** Catálogo de custo do marceneiro (§7.6) — gestão financeira gratuita.
+ *  Custo em centavos (BIGINT). Itens inativos somem do construtor mas ficam no histórico. */
+export const carpenterMaterials = pgTable(
+  'carpenter_materials',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    carpenterId: uuid('carpenter_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    category: materialCategoryEnum('category').notNull(),
+    unit: materialUnitEnum('unit').notNull(),
+    unitCostCents: bigint('unit_cost_cents', { mode: 'number' }).notNull(),
+    sku: text('sku'),
+    supplier: text('supplier'),
+    active: boolean('active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('carpenter_materials_owner_idx').on(t.carpenterId, t.active, t.category)],
+);
+
+export type CarpenterMaterial = typeof carpenterMaterials.$inferSelect;
+export type NewCarpenterMaterial = typeof carpenterMaterials.$inferInsert;
 
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;

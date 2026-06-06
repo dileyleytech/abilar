@@ -1,12 +1,74 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { carpenterOnboardingSchema, CATEGORIES, type Category } from '@abilar/shared';
-import { carpenterProfiles, eq, sql } from '@abilar/db';
+import { carpenterOnboardingSchema, materialInputSchema, CATEGORIES, type Category } from '@abilar/shared';
+import { carpenterProfiles, carpenterMaterials, and, eq, sql } from '@abilar/db';
 import { getDb } from '@/lib/db';
 import { getSessionProfile } from '@/lib/auth/session';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+
+/** Cria um item no catálogo de custo do marceneiro (§7.6). Custo em centavos. */
+export async function createMaterial(input: unknown): Promise<ActionResult> {
+  const profile = await getSessionProfile();
+  if (!profile) return { ok: false, error: 'Faça login.' };
+  if (profile.role !== 'CARPENTER') return { ok: false, error: 'Apenas marceneiros.' };
+  const parsed = materialInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Dados inválidos.' };
+  const d = parsed.data;
+
+  const db = getDb();
+  await db.insert(carpenterMaterials).values({
+    carpenterId: profile.id,
+    name: d.name,
+    category: d.category,
+    unit: d.unit,
+    unitCostCents: d.unitCostCents,
+    sku: d.sku ?? null,
+    supplier: d.supplier ?? null,
+  });
+  revalidatePath('/marceneiro/catalogo');
+  return { ok: true };
+}
+
+/** Atualiza um item do catálogo (só o dono). */
+export async function updateMaterial(id: string, input: unknown): Promise<ActionResult> {
+  const profile = await getSessionProfile();
+  if (!profile) return { ok: false, error: 'Faça login.' };
+  if (profile.role !== 'CARPENTER') return { ok: false, error: 'Apenas marceneiros.' };
+  const parsed = materialInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Dados inválidos.' };
+  const d = parsed.data;
+
+  const db = getDb();
+  await db
+    .update(carpenterMaterials)
+    .set({
+      name: d.name,
+      category: d.category,
+      unit: d.unit,
+      unitCostCents: d.unitCostCents,
+      sku: d.sku ?? null,
+      supplier: d.supplier ?? null,
+      updatedAt: sql`now()`,
+    })
+    .where(and(eq(carpenterMaterials.id, id), eq(carpenterMaterials.carpenterId, profile.id)));
+  revalidatePath('/marceneiro/catalogo');
+  return { ok: true };
+}
+
+/** Ativa/desativa um item (não some do histórico de orçamentos). */
+export async function setMaterialActive(id: string, active: boolean): Promise<ActionResult> {
+  const profile = await getSessionProfile();
+  if (!profile || profile.role !== 'CARPENTER') return { ok: false, error: 'Sem permissão.' };
+  const db = getDb();
+  await db
+    .update(carpenterMaterials)
+    .set({ active, updatedAt: sql`now()` })
+    .where(and(eq(carpenterMaterials.id, id), eq(carpenterMaterials.carpenterId, profile.id)));
+  revalidatePath('/marceneiro/catalogo');
+  return { ok: true };
+}
 
 /** Atualiza só a ÁREA DE ATENDIMENTO (raio + categorias) — edição rápida no feed.
  *  O feed é recalculado com esses valores (matching cidade+categoria+raio). */
