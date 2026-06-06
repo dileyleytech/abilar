@@ -1,4 +1,11 @@
-import type { Category, ProjectStatus, QuoteStatus, ReportReason } from '@abilar/shared';
+import type {
+  Category,
+  ProjectStatus,
+  QuoteStatus,
+  ReportReason,
+  MaterialCategory,
+  MaterialUnit,
+} from '@abilar/shared';
 
 export const CATEGORY_EMOJI: Record<Category, string> = {
   GUARDA_ROUPA: '🚪',
@@ -58,6 +65,25 @@ export const QUOTE_STATUS_BADGE: Record<QuoteStatus, string> = {
   REJECTED: 'bg-charcoal/10 text-muted line-through',
   EXPIRED: 'bg-deep text-muted',
   PAID: 'bg-sage/30 text-charcoal',
+};
+
+/** Catálogo de custo (§7.6) — categorias e unidades. */
+export const MATERIAL_CATEGORY_LABEL: Record<MaterialCategory, string> = {
+  CHAPA: 'Chapa (MDF/MDP)',
+  ESPELHO: 'Espelho / Vidro',
+  FERRAGEM: 'Ferragem',
+  ACESSORIO: 'Acessório',
+  FITA_BORDA: 'Fita de borda',
+  SERVICO: 'Serviço / mão de obra',
+  FRETE: 'Frete',
+  OUTRO: 'Outro',
+};
+
+export const MATERIAL_UNIT_LABEL: Record<MaterialUnit, string> = {
+  UN: 'unidade',
+  M2: 'm²',
+  ML: 'metro linear',
+  H: 'hora',
 };
 
 /** Razões de denúncia do chat (§7.8). */

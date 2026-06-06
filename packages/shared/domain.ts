@@ -84,6 +84,35 @@ export const REPORT_STATUS = ['OPEN', 'REVIEWED', 'DISMISSED', 'ACTIONED'] as co
 export const reportStatusSchema = z.enum(REPORT_STATUS);
 export type ReportStatus = z.infer<typeof reportStatusSchema>;
 
+// ── Gestão financeira do marceneiro (§7.6): catálogo de custo (CarpenterMaterial)
+export const MATERIAL_CATEGORIES = [
+  'CHAPA', // chapas de MDF/MDP
+  'ESPELHO', // espelho / vidro
+  'FERRAGEM', // dobradiças, parafusos, puxadores
+  'ACESSORIO', // cestos, aramados, iluminação
+  'FITA_BORDA',
+  'SERVICO', // mão de obra
+  'FRETE',
+  'OUTRO',
+] as const;
+export const materialCategorySchema = z.enum(MATERIAL_CATEGORIES);
+export type MaterialCategory = z.infer<typeof materialCategorySchema>;
+
+export const MATERIAL_UNITS = ['UN', 'M2', 'ML', 'H'] as const; // unidade, m², metro linear, hora
+export const materialUnitSchema = z.enum(MATERIAL_UNITS);
+export type MaterialUnit = z.infer<typeof materialUnitSchema>;
+
+/** Entrada validada de um item do catálogo de custo. Custo em centavos (BIGINT). */
+export const materialInputSchema = z.object({
+  name: z.string().trim().min(2, 'Nome muito curto').max(120),
+  category: materialCategorySchema,
+  unit: materialUnitSchema,
+  unitCostCents: z.number().int('Use centavos inteiros').min(0, 'Custo não pode ser negativo'),
+  sku: z.string().trim().max(60).optional(),
+  supplier: z.string().trim().max(120).optional(),
+});
+export type MaterialInput = z.infer<typeof materialInputSchema>;
+
 /** Entrada validada de uma denúncia (razão + detalhe opcional). */
 export const reportInputSchema = z.object({
   reason: reportReasonSchema,

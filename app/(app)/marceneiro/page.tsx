@@ -24,9 +24,19 @@ export default async function MarceneiroPage() {
 
   return (
     <main className="mx-auto w-full max-w-screen-2xl px-4 py-8 sm:px-6 lg:px-8">
-      <h1 className="mb-6 text-2xl font-bold text-charcoal sm:text-3xl">
-        Olá, {carpenter?.name ?? profile.name ?? 'marceneiro'} 👋
-      </h1>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-charcoal sm:text-3xl">
+          Olá, {carpenter?.name ?? profile.name ?? 'marceneiro'} 👋
+        </h1>
+        {carpenter && (
+          <Link
+            href="/marceneiro/catalogo"
+            className="rounded-xl border border-subtle bg-surface px-4 py-2.5 text-sm font-semibold text-charcoal shadow-sm transition hover:border-brand-primary/40"
+          >
+            📦 Catálogo de custo
+          </Link>
+        )}
+      </div>
 
       {!carpenter ? (
         <div className="flex flex-col items-start gap-3 rounded-2xl border border-dashed border-subtle bg-surface p-8">
