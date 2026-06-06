@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { maskContact } from '@abilar/shared';
-import { conversations, messages, quotes, projects, eq, and, sql } from '@abilar/db';
+import { maskContact, reportInputSchema, type ConversationStatus } from '@abilar/shared';
+import { conversations, messages, reports, quotes, projects, eq, and, sql } from '@abilar/db';
 import { getDb } from '@/lib/db';
 import { getSessionProfile } from '@/lib/auth/session';
 import { countUnreadMessages } from '@/lib/chat/queries';
@@ -107,13 +107,75 @@ export async function sendMessage(conversationId: string, body: string): Promise
   if (conv.status !== 'ACTIVE') return { ok: false, error: 'Esta conversa está fechada.' };
 
   const redacted = maskContact(text);
+  const masked = redacted !== text;
   await db.insert(messages).values({
     conversationId,
     senderId: profile.id,
     body: text,
-    redactedBody: redacted === text ? null : redacted,
+    redactedBody: masked ? redacted : null,
+    // Sinaliza p/ moderação quando houve tentativa de compartilhar contato (§7.8).
+    flaggedReason: masked ? 'CONTACT_MASKED' : null,
   });
   revalidatePath(`/conversas/${conversationId}`);
   revalidatePath('/conversas'); // atualiza a caixa (prévia + não lidas)
+  return { ok: true };
+}
+
+/** Denuncia a conversa (opcionalmente uma mensagem) — moderação §7.8. */
+export async function reportConversation(
+  conversationId: string,
+  input: unknown,
+  messageId?: string,
+): Promise<ActionResult> {
+  const profile = await getSessionProfile();
+  if (!profile) return { ok: false, error: 'Faça login.' };
+  const parsed = reportInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Dados inválidos.' };
+
+  const db = getDb();
+  const [conv] = await db
+    .select({ clientId: conversations.clientId, carpenterId: conversations.carpenterId })
+    .from(conversations)
+    .where(eq(conversations.id, conversationId))
+    .limit(1);
+  if (!conv || (conv.clientId !== profile.id && conv.carpenterId !== profile.id)) {
+    return { ok: false, error: 'Conversa não encontrada.' };
+  }
+
+  await db.insert(reports).values({
+    conversationId,
+    messageId: messageId ?? null,
+    reporterId: profile.id,
+    reason: parsed.data.reason,
+    detail: parsed.data.detail ?? null,
+  });
+  return { ok: true };
+}
+
+/** Encerra/bloqueia/reabre a conversa. BLOCKED só sai via admin/suporte. */
+export async function setConversationStatus(
+  conversationId: string,
+  status: ConversationStatus,
+): Promise<ActionResult> {
+  const profile = await getSessionProfile();
+  if (!profile) return { ok: false, error: 'Faça login.' };
+
+  const db = getDb();
+  const [conv] = await db
+    .select({ clientId: conversations.clientId, carpenterId: conversations.carpenterId, status: conversations.status })
+    .from(conversations)
+    .where(eq(conversations.id, conversationId))
+    .limit(1);
+  if (!conv || (conv.clientId !== profile.id && conv.carpenterId !== profile.id)) {
+    return { ok: false, error: 'Conversa não encontrada.' };
+  }
+  // Uma conversa bloqueada só é reaberta pelo suporte/admin.
+  if (conv.status === 'BLOCKED' && status !== 'BLOCKED') {
+    return { ok: false, error: 'Conversa bloqueada. Fale com o suporte para reabrir.' };
+  }
+
+  await db.update(conversations).set({ status }).where(eq(conversations.id, conversationId));
+  revalidatePath(`/conversas/${conversationId}`);
+  revalidatePath('/conversas');
   return { ok: true };
 }

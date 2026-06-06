@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import type { ConversationStatus } from '@abilar/shared';
 import { requireUserId } from '@/lib/auth/session';
 import { getConversation, listMessages } from '@/lib/chat/queries';
 import { ChatRoom } from './_components/ChatRoom';
+import { ChatMenu } from './_components/ChatMenu';
 
 export const metadata = { title: 'Conversa — Abilar' };
 
@@ -20,7 +22,15 @@ export default async function ConversaPage({ params }: { params: Promise<{ id: s
       <Link href={backHref} className="text-sm text-muted hover:text-charcoal">
         ← {conv.projectTitle}
       </Link>
-      <h1 className="mt-3 mb-4 text-xl font-bold text-charcoal">Conversa com {conv.otherName}</h1>
+      <div className="mt-3 mb-4 flex items-center justify-between gap-2">
+        <h1 className="text-xl font-bold text-charcoal">Conversa com {conv.otherName}</h1>
+        <ChatMenu conversationId={conv.id} status={conv.status as ConversationStatus} />
+      </div>
+      {conv.status === 'BLOCKED' && (
+        <p className="mb-3 rounded-xl bg-ochre/20 px-4 py-3 text-sm text-charcoal">
+          ⛔ Esta conversa está bloqueada. Fale com o suporte se precisar reabrir.
+        </p>
+      )}
       <ChatRoom
         conversationId={conv.id}
         meId={userId}

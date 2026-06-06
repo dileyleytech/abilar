@@ -1,4 +1,4 @@
-import type { Category, ProjectStatus, QuoteStatus } from '@abilar/shared';
+import type { Category, ProjectStatus, QuoteStatus, ReportReason } from '@abilar/shared';
 
 export const CATEGORY_EMOJI: Record<Category, string> = {
   GUARDA_ROUPA: '🚪',
@@ -58,6 +58,15 @@ export const QUOTE_STATUS_BADGE: Record<QuoteStatus, string> = {
   REJECTED: 'bg-charcoal/10 text-muted line-through',
   EXPIRED: 'bg-deep text-muted',
   PAID: 'bg-sage/30 text-charcoal',
+};
+
+/** Razões de denúncia do chat (§7.8). */
+export const REPORT_REASON_LABEL: Record<ReportReason, string> = {
+  CONTACT_OUTSIDE: 'Tentou negociar/pagar por fora',
+  HARASSMENT: 'Ofensa ou assédio',
+  SCAM: 'Golpe ou fraude',
+  SPAM: 'Spam ou propaganda',
+  OTHER: 'Outro motivo',
 };
 
 /** Variante SÓLIDA (fundo cheio + texto branco) para badge legível sobre foto. */
