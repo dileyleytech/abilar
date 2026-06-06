@@ -22,21 +22,36 @@ export type MaterialView = {
   sku: string | null;
   supplier: string | null;
   active: boolean;
+  updatedAt: string; // ISO
 };
 
 const fld =
   'w-full rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
 
+// Unidade sugerida por categoria — o marceneiro quase nunca precisa mexer.
+const DEFAULT_UNIT: Record<MaterialCategory, MaterialUnit> = {
+  CHAPA: 'M2',
+  ESPELHO: 'M2',
+  FITA_BORDA: 'ML',
+  SERVICO: 'H',
+  FERRAGEM: 'UN',
+  ACESSORIO: 'UN',
+  FRETE: 'UN',
+  OUTRO: 'UN',
+};
+
+const dateLabel = (iso: string) =>
+  new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+
 type Draft = {
   name: string;
   category: MaterialCategory;
   unit: MaterialUnit;
-  custoReais: string;
-  sku: string;
+  precoReais: string;
   supplier: string;
 };
 
-const emptyDraft: Draft = { name: '', category: 'CHAPA', unit: 'M2', custoReais: '', sku: '', supplier: '' };
+const emptyDraft: Draft = { name: '', category: 'CHAPA', unit: 'M2', precoReais: '', supplier: '' };
 
 export function MaterialsManager({ initial }: { initial: MaterialView[] }) {
   const router = useRouter();
@@ -45,6 +60,9 @@ export function MaterialsManager({ initial }: { initial: MaterialView[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [showForm, setShowForm] = useState(false);
+  // Atualização rápida de preço (linha a linha).
+  const [priceId, setPriceId] = useState<string | null>(null);
+  const [priceVal, setPriceVal] = useState('');
 
   const grouped = useMemo(() => {
     const map = new Map<MaterialCategory, MaterialView[]>();
@@ -63,8 +81,7 @@ export function MaterialsManager({ initial }: { initial: MaterialView[] }) {
       name: m.name,
       category: m.category,
       unit: m.unit,
-      custoReais: String(m.unitCostCents / 100),
-      sku: m.sku ?? '',
+      precoReais: String(m.unitCostCents / 100),
       supplier: m.supplier ?? '',
     });
     setEditingId(m.id);
@@ -75,20 +92,36 @@ export function MaterialsManager({ initial }: { initial: MaterialView[] }) {
   const save = () =>
     start(async () => {
       setError(null);
-      const custo = Number(draft.custoReais);
-      if (!draft.name.trim() || !(custo >= 0)) return setError('Informe nome e custo válidos.');
+      const preco = Number(draft.precoReais);
+      if (draft.name.trim().length < 2 || !(preco >= 0)) return setError('Coloque um nome e um preço válido.');
       const input = {
         name: draft.name.trim(),
         category: draft.category,
         unit: draft.unit,
-        unitCostCents: reaisToCents(custo),
-        sku: draft.sku.trim() || undefined,
+        unitCostCents: reaisToCents(preco),
         supplier: draft.supplier.trim() || undefined,
       };
       const r = editingId ? await updateMaterial(editingId, input) : await createMaterial(input);
       if (!r.ok) return setError(r.error);
       setShowForm(false);
       router.refresh();
+    });
+
+  const saveQuickPrice = (m: MaterialView) =>
+    start(async () => {
+      const preco = Number(priceVal);
+      if (!(preco >= 0)) return;
+      const r = await updateMaterial(m.id, {
+        name: m.name,
+        category: m.category,
+        unit: m.unit,
+        unitCostCents: reaisToCents(preco),
+        supplier: m.supplier ?? undefined,
+      });
+      if (r.ok) {
+        setPriceId(null);
+        router.refresh();
+      }
     });
 
   const toggleActive = (m: MaterialView) =>
@@ -99,51 +132,75 @@ export function MaterialsManager({ initial }: { initial: MaterialView[] }) {
 
   return (
     <div className="flex flex-col gap-4">
+      <p className="rounded-xl bg-sage/20 px-4 py-3 text-sm text-charcoal">
+        💡 Coloque o preço que você paga <strong>hoje</strong>. Sempre que comprar e o preço mudar, é só tocar em
+        <strong> Atualizar preço</strong>. No orçamento você ainda pode ajustar item a item.
+      </p>
+
       {!showForm && (
         <button
           type="button"
           onClick={openNew}
           className="w-fit rounded-xl bg-brand-primary px-5 py-3 text-base font-semibold text-white transition hover:opacity-90"
         >
-          + Novo item
+          + Adicionar material
         </button>
       )}
 
       {showForm && (
         <div className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold text-charcoal">{editingId ? 'Editar item' : 'Novo item'}</h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 sm:col-span-2">
-              <span className="text-sm font-medium text-charcoal">Nome</span>
-              <input className={fld} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Ex.: Chapa MDF 18mm Branco TX" />
+          <h2 className="mb-3 text-lg font-semibold text-charcoal">{editingId ? 'Editar material' : 'Novo material'}</h2>
+          <div className="flex flex-col gap-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-charcoal">O que é?</span>
+              <input
+                className={fld}
+                value={draft.name}
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                placeholder="Ex.: Chapa MDF 18mm Branco"
+              />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-charcoal">Categoria</span>
-              <select className={fld} value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value as MaterialCategory })}>
+              <span className="text-sm font-medium text-charcoal">Tipo</span>
+              <select
+                className={fld}
+                value={draft.category}
+                onChange={(e) => {
+                  const category = e.target.value as MaterialCategory;
+                  setDraft({ ...draft, category, unit: DEFAULT_UNIT[category] });
+                }}
+              >
                 {MATERIAL_CATEGORIES.map((c) => (
                   <option key={c} value={c}>{MATERIAL_CATEGORY_LABEL[c]}</option>
                 ))}
               </select>
             </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-charcoal">Quanto você paga (R$)</span>
+                <input
+                  className={fld}
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  step="0.01"
+                  value={draft.precoReais}
+                  onChange={(e) => setDraft({ ...draft, precoReais: e.target.value })}
+                  placeholder="0,00"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-charcoal">Por</span>
+                <select className={fld} value={draft.unit} onChange={(e) => setDraft({ ...draft, unit: e.target.value as MaterialUnit })}>
+                  {MATERIAL_UNITS.map((u) => (
+                    <option key={u} value={u}>{MATERIAL_UNIT_LABEL[u]}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
             <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-charcoal">Unidade</span>
-              <select className={fld} value={draft.unit} onChange={(e) => setDraft({ ...draft, unit: e.target.value as MaterialUnit })}>
-                {MATERIAL_UNITS.map((u) => (
-                  <option key={u} value={u}>{MATERIAL_UNIT_LABEL[u]}</option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-charcoal">Custo por {MATERIAL_UNIT_LABEL[draft.unit]} (R$)</span>
-              <input className={fld} type="number" inputMode="decimal" min={0} step="0.01" value={draft.custoReais} onChange={(e) => setDraft({ ...draft, custoReais: e.target.value })} placeholder="0,00" />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-charcoal">Fornecedor (opcional)</span>
-              <input className={fld} value={draft.supplier} onChange={(e) => setDraft({ ...draft, supplier: e.target.value })} />
-            </label>
-            <label className="flex flex-col gap-1 sm:col-span-2">
-              <span className="text-sm font-medium text-charcoal">SKU / código (opcional)</span>
-              <input className={fld} value={draft.sku} onChange={(e) => setDraft({ ...draft, sku: e.target.value })} />
+              <span className="text-sm font-medium text-charcoal">Onde compra (opcional)</span>
+              <input className={fld} value={draft.supplier} onChange={(e) => setDraft({ ...draft, supplier: e.target.value })} placeholder="Ex.: Leo Madeiras" />
             </label>
           </div>
           {error && <p className="mt-2 text-sm text-ochre">{error}</p>}
@@ -162,7 +219,7 @@ export function MaterialsManager({ initial }: { initial: MaterialView[] }) {
         <div className="rounded-2xl border border-dashed border-subtle bg-surface p-10 text-center text-muted">
           <span className="text-3xl" aria-hidden>📦</span>
           <p className="mt-2 font-medium text-charcoal">Seu catálogo está vazio</p>
-          <p>Cadastre chapas, ferragens, serviços e fretes para montar orçamentos rápido.</p>
+          <p>Cadastre o que você usa (chapa, espelho, ferragem, serviço) pra montar orçamentos rápido.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-5">
@@ -173,26 +230,60 @@ export function MaterialsManager({ initial }: { initial: MaterialView[] }) {
               </h3>
               <ul className="flex flex-col gap-2">
                 {items.map((m) => (
-                  <li
-                    key={m.id}
-                    className={`flex items-center gap-3 rounded-xl border border-subtle bg-surface p-3 ${m.active ? '' : 'opacity-60'}`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-charcoal">
-                        {m.name}
-                        {!m.active && <span className="ml-2 text-xs text-muted">(inativo)</span>}
-                      </p>
-                      <p className="text-sm text-muted">
-                        {formatBRL(m.unitCostCents)} / {MATERIAL_UNIT_LABEL[m.unit]}
-                        {m.supplier ? ` · ${m.supplier}` : ''}
-                      </p>
+                  <li key={m.id} className={`rounded-xl border border-subtle bg-surface p-3 ${m.active ? '' : 'opacity-60'}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-charcoal">
+                          {m.name}
+                          {!m.active && <span className="ml-2 text-xs text-muted">(inativo)</span>}
+                        </p>
+                        <p className="text-sm text-muted">
+                          {formatBRL(m.unitCostCents)} / {MATERIAL_UNIT_LABEL[m.unit]}
+                          <span className="text-subtle"> · atualizado em {dateLabel(m.updatedAt)}</span>
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPriceId(priceId === m.id ? null : m.id);
+                          setPriceVal(String(m.unitCostCents / 100));
+                        }}
+                        className="shrink-0 rounded-lg bg-deep px-3 py-1.5 text-sm font-semibold text-charcoal hover:bg-sand-deep"
+                      >
+                        💲 Atualizar preço
+                      </button>
                     </div>
-                    <button type="button" onClick={() => openEdit(m)} className="rounded-lg px-3 py-1.5 text-sm font-medium text-brand-primary hover:bg-deep">
-                      Editar
-                    </button>
-                    <button type="button" onClick={() => toggleActive(m)} disabled={pending} className="rounded-lg px-3 py-1.5 text-sm text-muted hover:bg-deep">
-                      {m.active ? 'Desativar' : 'Reativar'}
-                    </button>
+
+                    {priceId === m.id && (
+                      <div className="mt-3 flex items-end gap-2 border-t border-subtle pt-3">
+                        <label className="flex flex-1 flex-col gap-1">
+                          <span className="text-xs text-muted">Novo preço por {MATERIAL_UNIT_LABEL[m.unit]} (R$)</span>
+                          <input
+                            autoFocus
+                            className={fld}
+                            type="number"
+                            inputMode="decimal"
+                            min={0}
+                            step="0.01"
+                            value={priceVal}
+                            onChange={(e) => setPriceVal(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && saveQuickPrice(m)}
+                          />
+                        </label>
+                        <button type="button" onClick={() => saveQuickPrice(m)} disabled={pending} className="rounded-xl bg-brand-primary px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">
+                          Salvar
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="mt-2 flex gap-3 text-sm">
+                      <button type="button" onClick={() => openEdit(m)} className="font-medium text-brand-primary hover:underline">
+                        Editar
+                      </button>
+                      <button type="button" onClick={() => toggleActive(m)} disabled={pending} className="text-muted hover:text-charcoal">
+                        {m.active ? 'Desativar' : 'Reativar'}
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>

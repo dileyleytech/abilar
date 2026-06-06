@@ -87,6 +87,7 @@ export type ReportStatus = z.infer<typeof reportStatusSchema>;
 // ── Gestão financeira do marceneiro (§7.6): catálogo de custo (CarpenterMaterial)
 export const MATERIAL_CATEGORIES = [
   'CHAPA', // chapas de MDF/MDP
+  'ESPELHO', // espelho / vidro
   'FERRAGEM', // dobradiças, parafusos, puxadores
   'ACESSORIO', // cestos, aramados, iluminação
   'FITA_BORDA',

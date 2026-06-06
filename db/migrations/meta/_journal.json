@@ -162,6 +162,13 @@
       "when": 1780694410500,
       "tag": "0022_carpenter_materials",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1780694411000,
+      "tag": "0023_material_espelho",
+      "breakpoints": true
     }
   ]
 }

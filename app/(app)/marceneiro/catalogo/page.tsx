@@ -17,6 +17,7 @@ export default async function CatalogoPage() {
     sku: m.sku,
     supplier: m.supplier,
     active: m.active,
+    updatedAt: m.updatedAt.toISOString(),
   }));
 
   return (
