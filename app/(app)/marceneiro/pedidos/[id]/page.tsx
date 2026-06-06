@@ -10,6 +10,7 @@ import { getActivePricingConfig } from '@/lib/pricing/config';
 import { getCarpenterQuote } from '@/lib/quotes/queries';
 import { getConversationForProjectCarpenter } from '@/lib/chat/queries';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
+import { StatusBadge } from '@/components/StatusBadge';
 import { QuoteForm, type QuoteInitial, type MaterialOption } from './_components/QuoteForm';
 
 export default async function CarpenterPedidoPage({ params }: { params: Promise<{ id: string }> }) {
@@ -67,100 +68,101 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
   }
 
   return (
-    <main className="mx-auto w-full max-w-screen-2xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
       <Link href="/marceneiro" className="text-sm text-muted hover:text-charcoal">
-        ← Pedidos da região
+        ← Voltar
       </Link>
-      <header className="mt-3 mb-6">
-        <h1 className="text-2xl font-bold text-charcoal sm:text-3xl">{project.title}</h1>
-        <p className="text-sm text-muted">
-          📍 {project.city ?? '—'} · {modules.length} {modules.length === 1 ? 'móvel' : 'móveis'}
-        </p>
+      <header className="mt-3 mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-charcoal sm:text-3xl">{project.title}</h1>
+          <p className="text-sm text-muted">
+            📍 {project.city ?? '—'} · {modules.length} {modules.length === 1 ? 'móvel' : 'móveis'}
+          </p>
+        </div>
+        <StatusBadge status={project.status} />
       </header>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
-            <h2 className="mb-4 text-lg font-semibold text-charcoal">Móveis do pedido</h2>
-            <div className="flex flex-col gap-6">
-              {[...groups.entries()].map(([room, mods]) => (
-                <div key={room}>
-                  <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-brand-secondary">{room}</h3>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {mods.map((m) => {
-                      const url = modulePhoto.get(m.id) ?? null;
-                      return (
-                        <div key={m.id} className="flex gap-3 rounded-xl border border-subtle p-3">
-                          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-deep text-2xl">
-                            {url ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={url} alt="" className="h-full w-full object-cover" />
-                            ) : (
-                              <span aria-hidden>{CATEGORY_EMOJI[m.type as Category] ?? '🪵'}</span>
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-charcoal">
-                              {m.label ?? CATEGORY_LABELS[m.type as Category] ?? m.type}
-                            </p>
-                            <p className="mt-1 font-mono text-sm text-muted">
-                              {formatCm(m.widthMm)} × {formatCm(m.heightMm)} × {formatCm(m.depthMm)}
-                            </p>
-                            {m.workType && (
-                              <span className="mt-1 inline-block rounded-pill bg-deep px-2 py-0.5 text-[10px] font-medium text-muted">
-                                {m.workType === 'NEW_INSTALL' ? 'Novo' : 'Troca'}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
+      <div className="flex flex-col gap-5">
+        {/* Chat: ação imediata quando o cliente já liberou a conversa */}
+        {conversationId && (
+          <Link
+            href={`/conversas/${conversationId}`}
+            className="flex items-center justify-center gap-2 rounded-2xl bg-brand-secondary px-5 py-4 text-lg font-semibold text-white shadow-sm transition hover:opacity-90"
+          >
+            💬 Conversar com o cliente
+          </Link>
+        )}
 
-        <aside className="flex flex-col gap-6">
+        {/* O que o cliente pediu (referência) */}
+        <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
+          <h2 className="mb-4 text-lg font-semibold text-charcoal">O que o cliente pediu</h2>
+
           {roomPhotos.length > 0 && (
-            <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
-              <h2 className="mb-3 text-lg font-semibold text-charcoal">Fotos / documentos</h2>
-              <div className="grid grid-cols-2 gap-2">
-                {roomPhotos.map((p) =>
-                  p.url ? (
-                    p.kind === 'ARCHITECT_PDF' ? (
-                      <a key={p.id} href={p.url} target="_blank" rel="noreferrer" className="flex aspect-square items-center justify-center rounded-xl border border-subtle bg-deep text-sm font-medium text-brand-primary">
-                        📄 Abrir PDF
-                      </a>
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img key={p.id} src={p.url} alt="" className="aspect-square w-full rounded-xl border border-subtle object-cover" />
-                    )
-                  ) : null,
-                )}
+            <div className="mb-5 grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {roomPhotos.map((p) =>
+                p.url ? (
+                  p.kind === 'ARCHITECT_PDF' ? (
+                    <a key={p.id} href={p.url} target="_blank" rel="noreferrer" className="flex aspect-square items-center justify-center rounded-xl border border-subtle bg-deep text-center text-xs font-medium text-brand-primary">
+                      📄 PDF
+                    </a>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={p.id} src={p.url} alt="" className="aspect-square w-full rounded-xl border border-subtle object-cover" />
+                  )
+                ) : null,
+              )}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-5">
+            {[...groups.entries()].map(([room, mods]) => (
+              <div key={room}>
+                <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-brand-secondary">{room}</h3>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {mods.map((m) => {
+                    const url = modulePhoto.get(m.id) ?? null;
+                    return (
+                      <div key={m.id} className="flex gap-3 rounded-xl border border-subtle p-3">
+                        <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-deep text-2xl">
+                          {url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={url} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <span aria-hidden>{CATEGORY_EMOJI[m.type as Category] ?? '🪵'}</span>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-charcoal">
+                            {m.label ?? CATEGORY_LABELS[m.type as Category] ?? m.type}
+                          </p>
+                          <p className="mt-1 font-mono text-sm text-muted">
+                            {formatCm(m.widthMm)} × {formatCm(m.heightMm)} × {formatCm(m.depthMm)}
+                          </p>
+                          {m.workType && (
+                            <span className="mt-1 inline-block rounded-pill bg-deep px-2 py-0.5 text-[10px] font-medium text-muted">
+                              {m.workType === 'NEW_INSTALL' ? 'Novo' : 'Troca'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </section>
-          )}
+            ))}
+          </div>
+        </section>
 
-          {conversationId && (
-            <Link
-              href={`/conversas/${conversationId}`}
-              className="flex items-center justify-center gap-2 rounded-2xl bg-brand-secondary px-5 py-4 text-lg font-semibold text-white shadow-sm transition hover:opacity-90"
-            >
-              💬 Conversar com o cliente
-            </Link>
+        {/* Ação principal: montar e enviar o orçamento */}
+        <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
+          <h2 className="mb-1 text-xl font-bold text-charcoal">Monte seu orçamento</h2>
+          <p className="mb-4 text-sm text-muted">Some os itens (ou informe um valor) e veja quanto você recebe.</p>
+          {config ? (
+            <QuoteForm projectId={project.id} config={config} materials={materials} initial={quoteInitial} />
+          ) : (
+            <p className="text-muted">Configuração de preço indisponível.</p>
           )}
-
-          <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
-            <h2 className="mb-3 text-lg font-semibold text-charcoal">Seu orçamento</h2>
-            {config ? (
-              <QuoteForm projectId={project.id} config={config} materials={materials} initial={quoteInitial} />
-            ) : (
-              <p className="text-muted">Configuração de preço indisponível.</p>
-            )}
-          </section>
-        </aside>
+        </section>
       </div>
     </main>
   );
