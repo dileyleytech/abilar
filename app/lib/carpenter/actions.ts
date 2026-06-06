@@ -8,8 +8,22 @@ import { getSessionProfile } from '@/lib/auth/session';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
+/** Item do catálogo serializável (para o cliente atualizar a lista na hora). */
+export type MaterialDTO = {
+  id: string;
+  name: string;
+  category: string;
+  unit: string;
+  unitCostCents: number;
+  sku: string | null;
+  supplier: string | null;
+  active: boolean;
+  updatedAt: string;
+};
+export type CreateMaterialResult = { ok: true; material: MaterialDTO } | { ok: false; error: string };
+
 /** Cria um item no catálogo de custo do marceneiro (§7.6). Custo em centavos. */
-export async function createMaterial(input: unknown): Promise<ActionResult> {
+export async function createMaterial(input: unknown): Promise<CreateMaterialResult> {
   const profile = await getSessionProfile();
   if (!profile) return { ok: false, error: 'Faça login.' };
   if (profile.role !== 'CARPENTER') return { ok: false, error: 'Apenas marceneiros.' };
@@ -18,17 +32,34 @@ export async function createMaterial(input: unknown): Promise<ActionResult> {
   const d = parsed.data;
 
   const db = getDb();
-  await db.insert(carpenterMaterials).values({
-    carpenterId: profile.id,
-    name: d.name,
-    category: d.category,
-    unit: d.unit,
-    unitCostCents: d.unitCostCents,
-    sku: d.sku ?? null,
-    supplier: d.supplier ?? null,
-  });
+  const [row] = await db
+    .insert(carpenterMaterials)
+    .values({
+      carpenterId: profile.id,
+      name: d.name,
+      category: d.category,
+      unit: d.unit,
+      unitCostCents: d.unitCostCents,
+      sku: d.sku ?? null,
+      supplier: d.supplier ?? null,
+    })
+    .returning();
   revalidatePath('/marceneiro/catalogo');
-  return { ok: true };
+  if (!row) return { ok: false, error: 'Não foi possível salvar.' };
+  return {
+    ok: true,
+    material: {
+      id: row.id,
+      name: row.name,
+      category: row.category,
+      unit: row.unit,
+      unitCostCents: row.unitCostCents,
+      sku: row.sku,
+      supplier: row.supplier,
+      active: row.active,
+      updatedAt: row.updatedAt.toISOString(),
+    },
+  };
 }
 
 /** Atualiza um item do catálogo (só o dono). */

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   MATERIAL_CATEGORIES,
@@ -63,12 +63,15 @@ export function MaterialsManager({ initial }: { initial: MaterialView[] }) {
   // Atualização rápida de preço (linha a linha).
   const [priceId, setPriceId] = useState<string | null>(null);
   const [priceVal, setPriceVal] = useState('');
+  // Lista local: atualiza na hora (otimista); o router.refresh reconcilia depois.
+  const [items, setItems] = useState<MaterialView[]>(initial);
+  useEffect(() => setItems(initial), [initial]);
 
   const grouped = useMemo(() => {
     const map = new Map<MaterialCategory, MaterialView[]>();
-    for (const m of initial) (map.get(m.category) ?? map.set(m.category, []).get(m.category)!).push(m);
+    for (const m of items) (map.get(m.category) ?? map.set(m.category, []).get(m.category)!).push(m);
     return [...map.entries()];
-  }, [initial]);
+  }, [items]);
 
   const openNew = () => {
     setDraft(emptyDraft);
@@ -101,8 +104,26 @@ export function MaterialsManager({ initial }: { initial: MaterialView[] }) {
         unitCostCents: reaisToCents(preco),
         supplier: draft.supplier.trim() || undefined,
       };
-      const r = editingId ? await updateMaterial(editingId, input) : await createMaterial(input);
-      if (!r.ok) return setError(r.error);
+      if (editingId) {
+        const r = await updateMaterial(editingId, input);
+        if (!r.ok) return setError(r.error);
+        setItems((prev) =>
+          prev.map((m) =>
+            m.id === editingId
+              ? { ...m, ...input, supplier: input.supplier ?? null, updatedAt: new Date().toISOString() }
+              : m,
+          ),
+        );
+      } else {
+        const r = await createMaterial(input);
+        if (!r.ok) return setError(r.error);
+        const created: MaterialView = {
+          ...r.material,
+          category: r.material.category as MaterialCategory,
+          unit: r.material.unit as MaterialUnit,
+        };
+        setItems((prev) => [...prev, created]);
+      }
       setShowForm(false);
       router.refresh();
     });
@@ -111,14 +132,18 @@ export function MaterialsManager({ initial }: { initial: MaterialView[] }) {
     start(async () => {
       const preco = Number(priceVal);
       if (!(preco >= 0)) return;
+      const cents = reaisToCents(preco);
       const r = await updateMaterial(m.id, {
         name: m.name,
         category: m.category,
         unit: m.unit,
-        unitCostCents: reaisToCents(preco),
+        unitCostCents: cents,
         supplier: m.supplier ?? undefined,
       });
       if (r.ok) {
+        setItems((prev) =>
+          prev.map((x) => (x.id === m.id ? { ...x, unitCostCents: cents, updatedAt: new Date().toISOString() } : x)),
+        );
         setPriceId(null);
         router.refresh();
       }
@@ -127,6 +152,7 @@ export function MaterialsManager({ initial }: { initial: MaterialView[] }) {
   const toggleActive = (m: MaterialView) =>
     start(async () => {
       await setMaterialActive(m.id, !m.active);
+      setItems((prev) => prev.map((x) => (x.id === m.id ? { ...x, active: !m.active } : x)));
       router.refresh();
     });
 
@@ -215,7 +241,7 @@ export function MaterialsManager({ initial }: { initial: MaterialView[] }) {
         </div>
       )}
 
-      {initial.length === 0 && !showForm ? (
+      {items.length === 0 && !showForm ? (
         <div className="rounded-2xl border border-dashed border-subtle bg-surface p-10 text-center text-muted">
           <span className="text-3xl" aria-hidden>📦</span>
           <p className="mt-2 font-medium text-charcoal">Seu catálogo está vazio</p>
