@@ -94,7 +94,12 @@ export default async function PedidoDetailPage({ params }: { params: Promise<{ i
                         )}
                       </div>
                       {q.note && <p className="mt-2 text-sm text-charcoal/80">“{q.note}”</p>}
-                      <PreApproveButton quoteId={q.id} approved={q.status !== 'SENT'} />
+                      <div className="mt-3 flex flex-wrap items-center gap-3">
+                        <PreApproveButton quoteId={q.id} approved={q.status !== 'SENT'} />
+                        <Link href={`/orcamentos/${q.id}/imprimir`} className="text-sm font-semibold text-brand-primary hover:underline">
+                          🖨️ Ver em PDF
+                        </Link>
+                      </div>
                     </li>
                   ))}
                 </ul>

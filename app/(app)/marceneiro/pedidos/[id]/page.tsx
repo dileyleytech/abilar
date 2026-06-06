@@ -68,11 +68,11 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
   }
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6 lg:px-8">
       <Link href="/marceneiro" className="text-sm text-muted hover:text-charcoal">
         ← Voltar
       </Link>
-      <header className="mt-3 mb-5 flex flex-wrap items-start justify-between gap-3">
+      <header className="mt-2 mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-charcoal sm:text-3xl">{project.title}</h1>
           <p className="text-sm text-muted">
@@ -82,19 +82,32 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
         <StatusBadge status={project.status} />
       </header>
 
-      <div className="flex flex-col gap-5">
-        {/* Chat: ação imediata quando o cliente já liberou a conversa */}
-        {conversationId && (
-          <Link
-            href={`/conversas/${conversationId}`}
-            className="flex items-center justify-center gap-2 rounded-2xl bg-brand-secondary px-5 py-4 text-lg font-semibold text-white shadow-sm transition hover:opacity-90"
-          >
-            💬 Conversar com o cliente
-          </Link>
-        )}
+      {/* Ações grandes e óbvias no topo */}
+      {(conversationId || existing) && (
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row">
+          {conversationId && (
+            <Link
+              href={`/conversas/${conversationId}`}
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-brand-secondary px-5 py-4 text-lg font-semibold text-white shadow-sm transition hover:opacity-90"
+            >
+              💬 Conversar com o cliente
+            </Link>
+          )}
+          {existing && (
+            <Link
+              href={`/orcamentos/${existing.id}/imprimir`}
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-brand-primary px-5 py-4 text-lg font-semibold text-brand-primary transition hover:bg-deep"
+            >
+              🖨️ Baixar orçamento (PDF)
+            </Link>
+          )}
+        </div>
+      )}
 
-        {/* O que o cliente pediu (referência) */}
-        <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
+      {/* Três colunas, largura total: o que o cliente pediu | montar | valores */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* O que o cliente pediu (referência) — ocupa 100% da coluna */}
+        <section className="flex flex-col rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
           <h2 className="mb-4 text-lg font-semibold text-charcoal">O que o cliente pediu</h2>
 
           {roomPhotos.length > 0 && (
@@ -114,16 +127,16 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
             </div>
           )}
 
-          <div className="flex flex-col gap-5">
+          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto lg:pr-1">
             {[...groups.entries()].map(([room, mods]) => (
               <div key={room}>
                 <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-brand-secondary">{room}</h3>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3">
                   {mods.map((m) => {
                     const url = modulePhoto.get(m.id) ?? null;
                     return (
                       <div key={m.id} className="flex gap-3 rounded-xl border border-subtle p-3">
-                        <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-deep text-2xl">
+                        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-deep text-2xl">
                           {url ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={url} alt="" className="h-full w-full object-cover" />
@@ -153,16 +166,14 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
           </div>
         </section>
 
-        {/* Ação principal: montar e enviar o orçamento */}
-        <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
-          <h2 className="mb-1 text-xl font-bold text-charcoal">Monte seu orçamento</h2>
-          <p className="mb-4 text-sm text-muted">Some os itens (ou informe um valor) e veja quanto você recebe.</p>
-          {config ? (
-            <QuoteForm projectId={project.id} config={config} materials={materials} initial={quoteInitial} />
-          ) : (
+        {/* Colunas 2 e 3 (montar | valores) vêm do QuoteForm */}
+        {config ? (
+          <QuoteForm projectId={project.id} config={config} materials={materials} initial={quoteInitial} />
+        ) : (
+          <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6 lg:col-span-2">
             <p className="text-muted">Configuração de preço indisponível.</p>
-          )}
-        </section>
+          </section>
+        )}
       </div>
     </main>
   );

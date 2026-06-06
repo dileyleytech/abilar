@@ -12,7 +12,7 @@ export async function AppHeader() {
   const unread = chatUserId ? await countUnreadMessages(chatUserId) : 0;
 
   return (
-    <header className="sticky top-0 z-20 w-full border-b border-subtle bg-surface/90 backdrop-blur">
+    <header className="sticky top-0 z-20 w-full border-b border-subtle bg-surface/90 backdrop-blur print:hidden">
       <div className="mx-auto flex h-16 w-full max-w-screen-2xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center" aria-label="Abilar — início">
           {/* eslint-disable-next-line @next/next/no-img-element */}
