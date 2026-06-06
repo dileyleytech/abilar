@@ -1,31 +1,46 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { formatCm, type Category } from '@abilar/shared';
+import { formatCm, type Category, type QuoteLineItem } from '@abilar/shared';
 import { requireRole } from '@/lib/auth/session';
 import { getCarpenterProfile } from '@/lib/carpenter/profile';
 import { getProjectForCarpenter } from '@/lib/carpenter/feed';
+import { listMaterials } from '@/lib/carpenter/materials';
 import { signedProjectPhotoUrl } from '@/lib/storage';
 import { getActivePricingConfig } from '@/lib/pricing/config';
 import { getCarpenterQuote } from '@/lib/quotes/queries';
 import { getConversationForProjectCarpenter } from '@/lib/chat/queries';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
-import { QuoteForm, type QuoteInitial } from './_components/QuoteForm';
+import { QuoteForm, type QuoteInitial, type MaterialOption } from './_components/QuoteForm';
 
 export default async function CarpenterPedidoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const profile = await requireRole('CARPENTER');
-  // Queries independentes em paralelo (1 ida em vez de 3 sequenciais).
-  const [carpenter, config, existing, conversationId] = await Promise.all([
+  // Queries independentes em paralelo (1 ida em vez de várias sequenciais).
+  const [carpenter, config, existing, conversationId, catalog] = await Promise.all([
     getCarpenterProfile(profile.id),
     getActivePricingConfig(),
     getCarpenterQuote(id, profile.id),
     getConversationForProjectCarpenter(id, profile.id),
+    listMaterials(profile.id, { activeOnly: true }),
   ]);
   if (!carpenter) notFound();
 
   const detail = await getProjectForCarpenter(id, carpenter);
   if (!detail) notFound();
   const { project, modules, photos } = detail;
+
+  const materials: MaterialOption[] = catalog.map((m) => ({
+    id: m.id,
+    name: m.name,
+    category: m.category,
+    unit: m.unit,
+    unitCostCents: m.unitCostCents,
+  }));
+
+  const lineItems = (existing?.lineItems as QuoteLineItem[] | undefined) ?? [];
+  // Margem é derivada (base/custo − 1), já que o orçamento guarda valor e custo, não a margem.
+  const cost = existing?.carpenterCostCents ?? 0;
+  const derivedMargin = cost > 0 && existing ? Math.round((existing.baseValueCents / cost - 1) * 100) : 30;
   const quoteInitial: QuoteInitial | undefined = existing
     ? {
         baseValueReais: String(existing.baseValueCents / 100),
@@ -33,6 +48,8 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
         dilutionSharePct: Number(existing.dilutionSharePct),
         note: existing.note ?? '',
         status: existing.status,
+        lineItems,
+        marginPct: derivedMargin,
       }
     : undefined;
 
@@ -137,7 +154,7 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
           <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
             <h2 className="mb-3 text-lg font-semibold text-charcoal">Seu orçamento</h2>
             {config ? (
-              <QuoteForm projectId={project.id} config={config} initial={quoteInitial} />
+              <QuoteForm projectId={project.id} config={config} materials={materials} initial={quoteInitial} />
             ) : (
               <p className="text-muted">Configuração de preço indisponível.</p>
             )}

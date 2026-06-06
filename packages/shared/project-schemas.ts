@@ -1,6 +1,6 @@
 // project-schemas.ts — validação (zod) de projeto e módulos. cm (UI) → mm (servidor).
 import { z } from 'zod';
-import { WORK_TYPES, SOURCE_TYPES } from './domain';
+import { WORK_TYPES, SOURCE_TYPES, quoteLineItemSchema } from './domain';
 import { cmToMm } from './dimension';
 
 /** Dimensão vinda da UI em cm → mm inteiro positivo. Sem limite de tamanho. */
@@ -37,6 +37,9 @@ export const quoteInputSchema = z.object({
   dilutionSharePct: z.number().min(0).max(100),
   carpenterCostCents: z.number().int().min(0).optional(),
   note: z.string().trim().max(600).optional(),
+  // Construtor por itens (§7.6): se vier, o servidor recalcula V = custo + margem.
+  lineItems: z.array(quoteLineItemSchema).max(100).optional(),
+  marginPct: z.number().min(0).max(1000).optional(),
 });
 export type QuoteInput = z.infer<typeof quoteInputSchema>;
 

@@ -8,5 +8,6 @@ export * from './project-status';
 export * from './project-schemas';
 export * from './geo';
 export * from './moderation';
+export * from './completeness';
 export * as tokens from './tokens';
 export { default as designTokens } from './tokens';

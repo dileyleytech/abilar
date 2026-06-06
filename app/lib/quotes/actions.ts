@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { quoteInputSchema } from '@abilar/shared';
-import { quotePricing, maxClientInstallments } from '@abilar/pricing';
+import { quotePricing, maxClientInstallments, computeItemsBase } from '@abilar/pricing';
 import { quotes, eq, and, sql } from '@abilar/db';
 import { getDb } from '@/lib/db';
 import { getSessionProfile } from '@/lib/auth/session';
@@ -33,6 +33,14 @@ export async function sendQuote(projectId: string, input: unknown): Promise<Acti
   const config = await getActivePricingConfig();
   if (!config) return { ok: false, error: 'Configuração de preço indisponível.' };
 
+  // Construtor por itens (§7.6): se vier lineItems, o SERVIDOR recalcula V = custo
+  // + margem (regra de ouro #8). Senão, usa o valor informado (modo "valor fechado").
+  const hasItems = (d.lineItems?.length ?? 0) > 0;
+  const items = hasItems ? computeItemsBase(d.lineItems!, d.marginPct ?? 0) : null;
+  const baseValueCents = items ? items.baseValueCents : d.baseValueCents;
+  const carpenterCostCents = items ? items.subtotalCostCents : (d.carpenterCostCents ?? null);
+  if (baseValueCents <= 0) return { ok: false, error: 'Informe o valor do serviço (ou itens com custo).' };
+
   // O marceneiro só "perde dinheiro" se aceitou subsidiar (maxInstallments > 1);
   // só aí a diluição mínima se aplica.
   const subsidizes = d.maxInstallments > 1;
@@ -44,37 +52,40 @@ export async function sendQuote(projectId: string, input: unknown): Promise<Acti
   // subsidia só até o N dele. É o pior caso de payout/margem — valida aqui.
   const nClient = maxClientInstallments(config);
   const worst = quotePricing({
-    baseValueCents: d.baseValueCents,
+    baseValueCents,
     config,
     installments: subsidizes ? d.maxInstallments : 1,
     clientInstallments: nClient,
     method: nClient > 1 ? 'CARD' : 'PIX',
     carpenterDilutionSharePct: subsidizes ? d.dilutionSharePct : 0,
-    carpenterCostCents: d.carpenterCostCents,
+    carpenterCostCents: carpenterCostCents ?? undefined,
   });
   if (!worst.valid) return { ok: false, error: worst.warnings[0] ?? 'Orçamento inválido.' };
 
+  const lineItems = d.lineItems ?? [];
   const db = getDb();
   await db
     .insert(quotes)
     .values({
       projectId,
       carpenterId: profile.id,
-      baseValueCents: d.baseValueCents,
-      carpenterCostCents: d.carpenterCostCents ?? null,
+      baseValueCents,
+      carpenterCostCents,
       maxInstallments: d.maxInstallments,
       dilutionSharePct: String(d.dilutionSharePct),
       note: d.note ?? null,
+      lineItems,
       status: 'SENT',
     })
     .onConflictDoUpdate({
       target: [quotes.projectId, quotes.carpenterId],
       set: {
-        baseValueCents: d.baseValueCents,
-        carpenterCostCents: d.carpenterCostCents ?? null,
+        baseValueCents,
+        carpenterCostCents,
         maxInstallments: d.maxInstallments,
         dilutionSharePct: String(d.dilutionSharePct),
         note: d.note ?? null,
+        lineItems,
         status: 'SENT',
         updatedAt: sql`now()`,
       },
