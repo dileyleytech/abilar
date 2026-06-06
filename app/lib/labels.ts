@@ -69,7 +69,7 @@ export const QUOTE_STATUS_BADGE: Record<QuoteStatus, string> = {
 
 /** Catálogo de custo (§7.6) — categorias e unidades. */
 export const MATERIAL_CATEGORY_LABEL: Record<MaterialCategory, string> = {
-  CHAPA: 'Chapa',
+  CHAPA: 'Chapa (MDF/MDP)',
   FERRAGEM: 'Ferragem',
   ACESSORIO: 'Acessório',
   FITA_BORDA: 'Fita de borda',
