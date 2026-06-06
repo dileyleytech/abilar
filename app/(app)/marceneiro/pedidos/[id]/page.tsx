@@ -9,6 +9,7 @@ import { signedProjectPhotoUrl } from '@/lib/storage';
 import { getActivePricingConfig } from '@/lib/pricing/config';
 import { getCarpenterQuote } from '@/lib/quotes/queries';
 import { getConversationForProjectCarpenter } from '@/lib/chat/queries';
+import { getContractIdByQuote } from '@/lib/contracts/queries';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
 import { StatusBadge } from '@/components/StatusBadge';
 import { QuoteForm, type QuoteInitial, type MaterialOption } from './_components/QuoteForm';
@@ -29,6 +30,7 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
   // Já orçou → pode abrir/editar em qualquer status; senão, vale a elegibilidade (pedido aberto).
   const detail = existing ? await getProjectDetailById(id) : await getProjectForCarpenter(id, carpenter);
   if (!detail) notFound();
+  const contractId = existing ? await getContractIdByQuote(existing.id) : null;
   const { project, modules, photos } = detail;
 
   const materials: MaterialOption[] = catalog.map((m) => ({
@@ -91,6 +93,14 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
               className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-brand-secondary px-5 py-4 text-lg font-semibold text-white shadow-sm transition hover:opacity-90"
             >
               💬 Conversar com o cliente
+            </Link>
+          )}
+          {contractId && (
+            <Link
+              href={`/contratos/${contractId}`}
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-brand-primary px-5 py-4 text-lg font-semibold text-white shadow-sm transition hover:opacity-90"
+            >
+              📄 Contrato (assinar)
             </Link>
           )}
           {existing && (

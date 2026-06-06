@@ -169,6 +169,13 @@
       "when": 1780694411000,
       "tag": "0023_material_espelho",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1780694411500,
+      "tag": "0024_contracts",
+      "breakpoints": true
     }
   ]
 }

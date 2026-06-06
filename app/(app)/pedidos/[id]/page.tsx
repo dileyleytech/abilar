@@ -10,6 +10,7 @@ import { ProjectActions } from './_components/ProjectActions';
 import { ModulesSection, type ModuleView } from './_components/ModulesSection';
 import { ProjectLocation } from './_components/ProjectLocation';
 import { PreApproveButton } from './_components/PreApproveButton';
+import { AcceptQuoteButton } from './_components/AcceptQuoteButton';
 
 export default async function PedidoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -95,7 +96,15 @@ export default async function PedidoDetailPage({ params }: { params: Promise<{ i
                       </div>
                       {q.note && <p className="mt-2 text-sm text-charcoal/80">“{q.note}”</p>}
                       <div className="mt-3 flex flex-wrap items-center gap-3">
-                        <PreApproveButton quoteId={q.id} approved={q.status !== 'SENT'} />
+                        {q.contractId ? (
+                          <Link href={`/contratos/${q.contractId}`} className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
+                            📄 Ver contrato
+                          </Link>
+                        ) : q.status === 'PRE_APPROVED' ? (
+                          <AcceptQuoteButton quoteId={q.id} />
+                        ) : (
+                          <PreApproveButton quoteId={q.id} approved={q.status !== 'SENT'} />
+                        )}
                         <Link href={`/orcamentos/${q.id}/imprimir`} className="text-sm font-semibold text-brand-primary hover:underline">
                           🖨️ Ver em PDF
                         </Link>
