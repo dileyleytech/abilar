@@ -203,60 +203,7 @@ export function QuoteForm({
           <p className="text-sm text-muted">Some os itens (do catálogo ou avulsos) e a sua margem.</p>
         </div>
 
-        {initial && (
-          <p className="rounded-lg bg-sage/25 px-3 py-2 text-sm text-charcoal">
-            ✓ Você já enviou. Editar e salvar atualiza o que o cliente vê.
-          </p>
-        )}
-
-        {/* Itens já adicionados + margem/valor */}
-        {hasItems && (
-          <div className="rounded-2xl border border-subtle bg-base p-4">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm font-semibold text-charcoal">Itens adicionados ({lines.length})</span>
-              <span className="text-sm text-muted">Custo: {formatBRL(itemsTotal.subtotalCostCents)}</span>
-            </div>
-            <ul className="flex flex-col gap-2">
-              {lines.map((l) => {
-                const unitCents = reaisToCents(Number(l.custoReais) || 0);
-                const lineTotal = Math.round((Number(l.qty) || 0) * unitCents);
-                return (
-                  <li key={l.key} className="flex items-center gap-2 rounded-xl border border-subtle bg-surface p-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-charcoal">{l.name}</p>
-                      <p className="text-sm text-muted">
-                        {l.qty} {MATERIAL_UNIT_LABEL[l.unit]} × {formatBRL(unitCents)} ={' '}
-                        <strong className="text-charcoal">{formatBRL(lineTotal)}</strong>
-                      </p>
-                    </div>
-                    <button type="button" onClick={() => editLine(l)} className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-brand-primary hover:bg-deep">
-                      Editar
-                    </button>
-                    <button type="button" onClick={() => removeLine(l.key)} className="shrink-0 rounded-lg px-2 py-1 text-sm text-muted hover:text-ochre">
-                      Remover
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            <div className="mt-3 border-t border-subtle pt-3">
-              <div className="flex items-center justify-between gap-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-charcoal">
-                  Margem (lucro)
-                  <input className={`${fld} w-24`} type="number" inputMode="decimal" min={0} step="1" value={marginPct} onChange={(e) => setMarginPct(e.target.value)} />
-                  %
-                </label>
-                <div className="text-right">
-                  <span className="text-xs text-muted">Seu valor (V)</span>
-                  <p className="font-mono text-lg font-bold text-brand-primary">{formatBRL(cents)}</p>
-                </div>
-              </div>
-              <p className="mt-1 text-xs text-muted">Lucro: {formatBRL(itemsTotal.marginCents)}.</p>
-            </div>
-          </div>
-        )}
-
-        {/* Adicionar item — minimizado por padrão */}
+        {/* Adicionar item — no topo, minimizado por padrão */}
         {!showComposer ? (
           <button
             type="button"
@@ -322,6 +269,53 @@ export function QuoteForm({
           </div>
         )}
 
+        {/* Itens já adicionados + margem/valor */}
+        {hasItems && (
+          <div className="rounded-2xl border border-subtle bg-base p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-sm font-semibold text-charcoal">Itens adicionados ({lines.length})</span>
+              <span className="text-sm text-muted">Custo: {formatBRL(itemsTotal.subtotalCostCents)}</span>
+            </div>
+            <ul className="flex flex-col gap-2">
+              {lines.map((l) => {
+                const unitCents = reaisToCents(Number(l.custoReais) || 0);
+                const lineTotal = Math.round((Number(l.qty) || 0) * unitCents);
+                return (
+                  <li key={l.key} className="flex items-center gap-2 rounded-xl border border-subtle bg-surface p-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-charcoal">{l.name}</p>
+                      <p className="text-sm text-muted">
+                        {l.qty} {MATERIAL_UNIT_LABEL[l.unit]} × {formatBRL(unitCents)} ={' '}
+                        <strong className="text-charcoal">{formatBRL(lineTotal)}</strong>
+                      </p>
+                    </div>
+                    <button type="button" onClick={() => editLine(l)} className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-brand-primary hover:bg-deep">
+                      Editar
+                    </button>
+                    <button type="button" onClick={() => removeLine(l.key)} className="shrink-0 rounded-lg px-2 py-1 text-sm text-muted hover:text-ochre">
+                      Remover
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="mt-3 border-t border-subtle pt-3">
+              <div className="flex items-center justify-between gap-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-charcoal">
+                  Margem (lucro)
+                  <input className={`${fld} w-24`} type="number" inputMode="decimal" min={0} step="1" value={marginPct} onChange={(e) => setMarginPct(e.target.value)} />
+                  %
+                </label>
+                <div className="text-right">
+                  <span className="text-xs text-muted">Seu valor (V)</span>
+                  <p className="font-mono text-lg font-bold text-brand-primary">{formatBRL(cents)}</p>
+                </div>
+              </div>
+              <p className="mt-1 text-xs text-muted">Lucro: {formatBRL(itemsTotal.marginCents)}.</p>
+            </div>
+          </div>
+        )}
+
         {/* Sem itens: valor fechado */}
         {!hasItems && (
           <label className="flex flex-col gap-1">
@@ -340,6 +334,12 @@ export function QuoteForm({
               {suggestions.map((sug) => (<li key={sug}>{sug}</li>))}
             </ul>
           </div>
+        )}
+
+        {initial && (
+          <p className="mt-auto rounded-lg bg-sage/25 px-3 py-2 text-sm text-charcoal">
+            ✓ Você já enviou. Editar e salvar atualiza o que o cliente vê.
+          </p>
         )}
       </section>
 

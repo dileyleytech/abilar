@@ -106,12 +106,12 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
 
       {/* Três colunas, largura total: o que o cliente pediu | montar | valores */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* O que o cliente pediu (referência — fica fixa no desktop) */}
-        <section className="self-start rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6 lg:sticky lg:top-20">
+        {/* O que o cliente pediu (referência) — ocupa 100% da coluna */}
+        <section className="flex flex-col rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
           <h2 className="mb-4 text-lg font-semibold text-charcoal">O que o cliente pediu</h2>
 
           {roomPhotos.length > 0 && (
-            <div className="mb-5 grid grid-cols-4 gap-2 sm:grid-cols-5">
+            <div className="mb-5 grid grid-cols-3 gap-2 sm:grid-cols-4">
               {roomPhotos.map((p) =>
                 p.url ? (
                   p.kind === 'ARCHITECT_PDF' ? (
@@ -127,7 +127,7 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
             </div>
           )}
 
-          <div className="flex max-h-[60vh] flex-col gap-5 overflow-y-auto lg:pr-1">
+          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto lg:pr-1">
             {[...groups.entries()].map(([room, mods]) => (
               <div key={room}>
                 <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-brand-secondary">{room}</h3>
