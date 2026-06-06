@@ -35,50 +35,43 @@ const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').t
 const matches = (q: string, ...fields: (string | null)[]) =>
   !q || fields.some((f) => f && norm(f).includes(norm(q)));
 
-function Thumb({ urls, badge }: { urls: string[]; badge?: React.ReactNode }) {
+function Cover({ urls, children }: { urls: string[]; children?: React.ReactNode }) {
   return (
-    <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-deep">
+    <div className="relative flex aspect-[4/3] items-center justify-center bg-deep">
       {urls[0] ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={urls[0]} alt="" className="h-full w-full object-cover" />
       ) : (
-        <span className="flex h-full w-full items-center justify-center text-3xl" aria-hidden>🛋️</span>
+        <span className="text-5xl" aria-hidden>🛋️</span>
       )}
-      {badge}
+      {children}
     </div>
   );
 }
 
-function Meta({ city, moduleCount, cats }: { city: string | null; moduleCount: number; cats: string[] }) {
+function CatTags({ cats }: { cats: string[] }) {
   return (
-    <>
-      <p className="text-sm text-muted">
-        📍 {city ?? '—'} · {moduleCount} {moduleCount === 1 ? 'móvel' : 'móveis'}
-      </p>
-      <div className="mt-1 flex flex-wrap gap-1">
-        {cats.slice(0, 3).map((cat) => (
-          <span key={cat} className="rounded-pill bg-deep px-2 py-0.5 text-xs font-medium text-charcoal">
-            {CATEGORY_LABELS[cat as Category] ?? cat}
-          </span>
-        ))}
-      </div>
-    </>
+    <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
+      {cats.slice(0, 3).map((cat) => (
+        <span key={cat} className="rounded-pill bg-deep px-2.5 py-0.5 text-xs font-medium text-charcoal">
+          {CATEGORY_LABELS[cat as Category] ?? cat}
+        </span>
+      ))}
+    </div>
   );
 }
 
-const cardCls =
-  'flex gap-3 rounded-2xl border border-subtle bg-surface p-3 shadow-sm transition hover:border-brand-primary/40 hover:shadow-md';
+const card = 'flex h-full flex-col overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm transition hover:-translate-y-0.5 hover:border-brand-primary/40 hover:shadow-md';
+const gridCls = 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3';
+const searchCls = 'w-full rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
 
 export function MarceneiroFeed({ open, quoted }: { open: OpenCard[]; quoted: QuotedCard[] }) {
+  const [tab, setTab] = useState<'open' | 'quoted'>('open');
   const [search, setSearch] = useState('');
   const [qStatus, setQStatus] = useState<QuoteStatus | 'ALL'>('ALL');
 
   const availableStatuses = useMemo(() => [...new Set(quoted.map((q) => q.quoteStatus))], [quoted]);
-
-  const openFiltered = useMemo(
-    () => open.filter((o) => matches(search, o.title, o.city)),
-    [open, search],
-  );
+  const openFiltered = useMemo(() => open.filter((o) => matches(search, o.title, o.city)), [open, search]);
   const quotedFiltered = useMemo(
     () =>
       quoted.filter(
@@ -87,6 +80,10 @@ export function MarceneiroFeed({ open, quoted }: { open: OpenCard[]; quoted: Quo
     [quoted, search, qStatus],
   );
 
+  const tabBtn = (active: boolean) =>
+    `flex-1 rounded-xl px-4 py-3 text-center text-sm font-semibold transition sm:text-base ${
+      active ? 'bg-brand-primary text-white shadow-sm' : 'bg-surface text-charcoal hover:bg-deep'
+    }`;
   const chip = (active: boolean) =>
     `rounded-pill px-3 py-1 text-sm font-medium transition ${
       active ? 'bg-brand-primary text-white' : 'bg-deep text-charcoal hover:bg-sand-deep'
@@ -94,131 +91,137 @@ export function MarceneiroFeed({ open, quoted }: { open: OpenCard[]; quoted: Quo
 
   return (
     <div className="flex flex-col gap-4">
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Buscar por título ou cidade…"
-        className="w-full rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
-      />
+      {/* Abas grandes */}
+      <div className="flex gap-2 rounded-2xl border border-subtle bg-base p-1.5">
+        <button type="button" onClick={() => setTab('open')} className={tabBtn(tab === 'open')}>
+          🛎️ Novos pedidos <span className={tab === 'open' ? 'text-white/80' : 'text-muted'}>({open.length})</span>
+        </button>
+        <button type="button" onClick={() => setTab('quoted')} className={tabBtn(tab === 'quoted')}>
+          📋 Meus orçamentos <span className={tab === 'quoted' ? 'text-white/80' : 'text-muted'}>({quoted.length})</span>
+        </button>
+      </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Meus orçamentos */}
-        <section>
-          <h2 className="mb-3 text-lg font-bold text-charcoal">
-            Meus orçamentos <span className="text-muted">({quotedFiltered.length})</span>
-          </h2>
-          {availableStatuses.length > 1 && (
-            <div className="mb-3 flex flex-wrap gap-2">
-              <button type="button" onClick={() => setQStatus('ALL')} className={chip(qStatus === 'ALL')}>
-                Todos
+      {/* Busca (só quando há itens na aba) */}
+      {((tab === 'open' && open.length > 0) || (tab === 'quoted' && quoted.length > 0)) && (
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por título ou cidade…" className={searchCls} />
+      )}
+
+      {/* NOVOS PEDIDOS */}
+      {tab === 'open' &&
+        (open.length === 0 ? (
+          <Empty
+            icon="📭"
+            title="Nenhum pedido novo agora"
+            hint="Aumente seu raio ou adicione categorias em “Ajustar” acima — assim mais pedidos aparecem aqui."
+          />
+        ) : openFiltered.length === 0 ? (
+          <Empty icon="🔎" title="Nada com essa busca" hint="Tente outro termo." />
+        ) : (
+          <ul className={gridCls}>
+            {openFiltered.map((c) => (
+              <li key={c.id}>
+                <Link href={`/marceneiro/pedidos/${c.id}`} className={card}>
+                  <Cover urls={c.photoUrls}>
+                    {c.photoUrls.length > 1 && (
+                      <span className="absolute bottom-2 right-2 rounded-pill bg-charcoal/70 px-2 py-0.5 text-xs font-medium text-white">
+                        📷 {c.photoUrls.length}
+                      </span>
+                    )}
+                  </Cover>
+                  <div className="flex flex-1 flex-col gap-1 p-4">
+                    <h3 className="text-lg font-semibold text-charcoal">{c.title}</h3>
+                    <p className="text-sm text-muted">
+                      📍 {c.city ?? '—'} · {c.moduleCount} {c.moduleCount === 1 ? 'móvel' : 'móveis'}
+                    </p>
+                    <CatTags cats={c.categories} />
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ))}
+
+      {/* MEUS ORÇAMENTOS */}
+      {tab === 'quoted' &&
+        (quoted.length === 0 ? (
+          <Empty
+            icon="📋"
+            title="Você ainda não enviou orçamentos"
+            hint="Quando você orçar um pedido, ele aparece aqui — com o status e o chat com o cliente."
+            action={
+              <button type="button" onClick={() => setTab('open')} className="rounded-xl bg-brand-primary px-5 py-3 text-sm font-semibold text-white">
+                Ver novos pedidos
               </button>
-              {availableStatuses.map((s) => (
-                <button key={s} type="button" onClick={() => setQStatus(s)} className={chip(qStatus === s)}>
-                  {QUOTE_STATUS_LABEL[s]}
-                </button>
-              ))}
-            </div>
-          )}
-          {quoted.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-subtle bg-surface p-6 text-center text-muted">
-              Você ainda não enviou orçamentos.
-            </p>
-          ) : quotedFiltered.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-subtle bg-surface p-6 text-center text-muted">
-              Nenhum orçamento com esses filtros.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {quotedFiltered.map((q) => {
-                // Em negociação → abre a tela do orçamento (editar + conversar).
-                // Pedido encerrado → cai no chat, se houver.
-                const href =
-                  q.projectStatus === 'OPEN_FOR_QUOTES' || q.projectStatus === 'IN_NEGOTIATION'
-                    ? `/marceneiro/pedidos/${q.projectId}`
-                    : q.conversationId
-                      ? `/conversas/${q.conversationId}`
-                      : null;
-                const inner = (
-                  <>
-                    <Thumb
-                      urls={q.photoUrls}
-                      badge={
-                        <span
-                          className={`absolute left-1 top-1 rounded-pill px-2 py-0.5 text-[11px] font-semibold shadow-sm ${QUOTE_STATUS_BADGE_SOLID[q.quoteStatus]}`}
-                        >
+            }
+          />
+        ) : (
+          <div className="flex flex-col gap-3">
+            {availableStatuses.length > 1 && (
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => setQStatus('ALL')} className={chip(qStatus === 'ALL')}>Todos</button>
+                {availableStatuses.map((s) => (
+                  <button key={s} type="button" onClick={() => setQStatus(s)} className={chip(qStatus === s)}>{QUOTE_STATUS_LABEL[s]}</button>
+                ))}
+              </div>
+            )}
+            {quotedFiltered.length === 0 ? (
+              <Empty icon="🔎" title="Nada com esses filtros" hint="Tente outro termo ou status." />
+            ) : (
+              <ul className={gridCls}>
+                {quotedFiltered.map((q) => {
+                  const href =
+                    q.projectStatus === 'OPEN_FOR_QUOTES' || q.projectStatus === 'IN_NEGOTIATION'
+                      ? `/marceneiro/pedidos/${q.projectId}`
+                      : q.conversationId
+                        ? `/conversas/${q.conversationId}`
+                        : null;
+                  const inner = (
+                    <>
+                      <Cover urls={q.photoUrls}>
+                        <span className={`absolute left-2 top-2 rounded-pill px-2.5 py-0.5 text-xs font-semibold shadow-sm ${QUOTE_STATUS_BADGE_SOLID[q.quoteStatus]}`}>
                           {QUOTE_STATUS_LABEL[q.quoteStatus]}
                         </span>
-                      }
-                    />
-                    <div className="min-w-0 flex-1">
-                      <h3 className="truncate font-semibold text-charcoal">{q.title}</h3>
-                      <Meta city={q.city} moduleCount={q.moduleCount} cats={q.categories} />
-                      <p className="mt-1 text-xs text-muted">Pedido: {PROJECT_STATUS_LABEL[q.projectStatus]}</p>
-                      {q.conversationId && (
-                        <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-secondary">
-                          💬 Chat liberado
-                        </span>
-                      )}
-                    </div>
-                  </>
-                );
-                return (
-                  <li key={q.projectId}>
-                    {href ? (
-                      <Link href={href} className={cardCls}>
-                        {inner}
-                      </Link>
-                    ) : (
-                      <div className={`${cardCls} opacity-80`}>{inner}</div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-
-        {/* Pedidos da região (abertos, sem orçamento meu ainda) */}
-        <section>
-          <h2 className="mb-3 text-lg font-bold text-charcoal">
-            Pedidos da sua região <span className="text-muted">({openFiltered.length})</span>
-          </h2>
-          {open.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-subtle bg-surface p-8 text-center text-muted">
-              <span className="text-3xl" aria-hidden>📭</span>
-              <p className="mt-2 font-medium text-charcoal">Nenhum pedido aberto agora</p>
-              <p className="text-sm">Ajuste seu raio/categorias ao lado ou aguarde novos pedidos.</p>
-            </div>
-          ) : openFiltered.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-subtle bg-surface p-6 text-center text-muted">
-              Nenhum pedido com esses filtros.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {openFiltered.map((c) => (
-                <li key={c.id}>
-                  <Link href={`/marceneiro/pedidos/${c.id}`} className={cardCls}>
-                    <Thumb
-                      urls={c.photoUrls}
-                      badge={
-                        c.photoUrls.length > 1 ? (
-                          <span className="absolute bottom-1 right-1 rounded-pill bg-charcoal/70 px-1.5 py-0.5 text-[11px] font-medium text-white">
-                            📷 {c.photoUrls.length}
+                        {q.conversationId && (
+                          <span className="absolute bottom-2 right-2 rounded-pill bg-brand-secondary px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm">
+                            💬 Chat
                           </span>
-                        ) : undefined
-                      }
-                    />
-                    <div className="min-w-0 flex-1">
-                      <h3 className="truncate font-semibold text-charcoal">{c.title}</h3>
-                      <Meta city={c.city} moduleCount={c.moduleCount} cats={c.categories} />
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+                        )}
+                      </Cover>
+                      <div className="flex flex-1 flex-col gap-1 p-4">
+                        <h3 className="text-lg font-semibold text-charcoal">{q.title}</h3>
+                        <p className="text-sm text-muted">
+                          📍 {q.city ?? '—'} · {q.moduleCount} {q.moduleCount === 1 ? 'móvel' : 'móveis'}
+                        </p>
+                        <p className="text-xs text-muted">Pedido: {PROJECT_STATUS_LABEL[q.projectStatus]}</p>
+                        <CatTags cats={q.categories} />
+                      </div>
+                    </>
+                  );
+                  return (
+                    <li key={q.projectId}>
+                      {href ? (
+                        <Link href={href} className={card}>{inner}</Link>
+                      ) : (
+                        <div className={`${card} opacity-80`}>{inner}</div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        ))}
+    </div>
+  );
+}
+
+function Empty({ icon, title, hint, action }: { icon: string; title: string; hint: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-subtle bg-surface p-12 text-center">
+      <span className="text-4xl" aria-hidden>{icon}</span>
+      <p className="text-lg font-semibold text-charcoal">{title}</p>
+      <p className="max-w-md text-muted">{hint}</p>
+      {action}
     </div>
   );
 }
