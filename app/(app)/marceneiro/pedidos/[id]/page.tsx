@@ -155,7 +155,14 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
 
         {/* Ação principal: montar e enviar o orçamento */}
         <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
-          <h2 className="mb-1 text-xl font-bold text-charcoal">Monte seu orçamento</h2>
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-xl font-bold text-charcoal">Monte seu orçamento</h2>
+            {existing && (
+              <Link href={`/orcamentos/${existing.id}/imprimir`} className="rounded-xl border border-subtle px-3 py-2 text-sm font-semibold text-brand-primary hover:bg-deep">
+                🖨️ Ver em PDF
+              </Link>
+            )}
+          </div>
           <p className="mb-4 text-sm text-muted">Some os itens (ou informe um valor) e veja quanto você recebe.</p>
           {config ? (
             <QuoteForm projectId={project.id} config={config} materials={materials} initial={quoteInitial} />
