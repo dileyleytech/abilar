@@ -107,11 +107,14 @@ export async function sendMessage(conversationId: string, body: string): Promise
   if (conv.status !== 'ACTIVE') return { ok: false, error: 'Esta conversa está fechada.' };
 
   const redacted = maskContact(text);
+  const masked = redacted !== text;
   await db.insert(messages).values({
     conversationId,
     senderId: profile.id,
     body: text,
-    redactedBody: redacted === text ? null : redacted,
+    redactedBody: masked ? redacted : null,
+    // Sinaliza p/ moderação quando houve tentativa de compartilhar contato (§7.8).
+    flaggedReason: masked ? 'CONTACT_MASKED' : null,
   });
   revalidatePath(`/conversas/${conversationId}`);
   revalidatePath('/conversas'); // atualiza a caixa (prévia + não lidas)

@@ -74,7 +74,8 @@
       "Bash(echo \"porta 3001 livre? $\\(lsof -ti:3001)",
       "Bash(echo \"iniciado, pid $!\")",
       "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} em %{time_total}s\\\\n\" http://localhost:3001/)",
-      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} em %{time_total}s\\\\n\" http://localhost:3001/entrar)"
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} em %{time_total}s\\\\n\" http://localhost:3001/entrar)",
+      "Bash(perl -i -pe \"s/normalize\\\\\\('NFD'\\\\\\)\\\\.replace\\\\\\(\\\\/\\\\[.*?\\\\]\\\\/g, ''\\\\\\)/normalize\\('NFD'\\).replace\\(\\\\/[\\\\\\\\\\\\\\\\u0300-\\\\\\\\\\\\\\\\u036f]\\\\/g, ''\\)/\" packages/shared/moderation.ts)"
     ],
     "additionalDirectories": [
       "/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/brand/svg"
