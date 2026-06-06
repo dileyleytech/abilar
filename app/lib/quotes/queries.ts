@@ -95,6 +95,8 @@ export async function getReceivedQuotes(projectId: string): Promise<ReceivedQuot
 export type QuotePrintView = {
   quoteId: string;
   status: QuoteStatus;
+  projectId: string;
+  meIsClient: boolean;
   projectTitle: string;
   projectCity: string | null;
   clientName: string;
@@ -127,6 +129,7 @@ export async function getQuoteForPrint(quoteId: string, userId: string): Promise
       createdAt: quotes.createdAt,
       carpenterId: quotes.carpenterId,
       clientId: projects.clientId,
+      projectId: quotes.projectId,
       projectTitle: projects.title,
       projectCity: projects.city,
       clientName: profiles.name,
@@ -166,6 +169,8 @@ export async function getQuoteForPrint(quoteId: string, userId: string): Promise
   return {
     quoteId: row.id,
     status: row.status,
+    projectId: row.projectId,
+    meIsClient: row.clientId === userId,
     projectTitle: row.projectTitle,
     projectCity: row.projectCity,
     clientName: row.clientName ?? 'Cliente',

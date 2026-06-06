@@ -20,7 +20,12 @@ export default async function OrcamentoImprimirPage({ params }: { params: Promis
     <main className="mx-auto w-full max-w-2xl px-4 py-8 print:py-0">
       {/* Barra de ações (some na impressão) */}
       <div className="mb-5 flex items-center justify-between gap-2 print:hidden">
-        <Link href="/conversas" className="text-sm text-muted hover:text-charcoal">← Voltar</Link>
+        <Link
+          href={q.meIsClient ? `/pedidos/${q.projectId}` : `/marceneiro/pedidos/${q.projectId}`}
+          className="text-sm text-muted hover:text-charcoal"
+        >
+          ← Voltar ao pedido
+        </Link>
         <PrintButton />
       </div>
 

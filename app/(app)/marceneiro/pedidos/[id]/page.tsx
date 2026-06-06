@@ -104,8 +104,8 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
         </div>
       )}
 
-      {/* Duas colunas, largura total: o que o cliente pediu | seu orçamento */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {/* Três colunas, largura total: o que o cliente pediu | montar | valores */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* O que o cliente pediu (referência — fica fixa no desktop) */}
         <section className="self-start rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6 lg:sticky lg:top-20">
           <h2 className="mb-4 text-lg font-semibold text-charcoal">O que o cliente pediu</h2>
@@ -166,16 +166,14 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
           </div>
         </section>
 
-        {/* Ação principal: montar e enviar o orçamento */}
-        <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
-          <h2 className="text-xl font-bold text-charcoal">Seu orçamento</h2>
-          <p className="mb-4 text-sm text-muted">Some os itens (ou informe um valor) e veja quanto você recebe.</p>
-          {config ? (
-            <QuoteForm projectId={project.id} config={config} materials={materials} initial={quoteInitial} />
-          ) : (
+        {/* Colunas 2 e 3 (montar | valores) vêm do QuoteForm */}
+        {config ? (
+          <QuoteForm projectId={project.id} config={config} materials={materials} initial={quoteInitial} />
+        ) : (
+          <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6 lg:col-span-2">
             <p className="text-muted">Configuração de preço indisponível.</p>
-          )}
-        </section>
+          </section>
+        )}
       </div>
     </main>
   );

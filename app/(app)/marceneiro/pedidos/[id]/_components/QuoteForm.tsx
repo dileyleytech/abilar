@@ -85,6 +85,8 @@ export function QuoteForm({
     })),
   );
   const [draft, setDraft] = useState<DraftItem>(emptyDraft);
+  const [showComposer, setShowComposer] = useState(false);
+  const [showInst, setShowInst] = useState(false);
   const [marginPct, setMarginPct] = useState<string>(String(initial?.marginPct ?? 30));
   const [valor, setValor] = useState(initial?.baseValueReais ?? '');
   const [maxInst, setMaxInst] = useState<number>(initial?.maxInstallments ?? 1);
@@ -193,231 +195,233 @@ export function QuoteForm({
     });
 
   return (
-    <div className="flex flex-col gap-4">
-      {initial && (
-        <p className="rounded-lg bg-sage/25 px-3 py-2 text-sm text-charcoal">
-          ✓ Você já enviou um orçamento. Editar e salvar atualiza o que o cliente vê.
-        </p>
-      )}
+    <>
+      {/* COLUNA 2 — Montar o orçamento */}
+      <section className="flex flex-col gap-4 rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
+        <div>
+          <h2 className="text-xl font-bold text-charcoal">Montar orçamento</h2>
+          <p className="text-sm text-muted">Some os itens (do catálogo ou avulsos) e a sua margem.</p>
+        </div>
 
-      {/* Itens JÁ adicionados (resumo) + margem/valor */}
-      {hasItems && (
-        <div className="rounded-2xl border border-subtle bg-base p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-semibold text-charcoal">Itens adicionados ({lines.length})</span>
-            <span className="text-sm text-muted">Custo: {formatBRL(itemsTotal.subtotalCostCents)}</span>
+        {initial && (
+          <p className="rounded-lg bg-sage/25 px-3 py-2 text-sm text-charcoal">
+            ✓ Você já enviou. Editar e salvar atualiza o que o cliente vê.
+          </p>
+        )}
+
+        {/* Itens já adicionados + margem/valor */}
+        {hasItems && (
+          <div className="rounded-2xl border border-subtle bg-base p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-sm font-semibold text-charcoal">Itens adicionados ({lines.length})</span>
+              <span className="text-sm text-muted">Custo: {formatBRL(itemsTotal.subtotalCostCents)}</span>
+            </div>
+            <ul className="flex flex-col gap-2">
+              {lines.map((l) => {
+                const unitCents = reaisToCents(Number(l.custoReais) || 0);
+                const lineTotal = Math.round((Number(l.qty) || 0) * unitCents);
+                return (
+                  <li key={l.key} className="flex items-center gap-2 rounded-xl border border-subtle bg-surface p-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-charcoal">{l.name}</p>
+                      <p className="text-sm text-muted">
+                        {l.qty} {MATERIAL_UNIT_LABEL[l.unit]} × {formatBRL(unitCents)} ={' '}
+                        <strong className="text-charcoal">{formatBRL(lineTotal)}</strong>
+                      </p>
+                    </div>
+                    <button type="button" onClick={() => editLine(l)} className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-brand-primary hover:bg-deep">
+                      Editar
+                    </button>
+                    <button type="button" onClick={() => removeLine(l.key)} className="shrink-0 rounded-lg px-2 py-1 text-sm text-muted hover:text-ochre">
+                      Remover
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="mt-3 border-t border-subtle pt-3">
+              <div className="flex items-center justify-between gap-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-charcoal">
+                  Margem (lucro)
+                  <input className={`${fld} w-24`} type="number" inputMode="decimal" min={0} step="1" value={marginPct} onChange={(e) => setMarginPct(e.target.value)} />
+                  %
+                </label>
+                <div className="text-right">
+                  <span className="text-xs text-muted">Seu valor (V)</span>
+                  <p className="font-mono text-lg font-bold text-brand-primary">{formatBRL(cents)}</p>
+                </div>
+              </div>
+              <p className="mt-1 text-xs text-muted">Lucro: {formatBRL(itemsTotal.marginCents)}.</p>
+            </div>
           </div>
-          <ul className="flex flex-col gap-2">
-            {lines.map((l) => {
-              const unitCents = reaisToCents(Number(l.custoReais) || 0);
-              const lineTotal = Math.round((Number(l.qty) || 0) * unitCents);
-              return (
-                <li key={l.key} className="flex items-center gap-2 rounded-xl border border-subtle bg-surface p-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-charcoal">{l.name}</p>
-                    <p className="text-sm text-muted">
-                      {l.qty} {MATERIAL_UNIT_LABEL[l.unit]} × {formatBRL(unitCents)} ={' '}
-                      <strong className="text-charcoal">{formatBRL(lineTotal)}</strong>
-                    </p>
-                  </div>
-                  <button type="button" onClick={() => editLine(l)} className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-brand-primary hover:bg-deep">
-                    Editar
-                  </button>
-                  <button type="button" onClick={() => removeLine(l.key)} className="shrink-0 rounded-lg px-2 py-1 text-sm text-muted hover:text-ochre">
-                    Remover
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          <div className="mt-3 border-t border-subtle pt-3">
-            <div className="flex items-center justify-between gap-2">
-              <label className="flex items-center gap-2 text-sm font-medium text-charcoal">
-                Margem (lucro)
-                <input className={`${fld} w-24`} type="number" inputMode="decimal" min={0} step="1" value={marginPct} onChange={(e) => setMarginPct(e.target.value)} />
-                %
+        )}
+
+        {/* Adicionar item — minimizado por padrão */}
+        {!showComposer ? (
+          <button
+            type="button"
+            onClick={() => setShowComposer(true)}
+            className="rounded-xl bg-brand-secondary px-4 py-3 text-base font-semibold text-white transition hover:opacity-90"
+          >
+            + Adicionar item
+          </button>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-subtle bg-base p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-semibold text-charcoal">Adicionar item</p>
+              <button type="button" onClick={() => setShowComposer(false)} className="text-sm text-muted hover:text-charcoal">Fechar</button>
+            </div>
+            {materials.length > 0 && (
+              <select className={`${fld} mb-2`} value={draft.materialId ?? ''} onChange={(e) => onPickDraftMaterial(e.target.value)}>
+                <option value="">— item avulso —</option>
+                {materials.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name} ({formatBRL(m.unitCostCents)}/{MATERIAL_UNIT_LABEL[m.unit]})</option>
+                ))}
+              </select>
+            )}
+            {draft.materialId ? (
+              <div className="mb-2">
+                <p className="font-medium text-charcoal">{draft.name}</p>
+                <p className="text-xs text-muted">{MATERIAL_CATEGORY_LABEL[draft.category]} · por {MATERIAL_UNIT_LABEL[draft.unit]} · do catálogo</p>
+              </div>
+            ) : (
+              <>
+                <input className={`${fld} mb-2`} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Descrição do item" />
+                <div className="grid grid-cols-2 gap-2">
+                  <select className={fld} value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value as MaterialCategory })}>
+                    {MATERIAL_CATEGORIES.map((c) => (<option key={c} value={c}>{MATERIAL_CATEGORY_LABEL[c]}</option>))}
+                  </select>
+                  <select className={fld} value={draft.unit} onChange={(e) => setDraft({ ...draft, unit: e.target.value as MaterialUnit })}>
+                    {MATERIAL_UNITS.map((u) => (<option key={u} value={u}>{MATERIAL_UNIT_LABEL[u]}</option>))}
+                  </select>
+                </div>
+              </>
+            )}
+            <div className="mt-2 flex items-end gap-2">
+              <label className="flex flex-1 flex-col gap-1">
+                <span className="text-xs text-muted">Qtd ({MATERIAL_UNIT_LABEL[draft.unit]})</span>
+                <input className={fld} type="number" inputMode="decimal" min={0} step="0.01" value={draft.qty} onChange={(e) => setDraft({ ...draft, qty: e.target.value })} />
               </label>
-              <div className="text-right">
-                <span className="text-xs text-muted">Seu valor (V)</span>
-                <p className="font-mono text-lg font-bold text-brand-primary">{formatBRL(cents)}</p>
+              <label className="flex flex-1 flex-col gap-1">
+                <span className="text-xs text-muted">Custo (R$)</span>
+                <input className={fld} type="number" inputMode="decimal" min={0} step="0.01" value={draft.custoReais} onChange={(e) => setDraft({ ...draft, custoReais: e.target.value })} />
+              </label>
+              <div className="flex flex-col items-end gap-1">
+                <span className="text-xs text-muted">Total</span>
+                <span className="py-3 font-mono text-sm font-semibold text-charcoal">{formatBRL(Math.round(draftQty * draftCustoCents))}</span>
               </div>
             </div>
-            <p className="mt-1 text-xs text-muted">Lucro: {formatBRL(itemsTotal.marginCents)}. O preço do cliente leva taxas por cima disso.</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button type="button" onClick={addDraft} disabled={!draftValid} className="rounded-xl bg-brand-secondary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                + Adicionar ao orçamento
+              </button>
+              {materials.length === 0 && (
+                <a href="/marceneiro/catalogo" className="rounded-xl border border-subtle px-4 py-2 text-sm text-charcoal">📦 Cadastrar no catálogo</a>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Adicionar NOVO item (composer separado da lista acima) */}
-      <div className="rounded-2xl border border-dashed border-subtle bg-surface p-4">
-        <p className="mb-2 text-sm font-semibold text-charcoal">Adicionar item</p>
-        {materials.length > 0 && (
-          <select className={`${fld} mb-2`} value={draft.materialId ?? ''} onChange={(e) => onPickDraftMaterial(e.target.value)}>
-            <option value="">— item avulso —</option>
-            {materials.map((m) => (
-              <option key={m.id} value={m.id}>{m.name} ({formatBRL(m.unitCostCents)}/{MATERIAL_UNIT_LABEL[m.unit]})</option>
-            ))}
-          </select>
         )}
-        {draft.materialId ? (
-          <div className="mb-2">
-            <p className="font-medium text-charcoal">{draft.name}</p>
-            <p className="text-xs text-muted">
-              {MATERIAL_CATEGORY_LABEL[draft.category]} · por {MATERIAL_UNIT_LABEL[draft.unit]} · do catálogo
-            </p>
+
+        {/* Sem itens: valor fechado */}
+        {!hasItems && (
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-charcoal">Ou informe um valor fechado</span>
+            <div className="flex items-center gap-2">
+              <input className={`${fld} max-w-48`} type="number" inputMode="decimal" min={0} step="0.01" placeholder="0,00" value={valor} onChange={(e) => setValor(e.target.value)} />
+              <span className="font-mono text-lg font-bold text-brand-primary">{cents > 0 ? formatBRL(cents) : ''}</span>
+            </div>
+          </label>
+        )}
+
+        {suggestions.length > 0 && (
+          <div className="rounded-xl bg-ochre/15 px-4 py-3 text-sm text-charcoal">
+            <p className="font-semibold">Confira antes de enviar:</p>
+            <ul className="mt-1 list-disc pl-5">
+              {suggestions.map((sug) => (<li key={sug}>{sug}</li>))}
+            </ul>
+          </div>
+        )}
+      </section>
+
+      {/* COLUNA 3 — Valores e envio */}
+      <section className="flex flex-col gap-4 rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
+        <h2 className="text-xl font-bold text-charcoal">Valores e envio</h2>
+
+        {preview ? (
+          <div className="flex flex-col gap-3">
+            <div className="rounded-2xl border border-subtle bg-base p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-secondary">À vista (Pix ou boleto)</p>
+              <div className="mt-1 flex items-baseline justify-between gap-2">
+                <span className="text-sm text-muted">Você recebe</span>
+                <span className="text-2xl font-bold text-charcoal">{formatBRL(preview.avista.carpenterPayoutCents)}</span>
+              </div>
+              <p className="text-sm text-muted">Cliente paga {formatBRL(preview.avista.displayedAmountCents)}</p>
+            </div>
+            {preview.parc && (
+              <div className="rounded-2xl border border-subtle bg-base p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-brand-secondary">No cartão (até {systemMax}x)</p>
+                <div className="mt-1 flex items-baseline justify-between gap-2">
+                  <span className="text-sm text-muted">Você recebe</span>
+                  <span className="text-2xl font-bold text-charcoal">{formatBRL(preview.parc.carpenterPayoutCents)}</span>
+                </div>
+                <p className="text-sm text-muted">
+                  Cliente paga {systemMax}x de {formatBRL(Math.round(preview.parc.displayedAmountCents / systemMax))}{' '}
+                  ({formatBRL(preview.parc.displayedAmountCents)})
+                </p>
+              </div>
+            )}
           </div>
         ) : (
-          <>
-            <input className={`${fld} mb-2`} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Descrição do item" />
-            <div className="grid grid-cols-2 gap-2">
-              <select className={fld} value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value as MaterialCategory })}>
-                {MATERIAL_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{MATERIAL_CATEGORY_LABEL[c]}</option>
-                ))}
-              </select>
-              <select className={fld} value={draft.unit} onChange={(e) => setDraft({ ...draft, unit: e.target.value as MaterialUnit })}>
-                {MATERIAL_UNITS.map((u) => (
-                  <option key={u} value={u}>{MATERIAL_UNIT_LABEL[u]}</option>
-                ))}
-              </select>
-            </div>
-          </>
+          <p className="rounded-2xl border border-dashed border-subtle p-6 text-center text-muted">
+            Adicione itens ou informe um valor para ver quanto você recebe.
+          </p>
         )}
-        <div className="mt-2 flex items-end gap-2">
-          <label className="flex flex-1 flex-col gap-1">
-            <span className="text-xs text-muted">Qtd ({MATERIAL_UNIT_LABEL[draft.unit]})</span>
-            <input className={fld} type="number" inputMode="decimal" min={0} step="0.01" value={draft.qty} onChange={(e) => setDraft({ ...draft, qty: e.target.value })} />
-          </label>
-          <label className="flex flex-1 flex-col gap-1">
-            <span className="text-xs text-muted">Custo (R$)</span>
-            <input className={fld} type="number" inputMode="decimal" min={0} step="0.01" value={draft.custoReais} onChange={(e) => setDraft({ ...draft, custoReais: e.target.value })} />
-          </label>
-          <div className="flex flex-col items-end gap-1">
-            <span className="text-xs text-muted">Total</span>
-            <span className="py-3 font-mono text-sm font-semibold text-charcoal">{formatBRL(Math.round(draftQty * draftCustoCents))}</span>
-          </div>
-        </div>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <button type="button" onClick={addDraft} disabled={!draftValid} className="rounded-xl bg-brand-secondary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-            + Adicionar ao orçamento
+
+        {/* Parcelamento — opcional, recolhido */}
+        <div className="rounded-2xl border border-subtle p-4">
+          <button type="button" onClick={() => setShowInst((v) => !v)} className="flex w-full items-center justify-between text-sm font-semibold text-charcoal">
+            <span>⚙️ Baratear o parcelamento do cliente (opcional)</span>
+            <span className="text-muted">{showInst ? '▲' : '▼'}</span>
           </button>
-          {materials.length === 0 && (
-            <a href="/marceneiro/catalogo" className="rounded-xl border border-subtle px-4 py-2 text-sm text-charcoal">
-              📦 Cadastrar no catálogo
-            </a>
-          )}
-        </div>
-      </div>
-
-      {/* Sem itens: valor fechado (modo simples) */}
-      {!hasItems && (
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-charcoal">Ou informe um valor fechado</span>
-          <div className="flex items-center gap-2">
-            <input className={`${fld} max-w-48`} type="number" inputMode="decimal" min={0} step="0.01" placeholder="0,00" value={valor} onChange={(e) => setValor(e.target.value)} />
-            <span className="font-mono text-lg font-bold text-brand-primary">{cents > 0 ? formatBRL(cents) : ''}</span>
-          </div>
-        </label>
-      )}
-
-      {suggestions.length > 0 && (
-        <div className="rounded-xl bg-ochre/15 px-4 py-3 text-sm text-charcoal">
-          <p className="font-semibold">Confira antes de enviar (sugestões):</p>
-          <ul className="mt-1 list-disc pl-5">
-            {suggestions.map((sug) => (
-              <li key={sug}>{sug}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-charcoal">Você topa abater a taxa do cartão até</span>
-        <select className={fld} value={maxInst} onChange={(e) => setMaxInst(Number(e.target.value))}>
-          {installmentOptions.map((n) => (
-            <option key={n} value={n}>
-              {n === 1 ? 'Não abato (cliente paga a taxa cheia)' : `${n}x`}
-            </option>
-          ))}
-        </select>
-        <p className="text-sm text-muted">
-          O cliente sempre pode parcelar em até {systemMax}x. Aqui você decide até quanto quer abrir mão de
-          uma parte da taxa para baratear o parcelamento dele.
-        </p>
-      </label>
-
-      {maxInst > 1 && (
-        <div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-sm font-medium text-charcoal">Quanto da taxa (até {maxInst}x) você absorve</span>
-            <span className="font-mono text-base text-brand-primary">{s}%</span>
-          </div>
-          <input type="range" min={minS} max={100} step={1} value={s} onChange={(e) => setS(Number(e.target.value))} className="mt-2 w-full accent-brand-primary" />
-          <p className="text-sm text-muted">Quanto mais você absorve, menos o cliente paga a mais — e você recebe um pouco menos.</p>
-        </div>
-      )}
-
-      {preview && (
-        <div className="grid grid-cols-1 gap-3 rounded-xl border border-subtle bg-base p-4 sm:grid-cols-2">
-          <Scenario title="À vista (Pix)" youGet={preview.avista.carpenterPayoutCents} clientPays={preview.avista.displayedAmountCents} />
-          {preview.parc ? (
-            <Scenario
-              title={preview.subsidizes ? `Cliente parcela (até ${systemMax}x)` : `Se o cliente parcelar (até ${systemMax}x)`}
-              youGet={preview.parc.carpenterPayoutCents}
-              clientPays={preview.parc.displayedAmountCents}
-              installment={Math.round(preview.parc.displayedAmountCents / systemMax)}
-              n={systemMax}
-            />
-          ) : (
-            <div className="flex items-center justify-center rounded-lg bg-deep p-4 text-center text-sm text-muted">
-              Sem parcelamento configurado.
+          {showInst && (
+            <div className="mt-3 flex flex-col gap-3">
+              <label className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-charcoal">Você topa abater a taxa do cartão até</span>
+                <select className={fld} value={maxInst} onChange={(e) => setMaxInst(Number(e.target.value))}>
+                  {installmentOptions.map((n) => (
+                    <option key={n} value={n}>{n === 1 ? 'Não abato (cliente paga a taxa cheia)' : `${n}x`}</option>
+                  ))}
+                </select>
+              </label>
+              {maxInst > 1 && (
+                <div>
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-sm font-medium text-charcoal">Quanto da taxa (até {maxInst}x) você absorve</span>
+                    <span className="font-mono text-base text-brand-primary">{s}%</span>
+                  </div>
+                  <input type="range" min={minS} max={100} step={1} value={s} onChange={(e) => setS(Number(e.target.value))} className="mt-2 w-full accent-brand-primary" />
+                </div>
+              )}
+              <p className="text-xs text-muted">O cliente sempre pode parcelar em até {systemMax}x. Abater significa você abrir mão de parte da taxa pra ele.</p>
             </div>
           )}
         </div>
-      )}
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-charcoal">Mensagem ao cliente (opcional)</span>
-        <textarea className={`${fld} min-h-20`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Prazo, detalhes do material…" />
-      </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-charcoal">Mensagem ao cliente (opcional)</span>
+          <textarea className={`${fld} min-h-20`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Prazo, detalhes do material…" />
+        </label>
 
-      <div className="flex gap-2">
-        <button type="button" onClick={submit} disabled={pending || cents <= 0} className="flex-1 rounded-xl bg-brand-primary px-5 py-4 text-lg font-semibold text-white transition hover:opacity-90 disabled:opacity-50">
+        <button type="button" onClick={submit} disabled={pending || cents <= 0} className="rounded-xl bg-brand-primary px-5 py-4 text-lg font-semibold text-white transition hover:opacity-90 disabled:opacity-50">
           {pending ? 'Enviando…' : initial ? 'Atualizar orçamento' : 'Enviar orçamento'}
         </button>
         {initial && (
-          <button type="button" onClick={remove} disabled={pending} className="rounded-xl border border-subtle px-4 py-4 text-base text-charcoal hover:bg-deep">
-            Retirar
+          <button type="button" onClick={remove} disabled={pending} className="rounded-xl border border-subtle px-4 py-3 text-base text-charcoal hover:bg-deep">
+            Retirar orçamento
           </button>
         )}
-      </div>
-      {error && <p className="rounded-xl bg-ochre/20 px-4 py-3 text-base text-charcoal" role="alert">{error}</p>}
-    </div>
-  );
-}
-
-function Scenario({
-  title,
-  youGet,
-  clientPays,
-  installment,
-  n,
-}: {
-  title: string;
-  youGet: number;
-  clientPays: number;
-  installment?: number;
-  n?: number;
-}) {
-  return (
-    <div className="rounded-lg bg-surface p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-brand-secondary">{title}</p>
-      <p className="mt-1 text-sm text-muted">Você recebe</p>
-      <p className="text-xl font-bold text-charcoal">{formatBRL(youGet)}</p>
-      <p className="mt-2 text-sm text-muted">Cliente paga</p>
-      <p className="text-base font-semibold text-charcoal">
-        {formatBRL(clientPays)}
-        {installment && n ? <span className="text-muted"> · {n}x de {formatBRL(installment)}</span> : null}
-      </p>
-    </div>
+        {error && <p className="rounded-xl bg-ochre/20 px-4 py-3 text-base text-charcoal" role="alert">{error}</p>}
+      </section>
+    </>
   );
 }
