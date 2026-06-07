@@ -70,100 +70,88 @@ export default async function PedidoDetailPage({
         <StatusBadge status={project.status} />
       </header>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Conteúdo principal: obra (se contratada) + móveis + orçamentos recebidos */}
-        <div className="flex flex-col gap-6 lg:col-span-2">
-          {obra && (
-            <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
-              <h2 className="mb-4 text-xl font-bold text-charcoal">Sua obra</h2>
-              <ObraBoard milestones={obra.milestones} meIsClient={obra.meIsClient} meIsCarpenter={obra.meIsCarpenter} approvedPct={obra.approvedPct} />
-            </section>
-          )}
+      <div className="flex flex-col gap-6">
+        {/* Obra contratada — quadro em destaque, largura total */}
+        {obra && (
+          <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
+            <h2 className="mb-4 text-xl font-bold text-charcoal">Sua obra</h2>
+            <ObraBoard milestones={obra.milestones} meIsClient={obra.meIsClient} meIsCarpenter={obra.meIsCarpenter} approvedPct={obra.approvedPct} />
+          </section>
+        )}
 
-          <ModulesSection projectId={project.id} modules={moduleViews} editable={editable} />
-
-          {(project.status === 'OPEN_FOR_QUOTES' || quotes.length > 0) && (
-            <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
-              <h2 className="mb-4 text-lg font-semibold text-charcoal">
-                Orçamentos recebidos {quotes.length > 0 && <span className="text-muted">({quotes.length})</span>}
-              </h2>
-              {quotes.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-subtle p-6 text-center text-muted">
-                  Nenhum orçamento ainda. Marceneiros da sua região vão enviar propostas aqui.
-                </p>
-              ) : (
-                <ul className="flex flex-col gap-3">
-                  {quotes.map((q) => (
-                    <li key={q.id} className="rounded-xl border border-subtle p-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="font-semibold text-charcoal">{q.carpenterName}</p>
-                        <span className="rounded-pill bg-brand-secondary/15 px-2.5 py-0.5 text-xs font-semibold text-brand-secondary">
-                          {q.status === 'SENT' ? 'Recebido' : q.status}
-                        </span>
-                      </div>
-                      <div className="mt-2 flex flex-wrap items-baseline gap-x-6 gap-y-1">
+        {/* Orçamentos recebidos — grade em largura total */}
+        {(project.status === 'OPEN_FOR_QUOTES' || quotes.length > 0) && (
+          <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
+            <h2 className="mb-4 text-lg font-semibold text-charcoal">
+              Orçamentos recebidos {quotes.length > 0 && <span className="text-muted">({quotes.length})</span>}
+            </h2>
+            {quotes.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-subtle p-6 text-center text-muted">
+                Nenhum orçamento ainda. Marceneiros da sua região vão enviar propostas aqui.
+              </p>
+            ) : (
+              <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {quotes.map((q) => (
+                  <li key={q.id} className="flex flex-col rounded-xl border border-subtle p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-semibold text-charcoal">{q.carpenterName}</p>
+                      <span className="rounded-pill bg-brand-secondary/15 px-2.5 py-0.5 text-xs font-semibold text-brand-secondary">
+                        {q.status === 'SENT' ? 'Recebido' : q.status}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex flex-col gap-0.5">
+                      <span className="text-sm text-muted">
+                        À vista: <strong className="text-charcoal">{formatBRL(q.avistaCents)}</strong>
+                      </span>
+                      {q.parceladoCents != null && q.installmentValueCents != null && (
                         <span className="text-sm text-muted">
-                          À vista: <strong className="text-charcoal">{formatBRL(q.avistaCents)}</strong>
+                          ou em até {q.clientInstallments}x de{' '}
+                          <strong className="text-charcoal">{formatBRL(q.installmentValueCents)}</strong>
                         </span>
-                        {q.parceladoCents != null && q.installmentValueCents != null && (
-                          <span className="text-sm text-muted">
-                            Em até {q.clientInstallments}x de{' '}
-                            <strong className="text-charcoal">{formatBRL(q.installmentValueCents)}</strong>{' '}
-                            <span className="text-subtle">({formatBRL(q.parceladoCents)})</span>
-                          </span>
-                        )}
-                      </div>
-                      {q.note && <p className="mt-2 text-sm text-charcoal/80">“{q.note}”</p>}
-                      <div className="mt-3 flex flex-wrap items-center gap-3">
-                        {q.contractId ? (
-                          <Link href={`/contratos/${q.contractId}`} className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
-                            📄 Ver contrato
-                          </Link>
-                        ) : q.status === 'PRE_APPROVED' ? (
-                          <AcceptQuoteButton quoteId={q.id} />
-                        ) : (
-                          <PreApproveButton quoteId={q.id} approved={q.status !== 'SENT'} />
-                        )}
-                        <Link href={`/orcamentos/${q.id}/imprimir`} className="text-sm font-semibold text-brand-primary hover:underline">
-                          🖨️ Ver em PDF
+                      )}
+                    </div>
+                    {q.note && <p className="mt-2 text-sm text-charcoal/80">“{q.note}”</p>}
+                    <div className="mt-auto flex flex-wrap items-center gap-3 pt-3">
+                      {q.contractId ? (
+                        <Link href={`/contratos/${q.contractId}`} className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
+                          📄 Ver contrato
                         </Link>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          )}
-        </div>
+                      ) : q.status === 'PRE_APPROVED' ? (
+                        <AcceptQuoteButton quoteId={q.id} />
+                      ) : (
+                        <PreApproveButton quoteId={q.id} approved={q.status !== 'SENT'} />
+                      )}
+                      <Link href={`/orcamentos/${q.id}/imprimir`} className="text-sm font-semibold text-brand-primary hover:underline">
+                        🖨️ PDF
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
 
-        {/* Aside: local da obra + documentos + ações */}
-        <aside className="flex flex-col gap-6">
+        {/* Móveis do pedido */}
+        <ModulesSection projectId={project.id} modules={moduleViews} editable={editable} />
+
+        {/* Secundário, largura total: local da obra · documentos · ações */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <ProjectLocation projectId={project.id} city={project.city} cep={project.cep} editable={editable} />
 
           {roomPhotos.length > 0 && (
             <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
               <h2 className="mb-3 text-lg font-semibold text-charcoal">Documentos do projeto</h2>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {roomPhotos.map((p) =>
                   p.url ? (
                     p.kind === 'ARCHITECT_PDF' ? (
-                      <a
-                        key={p.id}
-                        href={p.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex aspect-square items-center justify-center rounded-xl border border-subtle bg-deep text-center text-sm font-medium text-brand-primary"
-                      >
-                        📄 Abrir PDF
+                      <a key={p.id} href={p.url} target="_blank" rel="noreferrer" className="flex aspect-square items-center justify-center rounded-xl border border-subtle bg-deep text-center text-xs font-medium text-brand-primary">
+                        📄 PDF
                       </a>
                     ) : (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        key={p.id}
-                        src={p.url}
-                        alt="Documento do projeto"
-                        className="aspect-square w-full rounded-xl border border-subtle object-cover"
-                      />
+                      <img key={p.id} src={p.url} alt="Documento do projeto" className="aspect-square w-full rounded-xl border border-subtle object-cover" />
                     )
                   ) : null,
                 )}
@@ -175,7 +163,7 @@ export default async function PedidoDetailPage({
             <h2 className="mb-3 text-lg font-semibold text-charcoal">Ações</h2>
             <ProjectActions projectId={project.id} status={project.status} />
           </section>
-        </aside>
+        </div>
       </div>
     </main>
   );

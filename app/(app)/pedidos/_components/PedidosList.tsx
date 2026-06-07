@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { isTerminalProjectStatus, type ProjectStatus } from '@abilar/shared';
+import { type ProjectStatus } from '@abilar/shared';
 import { StatusBadge } from '@/components/StatusBadge';
 import { CancelButton } from './CancelButton';
 
@@ -17,6 +17,8 @@ export type ProjectCard = {
 };
 
 const isObra = (s: ProjectStatus) => s === 'HIRED' || s === 'EXECUTED';
+// Só dá para cancelar antes de contratar.
+const canCancel = (s: ProjectStatus) => s === 'DRAFT' || s === 'OPEN_FOR_QUOTES' || s === 'IN_NEGOTIATION';
 
 export function PedidosList({ projects }: { projects: ProjectCard[] }) {
   const [tab, setTab] = useState<'pedidos' | 'obras'>('pedidos');
@@ -87,7 +89,7 @@ export function PedidosList({ projects }: { projects: ProjectCard[] }) {
                   )}
                 </div>
               </Link>
-              {!isTerminalProjectStatus(p.status) && (
+              {canCancel(p.status) && (
                 <div className="absolute bottom-3 right-3">
                   <CancelButton projectId={p.id} />
                 </div>
