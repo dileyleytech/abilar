@@ -1,5 +1,5 @@
 import 'server-only';
-import { projects, modules, projectPhotos, quotes, and, asc, desc, eq, inArray, sql } from '@abilar/db';
+import { projects, modules, projectPhotos, quotes, projectMilestones, and, asc, desc, eq, inArray, sql } from '@abilar/db';
 import type { Project, Module, ProjectPhoto } from '@abilar/db';
 import { getDb } from '@/lib/db';
 
@@ -16,13 +16,15 @@ export async function listMyProjects(userId: string): Promise<Project[]> {
 /** Pedidos + foto de capa + nº de móveis, para a listagem. */
 export async function listMyProjectsWithCover(
   userId: string,
-): Promise<(Project & { coverPath: string | null; moduleCount: number; quoteCount: number })[]> {
+): Promise<
+  (Project & { coverPath: string | null; moduleCount: number; quoteCount: number; obraPct: number | null })[]
+> {
   const db = getDb();
   const rows = await listMyProjects(userId);
   if (rows.length === 0) return [];
   const ids = rows.map((p) => p.id);
 
-  const [photos, counts, quoteCounts] = await Promise.all([
+  const [photos, counts, quoteCounts, obra] = await Promise.all([
     db
       .select({ projectId: projectPhotos.projectId, path: projectPhotos.path })
       .from(projectPhotos)
@@ -38,6 +40,15 @@ export async function listMyProjectsWithCover(
       .from(quotes)
       .where(inArray(quotes.projectId, ids))
       .groupBy(quotes.projectId),
+    db
+      .select({
+        projectId: projectMilestones.projectId,
+        total: sql<number>`count(*)::int`,
+        approved: sql<number>`coalesce(sum(case when ${projectMilestones.status} = 'APPROVED' then ${projectMilestones.pct} else 0 end), 0)::int`,
+      })
+      .from(projectMilestones)
+      .where(inArray(projectMilestones.projectId, ids))
+      .groupBy(projectMilestones.projectId),
   ]);
 
   const cover = new Map<string, string>();
@@ -46,12 +57,15 @@ export async function listMyProjectsWithCover(
   for (const c of counts) count.set(c.projectId, c.n);
   const quoteCount = new Map<string, number>();
   for (const q of quoteCounts) quoteCount.set(q.projectId, q.n);
+  const obraPct = new Map<string, number>();
+  for (const o of obra) if (o.total > 0) obraPct.set(o.projectId, o.approved);
 
   return rows.map((p) => ({
     ...p,
     coverPath: cover.get(p.id) ?? null,
     moduleCount: count.get(p.id) ?? 0,
     quoteCount: quoteCount.get(p.id) ?? 0,
+    obraPct: obraPct.has(p.id) ? (obraPct.get(p.id) as number) : null,
   }));
 }
 

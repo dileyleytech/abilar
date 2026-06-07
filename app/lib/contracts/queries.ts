@@ -76,9 +76,16 @@ export async function getContract(contractId: string, userId: string): Promise<C
   };
 }
 
-/** Contrato de um orçamento (se existir) — para mostrar links de aceite/assinatura. */
-export async function getContractIdByQuote(quoteId: string): Promise<string | null> {
+/** Contrato de um orçamento (se existir) — id + status + se o marceneiro já assinou,
+ *  para rotular o botão (assinar vs ver). */
+export async function getContractForQuote(
+  quoteId: string,
+): Promise<{ id: string; status: ContractStatus; carpenterSigned: boolean } | null> {
   const db = getDb();
-  const [row] = await db.select({ id: contracts.id }).from(contracts).where(eq(contracts.quoteId, quoteId)).limit(1);
-  return row?.id ?? null;
+  const [row] = await db
+    .select({ id: contracts.id, status: contracts.status, carp: contracts.acceptedByCarpenterAt })
+    .from(contracts)
+    .where(eq(contracts.quoteId, quoteId))
+    .limit(1);
+  return row ? { id: row.id, status: row.status, carpenterSigned: row.carp != null } : null;
 }

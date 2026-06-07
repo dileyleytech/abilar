@@ -9,7 +9,7 @@ import { signedProjectPhotoUrl } from '@/lib/storage';
 import { getActivePricingConfig } from '@/lib/pricing/config';
 import { getCarpenterQuote } from '@/lib/quotes/queries';
 import { getConversationForProjectCarpenter } from '@/lib/chat/queries';
-import { getContractIdByQuote } from '@/lib/contracts/queries';
+import { getContractForQuote } from '@/lib/contracts/queries';
 import { getProjectMilestones } from '@/lib/obra/queries';
 import { ObraBoard } from '@/components/ObraBoard';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
@@ -41,7 +41,8 @@ export default async function CarpenterPedidoPage({
   // Já orçou → pode abrir/editar em qualquer status; senão, vale a elegibilidade (pedido aberto).
   const detail = existing ? await getProjectDetailById(id) : await getProjectForCarpenter(id, carpenter);
   if (!detail) notFound();
-  const contractId = existing ? await getContractIdByQuote(existing.id) : null;
+  const contract = existing ? await getContractForQuote(existing.id) : null;
+  const contractNeedsSign = contract != null && contract.status === 'DRAFT' && !contract.carpenterSigned;
   const obra = await getProjectMilestones(id, profile.id);
   const { project, modules, photos } = detail;
 
@@ -107,12 +108,14 @@ export default async function CarpenterPedidoPage({
               💬 Conversar com o cliente
             </Link>
           )}
-          {contractId && (
+          {contract && (
             <Link
-              href={`/contratos/${contractId}`}
-              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-brand-primary px-5 py-4 text-lg font-semibold text-white shadow-sm transition hover:opacity-90"
+              href={`/contratos/${contract.id}`}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 py-4 text-lg font-semibold shadow-sm transition hover:opacity-90 ${
+                contractNeedsSign ? 'bg-brand-primary text-white' : 'border-2 border-subtle text-charcoal'
+              }`}
             >
-              📄 Contrato (assinar)
+              {contractNeedsSign ? '✍️ Assinar contrato' : '📄 Ver contrato'}
             </Link>
           )}
           {existing && (

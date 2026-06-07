@@ -75,10 +75,22 @@ export default async function PedidosPage() {
                   <p className="text-sm text-muted">
                     {p.moduleCount} {p.moduleCount === 1 ? 'móvel' : 'móveis'}
                   </p>
-                  {p.quoteCount > 0 && (
-                    <span className="mt-2 inline-flex items-center gap-1 rounded-pill bg-brand-secondary/15 px-2.5 py-1 text-xs font-semibold text-brand-secondary">
-                      💬 {p.quoteCount} {p.quoteCount === 1 ? 'orçamento recebido' : 'orçamentos recebidos'}
-                    </span>
+                  {p.obraPct != null ? (
+                    <div className="mt-2">
+                      <div className="flex items-center justify-between text-xs font-semibold text-brand-primary">
+                        <span>🏗️ {p.obraPct === 100 ? 'Obra concluída' : 'Em obra'}</span>
+                        <span>{p.obraPct}%</span>
+                      </div>
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-deep">
+                        <div className="h-full rounded-full bg-brand-primary" style={{ width: `${p.obraPct}%` }} />
+                      </div>
+                    </div>
+                  ) : (
+                    p.quoteCount > 0 && (
+                      <span className="mt-2 inline-flex items-center gap-1 rounded-pill bg-brand-secondary/15 px-2.5 py-1 text-xs font-semibold text-brand-secondary">
+                        💬 {p.quoteCount} {p.quoteCount === 1 ? 'orçamento recebido' : 'orçamentos recebidos'}
+                      </span>
+                    )
                   )}
                 </div>
               </Link>
