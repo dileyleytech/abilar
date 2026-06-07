@@ -95,7 +95,18 @@
       "Bash(sed -n '19,40p' tsconfig.json)",
       "Bash(sed -n '8,20p' eslint.config.mjs)",
       "Bash(npx expo-doctor *)",
-      "Bash(node -e \"const f='app.json';const a=require\\('./'+f\\);delete a.expo.newArchEnabled;require\\('fs'\\).writeFileSync\\(f,JSON.stringify\\(a,null,2\\)+'\\\\n'\\)\")"
+      "Bash(node -e \"const f='app.json';const a=require\\('./'+f\\);delete a.expo.newArchEnabled;require\\('fs'\\).writeFileSync\\(f,JSON.stringify\\(a,null,2\\)+'\\\\n'\\)\")",
+      "Bash(curl -s -o /dev/null -w \"http=%{http_code}\\\\n\" http://localhost:3001)",
+      "Bash(xcode-select -p)",
+      "Read(//Applications/**)",
+      "Bash(xcrun simctl *)",
+      "Bash(curl -s -o /dev/null -w \"next http=%{http_code}\\\\n\" http://localhost:3001)",
+      "Bash(npm view *)",
+      "Bash(node -e \"console.log\\('expo', require\\('./node_modules/expo/package.json'\\).version\\)\")",
+      "Bash(curl -s \"https://exp.host/--/api/v2/versions\")",
+      "Bash(node -e \"let s='';process.stdin.on\\('data',d=>s+=d\\).on\\('end',\\(\\)=>{try{const j=JSON.parse\\(s\\);console.log\\('sdkVersions:', Object.keys\\(j.sdkVersions||{}\\).sort\\(\\)\\);}catch\\(e\\){console.log\\('falhou parse'\\)}}\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"for\\(const p of ['expo','react','react-native','expo-router']\\){try{console.log\\(p, require\\('./node_modules/'+p+'/package.json'\\).version\\)}catch\\(e\\){console.log\\(p,'?'\\)}}\")"
     ],
     "additionalDirectories": [
       "/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/brand/svg"
