@@ -128,6 +128,52 @@ export async function getConversation(id: string, userId: string): Promise<Conve
   return { ...row, otherName: (prof as { name: string | null } | null)?.name || (row.client_id === userId ? 'Marceneiro' : 'Cliente') };
 }
 
+export type EvidenceRow = {
+  id: string;
+  comment: string | null;
+  photos: string[] | null;
+  created_at: string;
+};
+
+export async function listEvidences(milestoneId: string): Promise<EvidenceRow[]> {
+  const { data, error } = await supabase
+    .from('milestone_evidences')
+    .select('id, comment, photos, created_at')
+    .eq('milestone_id', milestoneId)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data as EvidenceRow[]) ?? [];
+}
+
+export type NotificationRow = {
+  id: string;
+  title: string;
+  body: string | null;
+  link: string | null;
+  read_at: string | null;
+  created_at: string;
+};
+
+export async function listNotifications(userId: string): Promise<NotificationRow[]> {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('id, title, body, link, read_at, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (error) throw new Error(error.message);
+  return (data as NotificationRow[]) ?? [];
+}
+
+export async function countUnreadNotifications(userId: string): Promise<number> {
+  const { count } = await supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .is('read_at', null);
+  return count ?? 0;
+}
+
 export async function listMessages(conversationId: string): Promise<MessageRow[]> {
   const { data, error } = await supabase
     .from('messages')

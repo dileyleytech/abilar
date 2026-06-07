@@ -23,7 +23,13 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O Abilar usa suas fotos para anexar evidências da obra e imagens no chat."
+        }
+      ]
     ],
     "scheme": "abilar"
   }
