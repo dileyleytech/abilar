@@ -36,10 +36,13 @@ export function ModulesSection({
   const [h, setH] = useState('');
   const [d, setD] = useState('');
   const [photo, setPhoto] = useState<Photo | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  const editable = isOwner && status === 'DRAFT';
+  const editable = isOwner && ['DRAFT', 'OPEN_FOR_QUOTES', 'IN_NEGOTIATION'].includes(status);
+  const isDraft = isOwner && status === 'DRAFT';
 
   const load = useCallback(async () => {
     try {
@@ -72,7 +75,47 @@ export function ModulesSection({
     setH('');
     setD('');
     setPhoto(null);
+    setEditId(null);
     setOpen(false);
+  };
+
+  const startAdd = () => {
+    resetForm();
+    setOpen(true);
+  };
+
+  const startEdit = (m: ModuleRow) => {
+    setEditId(m.id);
+    setAmbiente(m.ambiente ?? '');
+    setCategory(m.type);
+    setLabel(m.label ?? '');
+    setWorkType(m.work_type ?? 'NEW_INSTALL');
+    setW(String(m.width_mm / 10));
+    setH(String(m.height_mm / 10));
+    setD(String(m.depth_mm / 10));
+    setPhoto(null);
+    setOpen(true);
+  };
+
+  const remove = (m: ModuleRow) => {
+    Alert.alert('Remover móvel', `Remover "${m.label ?? CATEGORY_LABEL[m.type] ?? m.type}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Remover',
+        style: 'destructive',
+        onPress: async () => {
+          setBusyId(m.id);
+          try {
+            await api.deleteModule(m.id);
+            await load();
+          } catch (e) {
+            Alert.alert('Ops', e instanceof Error ? e.message : 'Não foi possível remover.');
+          } finally {
+            setBusyId(null);
+          }
+        },
+      },
+    ]);
   };
 
   const addPhoto = async () => {
@@ -80,7 +123,7 @@ export function ModulesSection({
     if (picked[0]) setPhoto(picked[0]);
   };
 
-  const add = async () => {
+  const submit = async () => {
     if (!category) return Alert.alert('Móvel', 'Escolha o tipo do móvel.');
     if (category === 'OUTRO' && !label.trim()) return Alert.alert('Móvel', 'Diga qual é o móvel.');
     const widthCm = Number(w.replace(',', '.'));
@@ -88,21 +131,19 @@ export function ModulesSection({
     const depthCm = Number(d.replace(',', '.'));
     if (!(widthCm > 0 && heightCm > 0 && depthCm > 0)) return Alert.alert('Medidas', 'Informe largura, altura e profundidade (cm).');
 
+    const input = {
+      ambiente: ambiente.trim() || undefined,
+      category,
+      label: category === 'OUTRO' ? label.trim() : undefined,
+      workType,
+      widthCm,
+      heightCm,
+      depthCm,
+    };
     setSaving(true);
     try {
-      await api.addModule(
-        {
-          projectId,
-          ambiente: ambiente.trim() || undefined,
-          category,
-          label: category === 'OUTRO' ? label.trim() : undefined,
-          workType,
-          widthCm,
-          heightCm,
-          depthCm,
-        },
-        photo,
-      );
+      if (editId) await api.updateModule(editId, input, photo);
+      else await api.addModule({ projectId, ...input }, photo);
       resetForm();
       await load();
     } catch (e) {
@@ -156,10 +197,20 @@ export function ModulesSection({
               </Text>
             </View>
           </View>
+          {editable && !open && (
+            <View style={styles.cardActions}>
+              <Pressable onPress={() => startEdit(m)} hitSlop={6} disabled={busyId === m.id}>
+                <Text style={styles.editLink}>✏️ Editar</Text>
+              </Pressable>
+              <Pressable onPress={() => remove(m)} hitSlop={6} disabled={busyId === m.id}>
+                <Text style={styles.removeLink}>{busyId === m.id ? '…' : '✕ Remover'}</Text>
+              </Pressable>
+            </View>
+          )}
         </Card>
       ))}
 
-      {editable && !open && <Button title="+ Adicionar móvel" variant="outline" onPress={() => setOpen(true)} />}
+      {editable && !open && <Button title="+ Adicionar móvel" variant="outline" onPress={startAdd} />}
 
       {editable && open && (
         <Card style={{ gap: space.sm }}>
@@ -197,7 +248,7 @@ export function ModulesSection({
             <TextInput style={[styles.input, styles.flex1]} keyboardType="numeric" placeholder="Prof." placeholderTextColor={color.text.subtle} value={d} onChangeText={setD} />
           </View>
 
-          <Text style={styles.fLabel}>Foto do móvel (opcional)</Text>
+          <Text style={styles.fLabel}>{editId ? 'Trocar a foto (opcional)' : 'Foto do móvel (opcional)'}</Text>
           {photo ? (
             <View style={styles.row}>
               <Image source={{ uri: photo.uri }} style={styles.formThumb} />
@@ -211,7 +262,7 @@ export function ModulesSection({
 
           <View style={styles.row}>
             <View style={styles.flex1}>
-              <Button title="Adicionar" onPress={add} loading={saving} />
+              <Button title={editId ? 'Salvar' : 'Adicionar'} onPress={submit} loading={saving} />
             </View>
             <View style={styles.flex1}>
               <Button title="Cancelar" variant="outline" onPress={resetForm} />
@@ -220,10 +271,10 @@ export function ModulesSection({
         </Card>
       )}
 
-      {editable && modules.length > 0 && !open && (
+      {isDraft && modules.length > 0 && !open && (
         <Button title="Publicar pedido →" variant="secondary" onPress={publish} loading={publishing} />
       )}
-      {editable && <Text style={styles.muted}>Publique para os marceneiros da região enviarem orçamento.</Text>}
+      {isDraft && <Text style={styles.muted}>Publique para os marceneiros da região enviarem orçamento.</Text>}
     </View>
   );
 }
@@ -231,6 +282,9 @@ export function ModulesSection({
 const styles = StyleSheet.create({
   section: { fontSize: 18, fontWeight: '700', color: color.text.primary },
   muted: { color: color.text.muted, fontSize: 13 },
+  cardActions: { flexDirection: 'row', gap: space.lg, marginTop: space.sm, paddingTop: space.sm, borderTopWidth: 1, borderTopColor: color.border.subtle },
+  editLink: { color: color.brand.secondary, fontWeight: '600' },
+  removeLink: { color: color.state.danger, fontWeight: '600' },
   mRow: { flexDirection: 'row', gap: space.md, alignItems: 'center' },
   mThumb: { width: 64, height: 64, borderRadius: radius.md },
   mThumbEmpty: { backgroundColor: color.bg.deep, alignItems: 'center', justifyContent: 'center' },

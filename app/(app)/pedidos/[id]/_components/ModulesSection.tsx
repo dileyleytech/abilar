@@ -3,7 +3,7 @@
 import { useOptimistic, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { CATEGORIES, cmToMm, formatCm, dimensionCmError, type Category, type WorkType } from '@abilar/shared';
-import { addModule, deleteModule, registerProjectPhoto } from '@/lib/projects/actions';
+import { addModule, updateModule, deleteModule, registerProjectPhoto } from '@/lib/projects/actions';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { downscaleImage } from '@/lib/image';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
@@ -56,11 +56,13 @@ export function ModulesSection({
 
   const [ambiente, setAmbiente] = useState('');
   const [type, setType] = useState<Category>('GUARDA_ROUPA');
+  const [label, setLabel] = useState('');
   const [wt, setWt] = useState<WorkType>('NEW_INSTALL');
   const [w, setW] = useState('');
   const [h, setH] = useState('');
   const [d, setD] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
 
   // UI otimista: o móvel aparece na hora (sem flash de "lista vazia") e some o
   // erro percebido; quando o router.refresh sincroniza, os dados reais assumem.
@@ -83,33 +85,60 @@ export function ModulesSection({
     'w-full rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
   const fldErr = 'border-ochre ring-2 ring-ochre/30';
 
+  const resetForm = () => {
+    setAmbiente('');
+    setType('GUARDA_ROUPA');
+    setLabel('');
+    setWt('NEW_INSTALL');
+    setW('');
+    setH('');
+    setD('');
+    setFile(null);
+    setEditId(null);
+    setOpen(false);
+  };
+
+  const startEdit = (m: ModuleView) => {
+    setEditId(m.id);
+    setAmbiente(m.ambiente ?? '');
+    setType(m.type as Category);
+    setLabel(m.label ?? '');
+    setWt((m.workType as WorkType) ?? 'NEW_INSTALL');
+    setW(String(m.widthMm / 10));
+    setH(String(m.heightMm / 10));
+    setD(String(m.depthMm / 10));
+    setFile(null);
+    setOpen(true);
+  };
+
   const submit = () => {
     const payload = {
       ambiente: ambiente.trim() || undefined,
       type,
+      label: type === 'OUTRO' ? label.trim() || undefined : undefined,
       workType: wt,
       widthMm: Number(w),
       heightMm: Number(h),
       depthMm: Number(d),
     };
     const localFile = file;
-    // Limpa e fecha o form já; o móvel aparece otimista logo abaixo.
-    setAmbiente('');
-    setWt('NEW_INSTALL');
-    setW('');
-    setH('');
-    setD('');
-    setFile(null);
-    setOpen(false);
+    const isEdit = editId;
+    resetForm();
 
     start(async () => {
       setError(null);
+      if (isEdit) {
+        const r = await updateModule(projectId, isEdit, payload);
+        if (!r.ok) return setError(r.error);
+        if (localFile) await uploadModulePhoto(projectId, isEdit, localFile);
+        return router.refresh();
+      }
       addOptimistic({
         id: `temp-${Date.now()}`,
         ambiente: payload.ambiente ?? null,
         type: payload.type,
         workType: payload.workType,
-        label: null,
+        label: payload.label ?? null,
         widthMm: cmToMm(payload.widthMm),
         heightMm: cmToMm(payload.heightMm),
         depthMm: cmToMm(payload.depthMm),
@@ -154,7 +183,7 @@ export function ModulesSection({
           <button
             type="button"
             className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
-            onClick={() => setOpen(true)}
+            onClick={() => { resetForm(); setOpen(true); }}
           >
             + Adicionar móvel
           </button>
@@ -208,16 +237,27 @@ export function ModulesSection({
                         <p className="truncate font-semibold text-charcoal">
                           {m.label ?? CATEGORY_LABELS[m.type as Category] ?? m.type}
                         </p>
-                        {editable && (
-                          <button
-                            type="button"
-                            aria-label="Remover móvel"
-                            disabled={pending}
-                            onClick={() => remove(m.id)}
-                            className="shrink-0 rounded-md px-2 py-0.5 text-muted hover:bg-deep hover:text-charcoal disabled:opacity-50"
-                          >
-                            ✕
-                          </button>
+                        {editable && !m.id.startsWith('temp-') && (
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              aria-label="Editar móvel"
+                              disabled={pending}
+                              onClick={() => startEdit(m)}
+                              className="rounded-md px-2 py-0.5 text-muted hover:bg-deep hover:text-charcoal disabled:opacity-50"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              type="button"
+                              aria-label="Remover móvel"
+                              disabled={pending}
+                              onClick={() => remove(m.id)}
+                              className="rounded-md px-2 py-0.5 text-muted hover:bg-deep hover:text-charcoal disabled:opacity-50"
+                            >
+                              ✕
+                            </button>
+                          </div>
                         )}
                       </div>
                       <p className="mt-1 font-mono text-sm text-muted">
@@ -259,6 +299,12 @@ export function ModulesSection({
               </select>
             </label>
           </div>
+          {type === 'OUTRO' && (
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-charcoal">Qual é o móvel?</span>
+              <input className={fld} placeholder="Ex.: Adega, sapateira…" value={label} onChange={(e) => setLabel(e.target.value)} />
+            </label>
+          )}
           <div className="flex gap-2">
             {([
               { v: 'NEW_INSTALL', t: '🆕 Móvel novo' },
@@ -291,7 +337,9 @@ export function ModulesSection({
             </div>
           </div>
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-charcoal">Foto do móvel (opcional)</span>
+            <span className="text-sm font-medium text-charcoal">
+              {editId ? 'Trocar a foto (opcional)' : 'Foto do móvel (opcional)'}
+            </span>
             <input type="file" accept="image/*" className={fld} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           </label>
           <div className="flex gap-2">
@@ -301,9 +349,9 @@ export function ModulesSection({
               disabled={!ready || pending}
               onClick={submit}
             >
-              {pending ? 'Salvando…' : 'Adicionar móvel'}
+              {pending ? 'Salvando…' : editId ? 'Salvar alterações' : 'Adicionar móvel'}
             </button>
-            <button type="button" className="rounded-xl border border-subtle px-4 py-3 text-base text-charcoal hover:bg-deep" onClick={() => setOpen(false)}>
+            <button type="button" className="rounded-xl border border-subtle px-4 py-3 text-base text-charcoal hover:bg-deep" onClick={resetForm}>
               Cancelar
             </button>
           </div>

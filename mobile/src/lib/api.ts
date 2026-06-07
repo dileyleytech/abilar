@@ -83,6 +83,24 @@ export const api = {
     if (input.workType) fields.workType = input.workType;
     return postForm<{ ok: true; moduleId: string }>('/api/mobile/modules', fields, photo ? [photo] : [], 'photo');
   },
+  updateModule: (
+    moduleId: string,
+    input: { ambiente?: string; category: string; label?: string; workType?: string; widthCm: number; heightCm: number; depthCm: number },
+    photo?: Photo | null,
+  ) => {
+    const fields: Record<string, string> = {
+      moduleId,
+      category: input.category,
+      widthCm: String(input.widthCm),
+      heightCm: String(input.heightCm),
+      depthCm: String(input.depthCm),
+    };
+    if (input.ambiente) fields.ambiente = input.ambiente;
+    if (input.label) fields.label = input.label;
+    if (input.workType) fields.workType = input.workType;
+    return postForm<{ ok: true }>('/api/mobile/modules/update', fields, photo ? [photo] : [], 'photo');
+  },
+  deleteModule: (moduleId: string) => postJson<{ ok: true }>('/api/mobile/modules/delete', { moduleId }),
   publishProject: (projectId: string) => postJson<{ ok: true }>('/api/mobile/projects/publish', { projectId }),
   renameProject: (projectId: string, title: string) => postJson<{ ok: true }>('/api/mobile/projects/rename', { projectId, title }),
   quotesForProject: (projectId: string) =>
