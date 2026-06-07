@@ -55,17 +55,22 @@ export default async function PedidoDetailPage({
 
   return (
     <main className="mx-auto w-full max-w-screen-2xl px-4 py-8 sm:px-6 lg:px-8">
-      <Link href={back.href} className="inline-flex items-center gap-1 text-sm text-muted hover:text-charcoal">
-        {from ? back.label : '← Meus pedidos'}
-      </Link>
-
-      <header className="mt-3 mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-charcoal sm:text-3xl">{project.title}</h1>
-          <p className="text-sm text-muted">
-            {moduleViews.length} {moduleViews.length === 1 ? 'móvel' : 'móveis'}
-            {project.sourceType === 'ARCHITECT_PROJECT' ? ' · Projeto de arquiteto' : ''}
-          </p>
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <Link
+            href={back.href}
+            aria-label={from ? 'Voltar à conversa' : 'Voltar'}
+            className="shrink-0 rounded-lg px-2 py-1.5 text-lg text-muted transition hover:bg-deep hover:text-charcoal"
+          >
+            ←
+          </Link>
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-bold text-charcoal sm:text-3xl">{project.title}</h1>
+            <p className="text-sm text-muted">
+              {moduleViews.length} {moduleViews.length === 1 ? 'móvel' : 'móveis'}
+              {project.sourceType === 'ARCHITECT_PROJECT' ? ' · Projeto de arquiteto' : ''}
+            </p>
+          </div>
         </div>
         <StatusBadge status={project.status} />
       </header>

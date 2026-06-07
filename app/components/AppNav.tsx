@@ -37,6 +37,16 @@ export function AppNav({
 }) {
   const pathname = usePathname();
   const [unread, setUnread] = useState(initialUnread);
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    setCollapsed(localStorage.getItem('abilar:nav-collapsed') === '1');
+  }, []);
+  const toggleCollapsed = () =>
+    setCollapsed((v) => {
+      localStorage.setItem('abilar:nav-collapsed', v ? '0' : '1');
+      return !v;
+    });
 
   // Não lidas em tempo real (badge de Conversas).
   useEffect(() => {
@@ -97,39 +107,65 @@ export function AppNav({
 
   return (
     <>
-      {/* Sidebar (desktop) */}
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-subtle bg-surface px-3 py-4 lg:flex print:hidden">
-        <Link href="/" className="mb-6 px-2" aria-label="Abilar — início">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/abilar-logo-horizontal.svg" alt="Abilar" className="h-8 w-auto" />
-        </Link>
+      {/* Sidebar (desktop) — recolhível */}
+      <aside
+        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-subtle bg-surface px-2 py-4 lg:flex print:hidden ${
+          collapsed ? 'w-16' : 'w-60'
+        }`}
+      >
+        <div className={`mb-4 flex items-center px-1 ${collapsed ? 'justify-center' : 'justify-between'}`}>
+          {!collapsed && (
+            <Link href="/" aria-label="Abilar — início">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand/abilar-logo-horizontal.svg" alt="Abilar" className="h-7 w-auto" />
+            </Link>
+          )}
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
+            title={collapsed ? 'Expandir menu' : 'Recolher menu'}
+            className="rounded-lg p-2 text-muted transition hover:bg-deep hover:text-charcoal"
+          >
+            {collapsed ? '»' : '«'}
+          </button>
+        </div>
+
         <nav className="flex flex-1 flex-col gap-1">
           {items.map((it) => (
             <Link
               key={it.href}
               href={it.href}
+              title={collapsed ? it.label : undefined}
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                isActive(it.href) ? 'bg-brand-primary text-white' : 'text-charcoal hover:bg-deep'
-              }`}
+                collapsed ? 'justify-center' : ''
+              } ${isActive(it.href) ? 'bg-brand-primary text-white' : 'text-charcoal hover:bg-deep'}`}
             >
-              <span className="text-lg" aria-hidden>{it.icon}</span>
-              <span className="flex-1">{it.label}</span>
-              {badgeFor(it) && (
+              <span className="relative text-lg" aria-hidden>
+                {it.icon}
+                {collapsed && badgeFor(it) && (
+                  <span className="absolute -right-1.5 -top-1 h-2 w-2 rounded-full bg-brand-secondary" />
+                )}
+              </span>
+              {!collapsed && <span className="flex-1">{it.label}</span>}
+              {!collapsed && badgeFor(it) && (
                 <span className="rounded-full bg-brand-secondary px-1.5 text-[11px] font-bold text-white">{badgeFor(it)}</span>
               )}
             </Link>
           ))}
         </nav>
+
         <Link
           href={account.href}
+          title={collapsed ? account.label : undefined}
           className={`mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-            isActive(account.href) ? 'bg-brand-primary text-white' : 'text-charcoal hover:bg-deep'
-          }`}
+            collapsed ? 'justify-center' : ''
+          } ${isActive(account.href) ? 'bg-brand-primary text-white' : 'text-charcoal hover:bg-deep'}`}
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-primary text-xs font-bold text-white">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-primary text-xs font-bold text-white">
             {(firstName ?? 'U').charAt(0).toUpperCase()}
           </span>
-          <span>{account.label}</span>
+          {!collapsed && <span>{account.label}</span>}
         </Link>
       </aside>
 
