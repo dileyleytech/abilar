@@ -29,6 +29,7 @@ export type QuotedCard = {
   quoteStatus: QuoteStatus;
   projectStatus: ProjectStatus;
   conversationId: string | null;
+  obraPct: number | null;
 };
 
 const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -65,20 +66,27 @@ const card = 'flex h-full flex-col overflow-hidden rounded-2xl border border-sub
 const gridCls = 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3';
 const searchCls = 'w-full rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
 
+const isObra = (s: ProjectStatus) => s === 'HIRED' || s === 'EXECUTED';
+
 export function MarceneiroFeed({ open, quoted }: { open: OpenCard[]; quoted: QuotedCard[] }) {
-  const [tab, setTab] = useState<'open' | 'quoted'>('open');
+  const [tab, setTab] = useState<'open' | 'quoted' | 'obras'>('open');
   const [search, setSearch] = useState('');
   const [qStatus, setQStatus] = useState<QuoteStatus | 'ALL'>('ALL');
 
-  const availableStatuses = useMemo(() => [...new Set(quoted.map((q) => q.quoteStatus))], [quoted]);
+  // Contratados viram "Obras"; o resto fica em "Meus orçamentos".
+  const orcamentos = useMemo(() => quoted.filter((q) => !isObra(q.projectStatus)), [quoted]);
+  const obras = useMemo(() => quoted.filter((q) => isObra(q.projectStatus)), [quoted]);
+
+  const availableStatuses = useMemo(() => [...new Set(orcamentos.map((q) => q.quoteStatus))], [orcamentos]);
   const openFiltered = useMemo(() => open.filter((o) => matches(search, o.title, o.city)), [open, search]);
   const quotedFiltered = useMemo(
     () =>
-      quoted.filter(
+      orcamentos.filter(
         (q) => matches(search, q.title, q.city) && (qStatus === 'ALL' || q.quoteStatus === qStatus),
       ),
-    [quoted, search, qStatus],
+    [orcamentos, search, qStatus],
   );
+  const obrasFiltered = useMemo(() => obras.filter((o) => matches(search, o.title, o.city)), [obras, search]);
 
   const tabBtn = (active: boolean) =>
     `flex-1 rounded-xl px-4 py-3 text-center text-sm font-semibold transition sm:text-base ${
@@ -97,12 +105,15 @@ export function MarceneiroFeed({ open, quoted }: { open: OpenCard[]; quoted: Quo
           🛎️ Novos pedidos <span className={tab === 'open' ? 'text-white/80' : 'text-muted'}>({open.length})</span>
         </button>
         <button type="button" onClick={() => setTab('quoted')} className={tabBtn(tab === 'quoted')}>
-          📋 Meus orçamentos <span className={tab === 'quoted' ? 'text-white/80' : 'text-muted'}>({quoted.length})</span>
+          📋 Orçamentos <span className={tab === 'quoted' ? 'text-white/80' : 'text-muted'}>({orcamentos.length})</span>
+        </button>
+        <button type="button" onClick={() => setTab('obras')} className={tabBtn(tab === 'obras')}>
+          🏗️ Obras <span className={tab === 'obras' ? 'text-white/80' : 'text-muted'}>({obras.length})</span>
         </button>
       </div>
 
       {/* Busca (só quando há itens na aba) */}
-      {((tab === 'open' && open.length > 0) || (tab === 'quoted' && quoted.length > 0)) && (
+      {((tab === 'open' && open.length > 0) || (tab === 'quoted' && orcamentos.length > 0) || (tab === 'obras' && obras.length > 0)) && (
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por título ou cidade…" className={searchCls} />
       )}
 
@@ -143,7 +154,7 @@ export function MarceneiroFeed({ open, quoted }: { open: OpenCard[]; quoted: Quo
 
       {/* MEUS ORÇAMENTOS */}
       {tab === 'quoted' &&
-        (quoted.length === 0 ? (
+        (orcamentos.length === 0 ? (
           <Empty
             icon="📋"
             title="Você ainda não enviou orçamentos"
@@ -169,12 +180,8 @@ export function MarceneiroFeed({ open, quoted }: { open: OpenCard[]; quoted: Quo
             ) : (
               <ul className={gridCls}>
                 {quotedFiltered.map((q) => {
-                  const href =
-                    q.projectStatus === 'OPEN_FOR_QUOTES' || q.projectStatus === 'IN_NEGOTIATION'
-                      ? `/marceneiro/pedidos/${q.projectId}`
-                      : q.conversationId
-                        ? `/conversas/${q.conversationId}`
-                        : null;
+                  // Abre a tela do pedido (orçamento se em negociação; obra se contratado).
+                  const href = `/marceneiro/pedidos/${q.projectId}`;
                   const inner = (
                     <>
                       <Cover urls={q.photoUrls}>
@@ -210,6 +217,47 @@ export function MarceneiroFeed({ open, quoted }: { open: OpenCard[]; quoted: Quo
               </ul>
             )}
           </div>
+        ))}
+
+      {/* OBRAS (contratadas) */}
+      {tab === 'obras' &&
+        (obras.length === 0 ? (
+          <Empty
+            icon="🏗️"
+            title="Nenhuma obra em andamento"
+            hint="Quando um orçamento seu for aprovado e o contrato assinado, a obra aparece aqui pra você tocar etapa a etapa."
+          />
+        ) : obrasFiltered.length === 0 ? (
+          <Empty icon="🔎" title="Nada com essa busca" hint="Tente outro termo." />
+        ) : (
+          <ul className={gridCls}>
+            {obrasFiltered.map((o) => (
+              <li key={o.projectId}>
+                <Link href={`/marceneiro/pedidos/${o.projectId}`} className={card}>
+                  <Cover urls={o.photoUrls}>
+                    <span className="absolute left-2 top-2 rounded-pill bg-brand-primary px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm">
+                      {o.projectStatus === 'EXECUTED' ? 'Concluída' : 'Em obra'}
+                    </span>
+                  </Cover>
+                  <div className="flex flex-1 flex-col gap-1 p-4">
+                    <h3 className="text-lg font-semibold text-charcoal">{o.title}</h3>
+                    <p className="text-sm text-muted">
+                      📍 {o.city ?? '—'} · {o.moduleCount} {o.moduleCount === 1 ? 'móvel' : 'móveis'}
+                    </p>
+                    <div className="mt-1">
+                      <div className="flex items-center justify-between text-xs font-semibold text-brand-primary">
+                        <span>Andamento</span>
+                        <span>{o.obraPct ?? 0}%</span>
+                      </div>
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-deep">
+                        <div className="h-full rounded-full bg-brand-primary" style={{ width: `${o.obraPct ?? 0}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
         ))}
     </div>
   );

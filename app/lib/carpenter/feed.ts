@@ -1,5 +1,5 @@
 import 'server-only';
-import { projects, modules, projectPhotos, quotes, conversations, and, asc, desc, eq, exists, inArray, sql } from '@abilar/db';
+import { projects, modules, projectPhotos, quotes, conversations, projectMilestones, and, asc, desc, eq, exists, inArray, sql } from '@abilar/db';
 import type { CarpenterProfile, Project, Module, ProjectPhoto } from '@abilar/db';
 import type { ProjectStatus, QuoteStatus } from '@abilar/shared';
 import { isWithinRadius } from '@abilar/shared';
@@ -107,6 +107,7 @@ export type MyQuoteItem = {
   quoteStatus: QuoteStatus;
   projectStatus: ProjectStatus;
   conversationId: string | null;
+  obraPct: number | null; // andamento da obra (% aprovado), null se não contratado
 };
 
 /** Pedidos que ESTE marceneiro já orçou (qualquer status), com o status do
@@ -128,7 +129,7 @@ export async function getCarpenterQuotedProjects(carpenter: CarpenterProfile): P
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.projectId);
 
-  const [photos, mods, convs] = await Promise.all([
+  const [photos, mods, convs, obra] = await Promise.all([
     db
       .select({ projectId: projectPhotos.projectId, path: projectPhotos.path })
       .from(projectPhotos)
@@ -142,6 +143,15 @@ export async function getCarpenterQuotedProjects(carpenter: CarpenterProfile): P
       .select({ projectId: conversations.projectId, id: conversations.id })
       .from(conversations)
       .where(and(eq(conversations.carpenterId, carpenter.userId), inArray(conversations.projectId, ids))),
+    db
+      .select({
+        projectId: projectMilestones.projectId,
+        total: sql<number>`count(*)::int`,
+        approved: sql<number>`coalesce(sum(case when ${projectMilestones.status} = 'APPROVED' then ${projectMilestones.pct} else 0 end), 0)::int`,
+      })
+      .from(projectMilestones)
+      .where(inArray(projectMilestones.projectId, ids))
+      .groupBy(projectMilestones.projectId),
   ]);
 
   const photosByProject = new Map<string, string[]>();
@@ -160,6 +170,8 @@ export async function getCarpenterQuotedProjects(carpenter: CarpenterProfile): P
   }
   const convByProject = new Map<string, string>();
   for (const c of convs) if (!convByProject.has(c.projectId)) convByProject.set(c.projectId, c.id);
+  const obraByProject = new Map<string, number>();
+  for (const o of obra) if (o.total > 0) obraByProject.set(o.projectId, o.approved);
 
   return rows.map((r) => ({
     projectId: r.projectId,
@@ -171,6 +183,7 @@ export async function getCarpenterQuotedProjects(carpenter: CarpenterProfile): P
     quoteStatus: r.quoteStatus,
     projectStatus: r.projectStatus,
     conversationId: convByProject.get(r.projectId) ?? null,
+    obraPct: obraByProject.has(r.projectId) ? (obraByProject.get(r.projectId) as number) : null,
   }));
 }
 

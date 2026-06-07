@@ -206,6 +206,11 @@ export async function changeProjectStatus(projectId: string, to: unknown): Promi
   const target = projectStatusSchema.safeParse(to);
   if (!target.success) return { ok: false, error: 'Status inválido.' };
 
+  // Pedido já contratado (em obra) não pode ser cancelado pelo cliente por aqui.
+  if (target.data === 'CANCELLED' && current.status === 'HIRED') {
+    return { ok: false, error: 'Pedido contratado/em obra não pode ser cancelado. Fale com o suporte.' };
+  }
+
   try {
     assertProjectTransition(current.status, target.data);
   } catch (e) {

@@ -1,5 +1,5 @@
 import 'server-only';
-import { quotes, projects, profiles, carpenterProfiles, eq, and, desc } from '@abilar/db';
+import { quotes, projects, profiles, carpenterProfiles, contracts, eq, and, desc } from '@abilar/db';
 import type { Quote } from '@abilar/db';
 import type { QuoteStatus, QuoteLineItem } from '@abilar/shared';
 import { quotePricing, maxClientInstallments } from '@abilar/pricing';
@@ -27,6 +27,7 @@ export type ReceivedQuote = {
   clientInstallments: number;
   parceladoCents: number | null;
   installmentValueCents: number | null;
+  contractId: string | null;
 };
 
 /** Orçamentos recebidos num pedido (visão do cliente), com o preço já calculado. */
@@ -42,9 +43,11 @@ export async function getReceivedQuotes(projectId: string): Promise<ReceivedQuot
       note: quotes.note,
       status: quotes.status,
       carpenterName: carpenterProfiles.name,
+      contractId: contracts.id,
     })
     .from(quotes)
     .leftJoin(carpenterProfiles, eq(carpenterProfiles.userId, quotes.carpenterId))
+    .leftJoin(contracts, eq(contracts.quoteId, quotes.id))
     .where(eq(quotes.projectId, projectId))
     .orderBy(desc(quotes.createdAt));
 
@@ -88,6 +91,7 @@ export async function getReceivedQuotes(projectId: string): Promise<ReceivedQuot
       clientInstallments: nClient,
       parceladoCents,
       installmentValueCents,
+      contractId: r.contractId,
     };
   });
 }

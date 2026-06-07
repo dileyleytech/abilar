@@ -1,19 +1,22 @@
 import Link from 'next/link';
-import { isTerminalProjectStatus } from '@abilar/shared';
 import { requireUserId } from '@/lib/auth/session';
 import { listMyProjectsWithCover } from '@/lib/projects/queries';
 import { signedProjectPhotoUrl } from '@/lib/storage';
-import { StatusBadge } from '@/components/StatusBadge';
-import { CancelButton } from './_components/CancelButton';
+import { PedidosList, type ProjectCard } from './_components/PedidosList';
 
 export const metadata = { title: 'Meus pedidos — Abilar' };
 
 export default async function PedidosPage() {
   const userId = await requireUserId();
   const rows = await listMyProjectsWithCover(userId);
-  const projects = await Promise.all(
+  const projects: ProjectCard[] = await Promise.all(
     rows.map(async (p) => ({
-      ...p,
+      id: p.id,
+      title: p.title,
+      status: p.status,
+      moduleCount: p.moduleCount,
+      quoteCount: p.quoteCount,
+      obraPct: p.obraPct,
       coverUrl: p.coverPath ? await signedProjectPhotoUrl(p.coverPath) : null,
     })),
   );
@@ -35,61 +38,17 @@ export default async function PedidosPage() {
 
       {projects.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-subtle bg-surface p-12 text-center">
-          <span className="text-5xl" aria-hidden>
-            🪵
-          </span>
+          <span className="text-5xl" aria-hidden>🪵</span>
           <p className="text-lg font-medium text-charcoal">Você ainda não tem pedidos</p>
           <p className="max-w-sm text-muted">
             Crie um pedido com foto e medidas e receba orçamentos de marceneiros da sua região.
           </p>
-          <Link
-            href="/pedidos/novo"
-            className="mt-2 rounded-xl bg-brand-primary px-5 py-3 font-semibold text-white"
-          >
+          <Link href="/pedidos/novo" className="mt-2 rounded-xl bg-brand-primary px-5 py-3 font-semibold text-white">
             Criar meu primeiro pedido
           </Link>
         </div>
       ) : (
-        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {projects.map((p) => (
-            <li key={p.id} className="group relative">
-              <Link
-                href={`/pedidos/${p.id}`}
-                className="flex h-full flex-col overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm transition hover:-translate-y-0.5 hover:border-brand-primary/40 hover:shadow-md"
-              >
-                <div className="relative flex aspect-[4/3] items-center justify-center bg-deep">
-                  {p.coverUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.coverUrl} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="text-5xl" aria-hidden>
-                      🛋️
-                    </span>
-                  )}
-                  <span className="absolute right-2 top-2">
-                    <StatusBadge status={p.status} />
-                  </span>
-                </div>
-                <div className="p-4">
-                  <h2 className="text-lg font-semibold text-charcoal">{p.title}</h2>
-                  <p className="text-sm text-muted">
-                    {p.moduleCount} {p.moduleCount === 1 ? 'móvel' : 'móveis'}
-                  </p>
-                  {p.quoteCount > 0 && (
-                    <span className="mt-2 inline-flex items-center gap-1 rounded-pill bg-brand-secondary/15 px-2.5 py-1 text-xs font-semibold text-brand-secondary">
-                      💬 {p.quoteCount} {p.quoteCount === 1 ? 'orçamento recebido' : 'orçamentos recebidos'}
-                    </span>
-                  )}
-                </div>
-              </Link>
-              {!isTerminalProjectStatus(p.status) && (
-                <div className="absolute bottom-3 right-3">
-                  <CancelButton projectId={p.id} />
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
+        <PedidosList projects={projects} />
       )}
     </main>
   );

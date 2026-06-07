@@ -2,9 +2,10 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { ConversationStatus } from '@abilar/shared';
 import { requireUserId } from '@/lib/auth/session';
-import { getConversation, listMessages } from '@/lib/chat/queries';
+import { getConversation, listMessages, getConversationProposal } from '@/lib/chat/queries';
 import { ChatRoom } from './_components/ChatRoom';
 import { ChatMenu } from './_components/ChatMenu';
+import { ProposalPanel } from './_components/ProposalPanel';
 
 export const metadata = { title: 'Conversa — Abilar' };
 
@@ -13,22 +14,25 @@ export default async function ConversaPage({ params }: { params: Promise<{ id: s
   const userId = await requireUserId();
   const conv = await getConversation(id, userId);
   if (!conv) notFound();
-  const msgs = await listMessages(id);
+  const [msgs, proposal] = await Promise.all([listMessages(id), getConversationProposal(id, userId)]);
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-8 sm:px-6 lg:px-8">
       <Link href="/conversas" className="text-sm text-muted hover:text-charcoal">
         ← Conversas
       </Link>
-      <div className="mt-3 mb-4 flex items-start justify-between gap-2">
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h1 className="text-xl font-bold text-charcoal">Conversa com {conv.otherName}</h1>
           <p className="truncate text-sm text-muted">{conv.projectTitle}</p>
         </div>
         <ChatMenu conversationId={conv.id} status={conv.status as ConversationStatus} />
       </div>
+
+      {proposal && <ProposalPanel meIsClient={conv.meIsClient} conversationId={conv.id} proposal={proposal} />}
+
       {conv.status === 'BLOCKED' && (
-        <p className="mb-3 rounded-xl bg-ochre/20 px-4 py-3 text-sm text-charcoal">
+        <p className="rounded-xl bg-ochre/20 px-4 py-3 text-sm text-charcoal">
           ⛔ Esta conversa está bloqueada. Fale com o suporte se precisar reabrir.
         </p>
       )}

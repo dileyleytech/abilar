@@ -45,7 +45,7 @@ export function ChatNotifier({ meId }: { meId: string }) {
   if (!pending || pathname === `/conversas/${pending.conversationId}`) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4" role="status" aria-live="polite">
+    <div className="fixed inset-x-0 bottom-20 z-50 flex justify-center px-4 lg:bottom-4" role="status" aria-live="polite">
       <div className="flex w-full max-w-md items-center gap-3 rounded-2xl border border-subtle bg-surface p-4 shadow-lg">
         <span className="text-2xl" aria-hidden>💬</span>
         <div className="min-w-0 flex-1">

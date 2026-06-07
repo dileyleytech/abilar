@@ -35,6 +35,8 @@ import {
   REPORT_STATUS,
   MATERIAL_CATEGORIES,
   MATERIAL_UNITS,
+  CONTRACT_STATUS,
+  MILESTONE_STATUS,
 } from '@abilar/shared';
 
 // Enums (fonte única dos literais em @abilar/shared/domain).
@@ -53,6 +55,8 @@ export const reportReasonEnum = pgEnum('report_reason', REPORT_REASONS);
 export const reportStatusEnum = pgEnum('report_status', REPORT_STATUS);
 export const materialCategoryEnum = pgEnum('material_category', MATERIAL_CATEGORIES);
 export const materialUnitEnum = pgEnum('material_unit', MATERIAL_UNITS);
+export const contractStatusEnum = pgEnum('contract_status', CONTRACT_STATUS);
+export const milestoneStatusEnum = pgEnum('milestone_status', MILESTONE_STATUS);
 
 /** Perfil 1:1 com auth.users (id = auth.uid()). `role` é a fonte de verdade
  *  do papel (NÃO confiar em user_metadata para autorização). */
@@ -379,6 +383,77 @@ export const carpenterMaterials = pgTable(
 
 export type CarpenterMaterial = typeof carpenterMaterials.$inferSelect;
 export type NewCarpenterMaterial = typeof carpenterMaterials.$inferInsert;
+
+/** Contrato padrão por projeto aprovado (§6.5). Aceite eletrônico das 2 partes
+ *  (timestamp + hash de IP). `terms` é um snapshot do acordo no momento do aceite. */
+export const contracts = pgTable(
+  'contracts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    quoteId: uuid('quote_id')
+      .notNull()
+      .references(() => quotes.id, { onDelete: 'cascade' }),
+    clientId: uuid('client_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    carpenterId: uuid('carpenter_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    status: contractStatusEnum('status').notNull().default('DRAFT'),
+    valueCents: bigint('value_cents', { mode: 'number' }).notNull(), // total acordado (à vista, face ao cliente)
+    terms: jsonb('terms').notNull(),
+    acceptedByClientAt: timestamp('accepted_by_client_at', { withTimezone: true }),
+    clientIpHash: text('client_ip_hash'),
+    acceptedByCarpenterAt: timestamp('accepted_by_carpenter_at', { withTimezone: true }),
+    carpenterIpHash: text('carpenter_ip_hash'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('contracts_quote_idx').on(t.quoteId),
+    index('contracts_project_idx').on(t.projectId),
+  ],
+);
+
+export type Contract = typeof contracts.$inferSelect;
+export type NewContract = typeof contracts.$inferInsert;
+
+/** Marcos da obra (§6.4) — etapas de execução com liberação por evolução. Criados
+ *  quando o contrato é assinado. clientId/carpenterId denormalizados p/ RLS simples. */
+export const projectMilestones = pgTable(
+  'project_milestones',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    contractId: uuid('contract_id')
+      .notNull()
+      .references(() => contracts.id, { onDelete: 'cascade' }),
+    clientId: uuid('client_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    carpenterId: uuid('carpenter_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    ord: integer('ord').notNull(),
+    key: text('key').notNull(),
+    label: text('label').notNull(),
+    event: text('event').notNull(),
+    pct: integer('pct').notNull(),
+    amountCents: bigint('amount_cents', { mode: 'number' }).notNull(),
+    status: milestoneStatusEnum('status').notNull().default('PENDING'),
+    doneAt: timestamp('done_at', { withTimezone: true }),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('project_milestones_project_idx').on(t.projectId, t.ord)],
+);
+
+export type ProjectMilestone = typeof projectMilestones.$inferSelect;
+export type NewProjectMilestone = typeof projectMilestones.$inferInsert;
 
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;

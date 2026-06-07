@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { brand } from '@abilar/shared/tokens';
-import { AppHeader } from '@/components/AppHeader';
 import { getSessionProfile } from '@/lib/auth/session';
 
 export const metadata = {
@@ -27,7 +26,16 @@ export default async function Home() {
 
   return (
     <div className="flex min-h-screen flex-col bg-base">
-      <AppHeader />
+      <header className="sticky top-0 z-20 flex h-14 w-full items-center justify-between border-b border-subtle bg-surface/90 px-4 backdrop-blur sm:px-6 lg:px-8">
+        <Link href="/" aria-label="Abilar — início">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/abilar-logo-horizontal.svg" alt="Abilar" className="h-7 w-auto" />
+        </Link>
+        <nav className="flex items-center gap-2">
+          <Link href="/entrar" className="rounded-md px-3 py-2 text-sm font-medium text-charcoal hover:bg-deep">Entrar</Link>
+          <Link href="/cadastro" className="rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white">Criar conta</Link>
+        </nav>
+      </header>
 
       {/* HERO */}
       <section className="relative overflow-hidden">

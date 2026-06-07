@@ -9,12 +9,24 @@ import { signedProjectPhotoUrl } from '@/lib/storage';
 import { getActivePricingConfig } from '@/lib/pricing/config';
 import { getCarpenterQuote } from '@/lib/quotes/queries';
 import { getConversationForProjectCarpenter } from '@/lib/chat/queries';
+import { getContractForQuote } from '@/lib/contracts/queries';
+import { getProjectMilestones } from '@/lib/obra/queries';
+import { ObraBoard } from '@/components/ObraBoard';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
 import { StatusBadge } from '@/components/StatusBadge';
+import { backFrom } from '@/lib/nav';
 import { QuoteForm, type QuoteInitial, type MaterialOption } from './_components/QuoteForm';
 
-export default async function CarpenterPedidoPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CarpenterPedidoPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
+}) {
   const { id } = await params;
+  const { from } = await searchParams;
+  const back = backFrom(from, '/marceneiro');
   const profile = await requireRole('CARPENTER');
   // Queries independentes em paralelo (1 ida em vez de várias sequenciais).
   const [carpenter, config, existing, conversationId, catalog] = await Promise.all([
@@ -29,6 +41,9 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
   // Já orçou → pode abrir/editar em qualquer status; senão, vale a elegibilidade (pedido aberto).
   const detail = existing ? await getProjectDetailById(id) : await getProjectForCarpenter(id, carpenter);
   if (!detail) notFound();
+  const contract = existing ? await getContractForQuote(existing.id) : null;
+  const contractNeedsSign = contract != null && contract.status === 'DRAFT' && !contract.carpenterSigned;
+  const obra = await getProjectMilestones(id, profile.id);
   const { project, modules, photos } = detail;
 
   const materials: MaterialOption[] = catalog.map((m) => ({
@@ -69,15 +84,21 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
 
   return (
     <main className="mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6 lg:px-8">
-      <Link href="/marceneiro" className="text-sm text-muted hover:text-charcoal">
-        ← Voltar
-      </Link>
-      <header className="mt-2 mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-charcoal sm:text-3xl">{project.title}</h1>
-          <p className="text-sm text-muted">
-            📍 {project.city ?? '—'} · {modules.length} {modules.length === 1 ? 'móvel' : 'móveis'}
-          </p>
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <Link
+            href={back.href}
+            aria-label="Voltar"
+            className="shrink-0 rounded-lg px-2 py-1.5 text-lg text-muted transition hover:bg-deep hover:text-charcoal"
+          >
+            ←
+          </Link>
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-bold text-charcoal sm:text-3xl">{project.title}</h1>
+            <p className="text-sm text-muted">
+              📍 {project.city ?? '—'} · {modules.length} {modules.length === 1 ? 'móvel' : 'móveis'}
+            </p>
+          </div>
         </div>
         <StatusBadge status={project.status} />
       </header>
@@ -93,6 +114,16 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
               💬 Conversar com o cliente
             </Link>
           )}
+          {contract && (
+            <Link
+              href={`/contratos/${contract.id}`}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 py-4 text-lg font-semibold shadow-sm transition hover:opacity-90 ${
+                contractNeedsSign ? 'bg-brand-primary text-white' : 'border-2 border-subtle text-charcoal'
+              }`}
+            >
+              {contractNeedsSign ? '✍️ Assinar contrato' : '📄 Ver contrato'}
+            </Link>
+          )}
           {existing && (
             <Link
               href={`/orcamentos/${existing.id}/imprimir`}
@@ -102,6 +133,14 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
             </Link>
           )}
         </div>
+      )}
+
+      {/* Obra contratada: quadro de etapas em destaque */}
+      {obra && (
+        <section className="mb-6 rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
+          <h2 className="mb-4 text-xl font-bold text-charcoal">Sua obra (execução)</h2>
+          <ObraBoard milestones={obra.milestones} meIsClient={obra.meIsClient} meIsCarpenter={obra.meIsCarpenter} approvedPct={obra.approvedPct} />
+        </section>
       )}
 
       {/* Três colunas, largura total: o que o cliente pediu | montar | valores */}
