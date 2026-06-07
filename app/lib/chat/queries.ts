@@ -28,10 +28,12 @@ export type ConversationView = {
   status: string;
   meIsClient: boolean;
   otherName: string;
+  isModerator: boolean; // admin vendo (só leitura), não participante
 } | null;
 
-/** Conversa (se o usuário for participante) + nome da outra parte + pedido. */
-export async function getConversation(id: string, userId: string): Promise<ConversationView> {
+/** Conversa + nome da outra parte + pedido. Acesso: participante OU admin (que
+ *  entra em modo só leitura para moderação — §7.8). */
+export async function getConversation(id: string, userId: string, isAdmin = false): Promise<ConversationView> {
   const db = getDb();
   const [row] = await db
     .select({
@@ -51,15 +53,22 @@ export async function getConversation(id: string, userId: string): Promise<Conve
     .where(eq(conversations.id, id))
     .limit(1);
 
-  if (!row || (row.clientId !== userId && row.carpenterId !== userId)) return null;
+  if (!row) return null;
+  const isParticipant = row.clientId === userId || row.carpenterId === userId;
+  if (!isParticipant && !isAdmin) return null;
+
   const meIsClient = row.clientId === userId;
+  const clientName = row.clientName ?? 'Cliente';
+  const carpenterName = row.carpenterName ?? 'Marceneiro';
   return {
     id: row.id,
     projectId: row.projectId,
     projectTitle: row.projectTitle,
     status: row.status,
     meIsClient,
-    otherName: (meIsClient ? row.carpenterName : row.clientName) ?? (meIsClient ? 'Marceneiro' : 'Cliente'),
+    // Para o admin (não participante), mostra as duas partes.
+    otherName: isParticipant ? (meIsClient ? carpenterName : clientName) : `${clientName} ↔ ${carpenterName}`,
+    isModerator: !isParticipant && isAdmin,
   };
 }
 

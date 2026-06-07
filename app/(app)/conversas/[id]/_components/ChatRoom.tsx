@@ -14,11 +14,13 @@ export function ChatRoom({
   meId,
   active,
   initialMessages,
+  readOnly = false,
 }: {
   conversationId: string;
   meId: string;
   active: boolean;
   initialMessages: Msg[];
+  readOnly?: boolean;
 }) {
   const [messages, setMessages] = useState<Msg[]>(initialMessages);
   const [text, setText] = useState('');
@@ -37,10 +39,11 @@ export function ChatRoom({
   // Estou vendo a conversa → marca como lida (ao abrir e a cada nova mensagem)
   // e avisa o header pra re-sincronizar a bolinha de não lidas.
   useEffect(() => {
+    if (readOnly) return; // admin moderando não participa → não marca leitura
     void markConversationRead(conversationId).then(() => {
       window.dispatchEvent(new CustomEvent('abilar:unread-changed'));
     });
-  }, [conversationId, messages.length]);
+  }, [conversationId, messages.length, readOnly]);
 
   // Libera os object URLs das prévias quando trocam/desmontam.
   useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews]);
@@ -172,7 +175,9 @@ export function ChatRoom({
       </div>
 
       <div className="border-t border-subtle p-3">
-        {active ? (
+        {readOnly ? (
+          <p className="text-center text-sm text-muted">👁️ Somente leitura (moderação).</p>
+        ) : active ? (
           <>
             {previews.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-2">
@@ -232,9 +237,11 @@ export function ChatRoom({
         ) : (
           <p className="text-center text-sm text-muted">Esta conversa está fechada.</p>
         )}
-        <p className="mt-2 text-center text-xs text-subtle">
-          🔒 Para sua segurança, telefone, e-mail e links são ocultados. Feche o negócio pela plataforma (garantia do escrow).
-        </p>
+        {!readOnly && (
+          <p className="mt-2 text-center text-xs text-subtle">
+            🔒 Para sua segurança, telefone, e-mail e links são ocultados. Feche o negócio pela plataforma (garantia do escrow).
+          </p>
+        )}
       </div>
     </div>
   );
