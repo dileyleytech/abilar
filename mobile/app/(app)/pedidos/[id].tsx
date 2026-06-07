@@ -11,6 +11,7 @@ import {
 } from '@/lib/data';
 import { api, type QuoteView } from '@/lib/api';
 import { QuoteForm } from '@/components/QuoteForm';
+import { ModulesSection } from '@/components/ModulesSection';
 import { milestoneStatusLabel, PROJECT_STATUS_LABEL } from '@/lib/types';
 import { formatCents, formatDateTime } from '@/lib/format';
 import { Badge, Button, Card, Loading } from '@/components/ui';
@@ -135,7 +136,11 @@ export default function PedidoDetail() {
           </View>
         </Card>
 
-        {milestones.length === 0 && (
+        {milestones.length === 0 && id && (
+          <ModulesSection projectId={id} status={project.status} isOwner={isClient} onPublished={() => void load()} />
+        )}
+
+        {milestones.length === 0 && project.status !== 'DRAFT' && (
           <View style={{ gap: space.md }}>
             <Text style={styles.section}>Orçamentos</Text>
 

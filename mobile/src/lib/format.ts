@@ -3,6 +3,12 @@ export function formatCents(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+// Dimensão física é mm (inteiro) no banco; a UI mostra em cm.
+export function formatCm(mm: number): string {
+  const cm = mm / 10;
+  return `${Number.isInteger(cm) ? cm : cm.toFixed(1)} cm`;
+}
+
 export function formatDate(iso: string | null): string {
   if (!iso) return '';
   const d = new Date(iso);

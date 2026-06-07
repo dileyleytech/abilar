@@ -65,8 +65,11 @@ export const api = {
   markNotificationsRead: () => postJson<{ ok: true }>('/api/mobile/notifications/read', {}),
 
   // --- Sprint: criar pedido · orçamento · contrato ---
-  createProject: (input: { title: string; city?: string; category: string; widthCm: number; heightCm: number; depthCm: number }) =>
+  createProject: (input: { title: string; city?: string; cep?: string; lat?: number; lng?: number }) =>
     postJson<{ ok: true; projectId: string }>('/api/mobile/projects', input),
+  addModule: (input: { projectId: string; ambiente?: string; category: string; label?: string; workType?: string; widthCm: number; heightCm: number; depthCm: number }) =>
+    postJson<{ ok: true; moduleId: string }>('/api/mobile/modules', input),
+  publishProject: (projectId: string) => postJson<{ ok: true }>('/api/mobile/projects/publish', { projectId }),
   quotesForProject: (projectId: string) =>
     postJson<{ projectStatus: string; isClient: boolean; quotes: QuoteView[] }>('/api/mobile/quotes/for-project', { projectId }),
   preapproveQuote: (quoteId: string) => postJson<{ ok: true; conversationId: string }>('/api/mobile/quotes/preapprove', { quoteId }),
@@ -77,6 +80,19 @@ export const api = {
     postJson<{ ok: true }>('/api/mobile/quotes/send', input),
   signContract: (contractId: string) => postJson<{ ok: true }>('/api/mobile/contracts/sign', { contractId }),
 };
+
+// Busca de CEP (cidade + coords) — endpoint público do Next, sem auth.
+export async function lookupCep(cep: string): Promise<{ city?: string; lat?: number; lng?: number } | null> {
+  const digits = cep.replace(/\D/g, '');
+  if (digits.length !== 8 || !config.API_URL) return null;
+  try {
+    const res = await fetch(`${config.API_URL}/api/cep?cep=${digits}`);
+    const d = (await res.json()) as { ok?: boolean; city?: string; lat?: number; lng?: number };
+    return d?.ok ? { city: d.city, lat: d.lat ?? undefined, lng: d.lng ?? undefined } : null;
+  } catch {
+    return null;
+  }
+}
 
 export type QuoteView = {
   quoteId: string;

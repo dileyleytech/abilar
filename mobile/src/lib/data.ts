@@ -77,6 +77,27 @@ export async function listOpenProjects(): Promise<ProjectRow[]> {
   return (data as ProjectRow[]) ?? [];
 }
 
+export type ModuleRow = {
+  id: string;
+  ambiente: string | null;
+  type: string;
+  label: string | null;
+  work_type: string | null;
+  width_mm: number;
+  height_mm: number;
+  depth_mm: number;
+};
+
+// Móveis do pedido (RLS: cliente lê os do próprio projeto).
+export async function listModules(projectId: string): Promise<ModuleRow[]> {
+  const { data, error } = await supabase
+    .from('modules')
+    .select('id, ambiente, type, label, work_type, width_mm, height_mm, depth_mm')
+    .eq('project_id', projectId);
+  if (error) throw new Error(error.message);
+  return (data as ModuleRow[]) ?? [];
+}
+
 export async function getProject(id: string): Promise<ProjectRow | null> {
   const { data } = await supabase.from('projects').select(PROJECT_COLS).eq('id', id).single();
   return (data as ProjectRow) ?? null;
