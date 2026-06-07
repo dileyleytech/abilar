@@ -112,9 +112,32 @@ export const api = {
   acceptQuote: (quoteId: string) => postJson<{ ok: true; contractId: string }>('/api/mobile/quotes/accept', { quoteId }),
   previewQuote: (input: { baseValueCents: number; maxInstallments: number; dilutionSharePct: number }) =>
     postJson<{ preview: QuotePreview | null }>('/api/mobile/quotes/preview', input),
-  sendQuote: (input: { projectId: string; baseValueCents: number; maxInstallments: number; dilutionSharePct: number; note?: string }) =>
-    postJson<{ ok: true }>('/api/mobile/quotes/send', input),
+  sendQuote: (input: {
+    projectId: string;
+    baseValueCents: number;
+    maxInstallments: number;
+    dilutionSharePct: number;
+    note?: string;
+    lineItems?: QuoteLineItem[];
+    marginPct?: number;
+  }) => postJson<{ ok: true }>('/api/mobile/quotes/send', input),
   signContract: (contractId: string) => postJson<{ ok: true }>('/api/mobile/contracts/sign', { contractId }),
+
+  // Catálogo de custo (marceneiro)
+  createMaterial: (input: { name: string; category: string; unit: string; unitCostCents: number }) =>
+    postJson<{ ok: true; id: string }>('/api/mobile/materials', input),
+  updateMaterial: (id: string, input: { name: string; category: string; unit: string; unitCostCents: number }) =>
+    postJson<{ ok: true }>('/api/mobile/materials/update', { id, ...input }),
+  setMaterialActive: (id: string, active: boolean) => postJson<{ ok: true }>('/api/mobile/materials/active', { id, active }),
+};
+
+export type QuoteLineItem = {
+  materialId?: string | null;
+  name: string;
+  category: string;
+  unit: string;
+  qty: number;
+  unitCostCents: number;
 };
 
 // Busca de CEP (cidade + coords) — endpoint público do Next, sem auth.

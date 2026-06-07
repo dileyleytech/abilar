@@ -34,6 +34,20 @@ export function milestoneStatusLabel(status: MilestoneStatus, isClient: boolean)
   return MILESTONE_STATUS_LABEL[status];
 }
 
+export const MATERIAL_CATEGORIES = ['CHAPA', 'ESPELHO', 'FERRAGEM', 'ACESSORIO', 'FITA_BORDA', 'SERVICO', 'FRETE', 'OUTRO'] as const;
+export const MATERIAL_CATEGORY_LABEL: Record<string, string> = {
+  CHAPA: 'Chapa (MDF/MDP)',
+  ESPELHO: 'Espelho / Vidro',
+  FERRAGEM: 'Ferragem',
+  ACESSORIO: 'Acessório',
+  FITA_BORDA: 'Fita de borda',
+  SERVICO: 'Serviço / mão de obra',
+  FRETE: 'Frete',
+  OUTRO: 'Outro',
+};
+export const MATERIAL_UNITS = ['UN', 'M2', 'ML', 'H'] as const;
+export const MATERIAL_UNIT_LABEL: Record<string, string> = { UN: 'unidade', M2: 'm²', ML: 'metro linear', H: 'hora' };
+
 export const CATEGORIES = [
   'GUARDA_ROUPA',
   'COZINHA',

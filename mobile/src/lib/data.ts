@@ -109,6 +109,27 @@ export async function listModulePhotos(projectId: string): Promise<{ module_id: 
   return (data as { module_id: string; path: string }[]) ?? [];
 }
 
+export type MaterialRow = {
+  id: string;
+  name: string;
+  category: string;
+  unit: string;
+  unit_cost_cents: number;
+  active: boolean;
+};
+
+// Catálogo de custo do marceneiro (RLS: dono). Ativos primeiro.
+export async function listMaterials(): Promise<MaterialRow[]> {
+  const { data, error } = await supabase
+    .from('carpenter_materials')
+    .select('id, name, category, unit, unit_cost_cents, active')
+    .order('active', { ascending: false })
+    .order('category', { ascending: true })
+    .order('name', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data as MaterialRow[]) ?? [];
+}
+
 export async function getProject(id: string): Promise<ProjectRow | null> {
   const { data } = await supabase.from('projects').select(PROJECT_COLS).eq('id', id).single();
   return (data as ProjectRow) ?? null;

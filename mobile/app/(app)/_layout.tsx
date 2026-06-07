@@ -57,6 +57,15 @@ export default function AppLayout() {
           href: profile?.role === 'CLIENT' ? undefined : null,
         }}
       />
+      <Tabs.Screen
+        name="catalogo"
+        options={{
+          ...header,
+          title: 'Catálogo',
+          tabBarIcon: () => <Icon emoji="📦" />,
+          href: profile?.role === 'CARPENTER' ? undefined : null,
+        }}
+      />
       <Tabs.Screen name="conversas" options={{ title: 'Conversas', tabBarIcon: () => <Icon emoji="💬" /> }} />
       <Tabs.Screen
         name="avisos"
