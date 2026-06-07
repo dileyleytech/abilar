@@ -26,7 +26,11 @@ const ITEMS: Record<'CLIENT' | 'CARPENTER' | 'ARCHITECT' | 'ADMIN', Item[]> = {
     NOTIF,
   ],
   ARCHITECT: [{ href: '/conversas', label: 'Conversas', icon: '💬', badge: 'chat' }, NOTIF],
-  ADMIN: [{ href: '/admin/precos', label: 'Taxas', icon: '⚙️' }, NOTIF],
+  ADMIN: [
+    { href: '/admin/precos', label: 'Taxas', icon: '⚙️' },
+    { href: '/admin/denuncias', label: 'Denúncias', icon: '🚩' },
+    NOTIF,
+  ],
 };
 
 export function AppNav({

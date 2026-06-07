@@ -3,6 +3,7 @@ import type {
   ProjectStatus,
   QuoteStatus,
   ReportReason,
+  ReportStatus,
   MaterialCategory,
   MaterialUnit,
   MilestoneStatus,
@@ -109,6 +110,20 @@ export const REPORT_REASON_LABEL: Record<ReportReason, string> = {
   SCAM: 'Golpe ou fraude',
   SPAM: 'Spam ou propaganda',
   OTHER: 'Outro motivo',
+};
+
+export const REPORT_STATUS_LABEL: Record<ReportStatus, string> = {
+  OPEN: 'Aberta',
+  REVIEWED: 'Revisada',
+  DISMISSED: 'Dispensada',
+  ACTIONED: 'Ação tomada',
+};
+
+export const REPORT_STATUS_BADGE: Record<ReportStatus, string> = {
+  OPEN: 'bg-ochre/25 text-charcoal',
+  REVIEWED: 'bg-brand-secondary/15 text-brand-secondary',
+  DISMISSED: 'bg-charcoal/10 text-muted',
+  ACTIONED: 'bg-sage/30 text-charcoal',
 };
 
 /** Variante SÓLIDA (fundo cheio + texto branco) para badge legível sobre foto. */

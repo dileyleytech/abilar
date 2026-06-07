@@ -46,7 +46,7 @@ export default async function ConversaPage({ params }: { params: Promise<{ id: s
         conversationId={conv.id}
         meId={userId}
         active={conv.status === 'ACTIVE'}
-        initialMessages={msgs.map((m) => ({ id: m.id, senderId: m.senderId, text: m.text }))}
+        initialMessages={msgs.map((m) => ({ id: m.id, senderId: m.senderId, text: m.text, attachments: m.attachments }))}
       />
     </main>
   );

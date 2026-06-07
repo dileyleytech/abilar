@@ -19,6 +19,7 @@ import type { QuoteStatus } from '@abilar/shared';
 import { quotePricing, maxClientInstallments } from '@abilar/pricing';
 import { getDb } from '@/lib/db';
 import { getActivePricingConfig } from '@/lib/pricing/config';
+import { signedProjectPhotoUrl } from '@/lib/storage';
 
 export type ConversationView = {
   id: string;
@@ -164,6 +165,7 @@ export async function listConversations(userId: string): Promise<ConversationLis
       senderId: messages.senderId,
       body: messages.body,
       redactedBody: messages.redactedBody,
+      attachments: messages.attachments,
       createdAt: messages.createdAt,
     })
     .from(messages)
@@ -177,7 +179,12 @@ export async function listConversations(userId: string): Promise<ConversationLis
     lastReadByConv.set(r.id, r.clientId === userId ? r.clientLastReadAt : r.carpenterLastReadAt);
   }
   for (const m of msgs) {
-    if (!last.has(m.conversationId)) last.set(m.conversationId, { text: m.redactedBody ?? m.body, at: m.createdAt });
+    if (!last.has(m.conversationId)) {
+      const body = m.redactedBody ?? m.body;
+      const nPhotos = ((m.attachments as string[]) ?? []).length;
+      const preview = body || (nPhotos > 0 ? `📷 ${nPhotos > 1 ? `${nPhotos} fotos` : 'Foto'}` : '');
+      last.set(m.conversationId, { text: preview, at: m.createdAt });
+    }
     // Não lida = de outra pessoa e mais nova que o meu "último lido".
     const lr = lastReadByConv.get(m.conversationId) ?? null;
     if (m.senderId !== userId && (lr === null || m.createdAt > lr)) {
@@ -210,9 +217,13 @@ export async function countUnreadMessages(userId: string): Promise<number> {
   return items.reduce((acc, c) => acc + c.unread, 0);
 }
 
-export type ChatMessage = Pick<Message, 'id' | 'senderId' | 'createdAt'> & { text: string };
+export type ChatMessage = Pick<Message, 'id' | 'senderId' | 'createdAt'> & {
+  text: string;
+  attachments: string[]; // URLs assinadas
+};
 
-/** Mensagens da conversa (mais antigas primeiro). Mostra o corpo mascarado. */
+/** Mensagens da conversa (mais antigas primeiro). Mostra o corpo mascarado e
+ *  assina os anexos (fotos) para exibição. */
 export async function listMessages(conversationId: string): Promise<ChatMessage[]> {
   const db = getDb();
   const rows = await db
@@ -221,12 +232,19 @@ export async function listMessages(conversationId: string): Promise<ChatMessage[
       senderId: messages.senderId,
       body: messages.body,
       redactedBody: messages.redactedBody,
+      attachments: messages.attachments,
       createdAt: messages.createdAt,
     })
     .from(messages)
     .where(eq(messages.conversationId, conversationId))
     .orderBy(asc(messages.createdAt));
-  return rows.map((m) => ({ id: m.id, senderId: m.senderId, createdAt: m.createdAt, text: m.redactedBody ?? m.body }));
+  return Promise.all(
+    rows.map(async (m) => {
+      const paths = (m.attachments as string[]) ?? [];
+      const urls = (await Promise.all(paths.map((p) => signedProjectPhotoUrl(p)))).filter((u): u is string => !!u);
+      return { id: m.id, senderId: m.senderId, createdAt: m.createdAt, text: m.redactedBody ?? m.body, attachments: urls };
+    }),
+  );
 }
 
 /** Conversa existente entre um pedido e um marceneiro (ou null). */

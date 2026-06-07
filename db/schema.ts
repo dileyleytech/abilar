@@ -324,6 +324,7 @@ export const messages = pgTable(
     body: text('body').notNull(),
     redactedBody: text('redacted_body'),
     flaggedReason: text('flagged_reason'),
+    attachments: jsonb('attachments').notNull().default(sql`'[]'::jsonb`), // paths no Storage
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('messages_conversation_idx').on(t.conversationId, t.createdAt)],
