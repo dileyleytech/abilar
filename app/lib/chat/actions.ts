@@ -7,9 +7,13 @@ import { getDb } from '@/lib/db';
 import { getSessionProfile } from '@/lib/auth/session';
 import { countUnreadMessages } from '@/lib/chat/queries';
 import { notify } from '@/lib/notifications/notify';
+import { createSupabaseAdminClient } from '@/lib/supabase/admin';
+import { PROJECT_PHOTOS_BUCKET, signedProjectPhotoUrl } from '@/lib/storage';
 
 export type PreApproveResult = { ok: true; conversationId: string } | { ok: false; error: string };
 export type ActionResult = { ok: true } | { ok: false; error: string };
+
+const MAX_CHAT_PHOTOS = 4;
 
 /** Total de mensagens não lidas do usuário logado (badge do header). */
 export async function getMyUnreadCount(): Promise<number> {
@@ -92,13 +96,18 @@ export async function markConversationRead(conversationId: string): Promise<Acti
   return { ok: true };
 }
 
-/** Envia uma mensagem no chat (com mascaramento de contato — §7.8). */
-export async function sendMessage(conversationId: string, body: string): Promise<ActionResult> {
+/** Envia uma mensagem no chat (texto e/ou fotos), com mascaramento de contato (§7.8).
+ *  Recebe FormData: conversationId, body, photos[] (0..N). Fotos sobem via service-role. */
+export async function sendMessage(formData: FormData): Promise<ActionResult> {
   const profile = await getSessionProfile();
   if (!profile) return { ok: false, error: 'Faça login.' };
-  const text = body.trim();
-  if (!text) return { ok: false, error: 'Mensagem vazia.' };
+
+  const conversationId = String(formData.get('conversationId') ?? '');
+  const text = String(formData.get('body') ?? '').trim();
+  const files = formData.getAll('photos').filter((f): f is File => f instanceof File && f.size > 0);
+  if (!text && files.length === 0) return { ok: false, error: 'Mensagem vazia.' };
   if (text.length > 2000) return { ok: false, error: 'Mensagem muito longa.' };
+  if (files.length > MAX_CHAT_PHOTOS) return { ok: false, error: `Máximo de ${MAX_CHAT_PHOTOS} fotos por mensagem.` };
 
   const db = getDb();
   // Participante de uma conversa ATIVA?
@@ -112,7 +121,25 @@ export async function sendMessage(conversationId: string, body: string): Promise
   }
   if (conv.status !== 'ACTIVE') return { ok: false, error: 'Esta conversa está fechada.' };
 
-  const redacted = maskContact(text);
+  // Sobe as fotos (service-role) sob chat/{conversationId}/...
+  const paths: string[] = [];
+  if (files.length > 0) {
+    const supabase = createSupabaseAdminClient();
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i]!;
+      if (!f.type.startsWith('image/')) return { ok: false, error: 'Só é possível anexar imagens.' };
+      if (f.size > 10 * 1024 * 1024) return { ok: false, error: 'Cada foto deve ter no máx 10 MB.' };
+      const ext = (f.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+      const path = `chat/${conversationId}/${Date.now()}-${i}.${ext}`;
+      const { error } = await supabase.storage
+        .from(PROJECT_PHOTOS_BUCKET)
+        .upload(path, new Uint8Array(await f.arrayBuffer()), { contentType: f.type || 'image/jpeg', upsert: true });
+      if (error) return { ok: false, error: 'Não foi possível enviar a(s) foto(s).' };
+      paths.push(path);
+    }
+  }
+
+  const redacted = text ? maskContact(text) : '';
   const masked = redacted !== text;
   await db.insert(messages).values({
     conversationId,
@@ -121,10 +148,29 @@ export async function sendMessage(conversationId: string, body: string): Promise
     redactedBody: masked ? redacted : null,
     // Sinaliza p/ moderação quando houve tentativa de compartilhar contato (§7.8).
     flaggedReason: masked ? 'CONTACT_MASKED' : null,
+    attachments: paths,
   });
   revalidatePath(`/conversas/${conversationId}`);
   revalidatePath('/conversas'); // atualiza a caixa (prévia + não lidas)
   return { ok: true };
+}
+
+/** Assina os anexos de uma mensagem recém-chegada por Realtime (só participantes). */
+export async function signMyChatAttachments(conversationId: string, paths: string[]): Promise<string[]> {
+  const profile = await getSessionProfile();
+  if (!profile || paths.length === 0) return [];
+  const db = getDb();
+  const [conv] = await db
+    .select({ clientId: conversations.clientId, carpenterId: conversations.carpenterId })
+    .from(conversations)
+    .where(eq(conversations.id, conversationId))
+    .limit(1);
+  if (!conv || (conv.clientId !== profile.id && conv.carpenterId !== profile.id)) return [];
+  // Garante que cada path pertence a ESTA conversa.
+  const prefix = `chat/${conversationId}/`;
+  const safe = paths.filter((p) => p.startsWith(prefix));
+  const urls = await Promise.all(safe.map((p) => signedProjectPhotoUrl(p)));
+  return urls.filter((u): u is string => !!u);
 }
 
 /** Denuncia a conversa (opcionalmente uma mensagem) — moderação §7.8. */

@@ -19,6 +19,7 @@ import type { QuoteStatus } from '@abilar/shared';
 import { quotePricing, maxClientInstallments } from '@abilar/pricing';
 import { getDb } from '@/lib/db';
 import { getActivePricingConfig } from '@/lib/pricing/config';
+import { signedProjectPhotoUrl } from '@/lib/storage';
 
 export type ConversationView = {
   id: string;
@@ -27,10 +28,12 @@ export type ConversationView = {
   status: string;
   meIsClient: boolean;
   otherName: string;
+  isModerator: boolean; // admin vendo (só leitura), não participante
 } | null;
 
-/** Conversa (se o usuário for participante) + nome da outra parte + pedido. */
-export async function getConversation(id: string, userId: string): Promise<ConversationView> {
+/** Conversa + nome da outra parte + pedido. Acesso: participante OU admin (que
+ *  entra em modo só leitura para moderação — §7.8). */
+export async function getConversation(id: string, userId: string, isAdmin = false): Promise<ConversationView> {
   const db = getDb();
   const [row] = await db
     .select({
@@ -50,15 +53,22 @@ export async function getConversation(id: string, userId: string): Promise<Conve
     .where(eq(conversations.id, id))
     .limit(1);
 
-  if (!row || (row.clientId !== userId && row.carpenterId !== userId)) return null;
+  if (!row) return null;
+  const isParticipant = row.clientId === userId || row.carpenterId === userId;
+  if (!isParticipant && !isAdmin) return null;
+
   const meIsClient = row.clientId === userId;
+  const clientName = row.clientName ?? 'Cliente';
+  const carpenterName = row.carpenterName ?? 'Marceneiro';
   return {
     id: row.id,
     projectId: row.projectId,
     projectTitle: row.projectTitle,
     status: row.status,
     meIsClient,
-    otherName: (meIsClient ? row.carpenterName : row.clientName) ?? (meIsClient ? 'Marceneiro' : 'Cliente'),
+    // Para o admin (não participante), mostra as duas partes.
+    otherName: isParticipant ? (meIsClient ? carpenterName : clientName) : `${clientName} ↔ ${carpenterName}`,
+    isModerator: !isParticipant && isAdmin,
   };
 }
 
@@ -164,6 +174,7 @@ export async function listConversations(userId: string): Promise<ConversationLis
       senderId: messages.senderId,
       body: messages.body,
       redactedBody: messages.redactedBody,
+      attachments: messages.attachments,
       createdAt: messages.createdAt,
     })
     .from(messages)
@@ -177,7 +188,12 @@ export async function listConversations(userId: string): Promise<ConversationLis
     lastReadByConv.set(r.id, r.clientId === userId ? r.clientLastReadAt : r.carpenterLastReadAt);
   }
   for (const m of msgs) {
-    if (!last.has(m.conversationId)) last.set(m.conversationId, { text: m.redactedBody ?? m.body, at: m.createdAt });
+    if (!last.has(m.conversationId)) {
+      const body = m.redactedBody ?? m.body;
+      const nPhotos = ((m.attachments as string[]) ?? []).length;
+      const preview = body || (nPhotos > 0 ? `📷 ${nPhotos > 1 ? `${nPhotos} fotos` : 'Foto'}` : '');
+      last.set(m.conversationId, { text: preview, at: m.createdAt });
+    }
     // Não lida = de outra pessoa e mais nova que o meu "último lido".
     const lr = lastReadByConv.get(m.conversationId) ?? null;
     if (m.senderId !== userId && (lr === null || m.createdAt > lr)) {
@@ -210,9 +226,13 @@ export async function countUnreadMessages(userId: string): Promise<number> {
   return items.reduce((acc, c) => acc + c.unread, 0);
 }
 
-export type ChatMessage = Pick<Message, 'id' | 'senderId' | 'createdAt'> & { text: string };
+export type ChatMessage = Pick<Message, 'id' | 'senderId' | 'createdAt'> & {
+  text: string;
+  attachments: string[]; // URLs assinadas
+};
 
-/** Mensagens da conversa (mais antigas primeiro). Mostra o corpo mascarado. */
+/** Mensagens da conversa (mais antigas primeiro). Mostra o corpo mascarado e
+ *  assina os anexos (fotos) para exibição. */
 export async function listMessages(conversationId: string): Promise<ChatMessage[]> {
   const db = getDb();
   const rows = await db
@@ -221,12 +241,19 @@ export async function listMessages(conversationId: string): Promise<ChatMessage[
       senderId: messages.senderId,
       body: messages.body,
       redactedBody: messages.redactedBody,
+      attachments: messages.attachments,
       createdAt: messages.createdAt,
     })
     .from(messages)
     .where(eq(messages.conversationId, conversationId))
     .orderBy(asc(messages.createdAt));
-  return rows.map((m) => ({ id: m.id, senderId: m.senderId, createdAt: m.createdAt, text: m.redactedBody ?? m.body }));
+  return Promise.all(
+    rows.map(async (m) => {
+      const paths = (m.attachments as string[]) ?? [];
+      const urls = (await Promise.all(paths.map((p) => signedProjectPhotoUrl(p)))).filter((u): u is string => !!u);
+      return { id: m.id, senderId: m.senderId, createdAt: m.createdAt, text: m.redactedBody ?? m.body, attachments: urls };
+    }),
+  );
 }
 
 /** Conversa existente entre um pedido e um marceneiro (ou null). */

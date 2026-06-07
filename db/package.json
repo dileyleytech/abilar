@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
+    "seed:admin": "node seeds/seed-admin.mjs",
     "studio": "drizzle-kit studio"
   },
   "dependencies": {
