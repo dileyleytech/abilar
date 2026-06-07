@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import { HeaderIcons } from '@/components/HeaderIcons';
 import { color } from '@/theme';
 
 export default function PedidosStack() {
@@ -9,6 +10,7 @@ export default function PedidosStack() {
         headerTintColor: color.text.primary,
         headerShadowVisible: false,
         contentStyle: { backgroundColor: color.bg.base },
+        headerRight: () => <HeaderIcons />,
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Pedidos' }} />

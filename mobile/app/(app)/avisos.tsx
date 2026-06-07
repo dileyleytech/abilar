@@ -6,9 +6,8 @@ import { listNotifications, type NotificationRow } from '@/lib/data';
 import { api } from '@/lib/api';
 import { EmptyState, Loading } from '@/components/ui';
 import { formatDateTime } from '@/lib/format';
+import { NOTIF_READ_EVENT } from '@/lib/events';
 import { color, radius, space } from '@/theme';
-
-export const NOTIF_READ_EVENT = 'abilar:notif-read';
 
 // Converte o link da notificação (rota web) para a rota do app.
 function toMobileRoute(link: string | null): string | null {

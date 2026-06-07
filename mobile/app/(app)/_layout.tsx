@@ -1,10 +1,7 @@
-import { useEffect, useState } from 'react';
-import { DeviceEventEmitter, Text } from 'react-native';
+import { Text } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useAuth } from '@/lib/auth';
-import { countUnreadNotifications } from '@/lib/data';
-import { subscribeNotifications } from '@/lib/realtime';
-import { NOTIF_READ_EVENT } from './avisos';
+import { HeaderIcons } from '@/components/HeaderIcons';
 import { color } from '@/theme';
 
 function Icon({ emoji }: { emoji: string }) {
@@ -13,27 +10,15 @@ function Icon({ emoji }: { emoji: string }) {
 
 export default function AppLayout() {
   const { profile } = useAuth();
-  const [unread, setUnread] = useState(0);
+  const carpenter = profile?.role === 'CARPENTER';
 
-  useEffect(() => {
-    if (!profile) return;
-    let cleanup: (() => void) | undefined;
-    void countUnreadNotifications(profile.id).then(setUnread);
-    void subscribeNotifications(profile.id, () => setUnread((n) => n + 1)).then((c) => (cleanup = c));
-    const sub = DeviceEventEmitter.addListener(NOTIF_READ_EVENT, () => setUnread(0));
-    return () => {
-      cleanup?.();
-      sub.remove();
-    };
-  }, [profile]);
-
-  // Header nativo para as abas que não têm Stack próprio (evita título sob o
-  // status bar). Pedidos/Conversas têm Stack interno e mantêm headerShown:false.
+  // Header nativo com Conversas + Avisos no topo (padrão mobile).
   const header = {
     headerShown: true,
     headerStyle: { backgroundColor: color.bg.base },
     headerShadowVisible: false,
     headerTintColor: color.text.primary,
+    headerRight: () => <HeaderIcons />,
   } as const;
 
   return (
@@ -53,29 +38,30 @@ export default function AppLayout() {
           title: 'Novo pedido',
           tabBarLabel: 'Criar',
           tabBarIcon: () => <Icon emoji="➕" />,
-          // Só o cliente cria pedido; escondido para os demais papéis.
           href: profile?.role === 'CLIENT' ? undefined : null,
         }}
       />
+      {/* Marceneiro: gestão dividida em 3 abas */}
       <Tabs.Screen
-        name="catalogo"
-        options={{
-          ...header,
-          title: 'Gestão',
-          tabBarIcon: () => <Icon emoji="💼" />,
-          href: profile?.role === 'CARPENTER' ? undefined : null,
-        }}
+        name="avulsos"
+        options={{ ...header, title: 'Orçamentos avulsos', tabBarLabel: 'Orçamentos', tabBarIcon: () => <Icon emoji="📄" />, href: carpenter ? undefined : null }}
       />
-      <Tabs.Screen name="conversas" options={{ title: 'Conversas', tabBarIcon: () => <Icon emoji="💬" /> }} />
       <Tabs.Screen
-        name="avisos"
-        options={{ ...header, title: 'Avisos', tabBarIcon: () => <Icon emoji="🔔" />, tabBarBadge: unread > 0 ? unread : undefined }}
+        name="relatorios"
+        options={{ ...header, title: 'Relatórios', tabBarIcon: () => <Icon emoji="📊" />, href: carpenter ? undefined : null }}
+      />
+      <Tabs.Screen
+        name="catalogo-custos"
+        options={{ ...header, title: 'Catálogo de custos', tabBarLabel: 'Custos', tabBarIcon: () => <Icon emoji="📦" />, href: carpenter ? undefined : null }}
       />
       <Tabs.Screen name="conta" options={{ ...header, title: 'Minha conta', tabBarLabel: 'Conta', tabBarIcon: () => <Icon emoji="👤" /> }} />
+
+      {/* Fora da barra de baixo (topo / navegação) */}
+      <Tabs.Screen name="catalogo" options={{ href: null }} />
+      <Tabs.Screen name="conversas" options={{ href: null }} />
+      <Tabs.Screen name="avisos" options={{ ...header, title: 'Avisos', href: null }} />
       <Tabs.Screen name="contratos" options={{ href: null }} />
       <Tabs.Screen name="marceneiro-perfil" options={{ href: null }} />
-      <Tabs.Screen name="avulsos" options={{ ...header, title: 'Orçamentos avulsos', href: null }} />
-      <Tabs.Screen name="relatorios" options={{ ...header, title: 'Relatórios', href: null }} />
     </Tabs>
   );
 }
