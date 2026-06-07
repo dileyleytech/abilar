@@ -1,6 +1,11 @@
 import { supabase } from './supabase';
 import type { MessageRow } from './data';
 
+// Nome de canal único por inscrição — dois canais com o mesmo tópico quebram o
+// Realtime do Supabase (ex.: HeaderIcons montado em várias telas ao mesmo tempo).
+let channelSeq = 0;
+const uniqueTopic = (base: string) => `${base}:${++channelSeq}`;
+
 // Assina novas mensagens da conversa. Precisa autenticar o socket com o JWT,
 // senão a RLS (policies TO authenticated) barra todos os eventos.
 export async function subscribeMessages(
@@ -12,7 +17,7 @@ export async function subscribeMessages(
   if (token) await supabase.realtime.setAuth(token);
 
   const channel = supabase
-    .channel(`conv:${conversationId}`)
+    .channel(uniqueTopic(`conv:${conversationId}`))
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
@@ -32,7 +37,7 @@ export async function subscribeNotifications(userId: string, onInsert: () => voi
   if (token) await supabase.realtime.setAuth(token);
 
   const channel = supabase
-    .channel(`notif:${userId}`)
+    .channel(uniqueTopic(`notif:${userId}`))
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
