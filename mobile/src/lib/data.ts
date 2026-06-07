@@ -66,6 +66,15 @@ export async function listProjectsByStatus(statuses: ProjectStatus[]): Promise<P
   return (data as ProjectRow[]) ?? [];
 }
 
+// Contagem de orçamentos por projeto (RLS: cliente lê quotes dos próprios pedidos).
+export async function quoteCountsByProject(projectIds: string[]): Promise<Record<string, number>> {
+  if (projectIds.length === 0) return {};
+  const { data } = await supabase.from('quotes').select('project_id').in('project_id', projectIds);
+  const counts: Record<string, number> = {};
+  for (const r of (data as { project_id: string }[]) ?? []) counts[r.project_id] = (counts[r.project_id] ?? 0) + 1;
+  return counts;
+}
+
 export async function listOpenProjects(): Promise<ProjectRow[]> {
   const { data, error } = await supabase
     .from('projects')

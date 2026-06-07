@@ -6,6 +6,7 @@ import {
   listClientProjects,
   listOpenProjects,
   listProjectsByStatus,
+  quoteCountsByProject,
   type ProjectRow,
 } from '@/lib/data';
 import { PROJECT_STATUS_LABEL, type ProjectStatus } from '@/lib/types';
@@ -38,9 +39,12 @@ export default function PedidosScreen() {
         ];
       } else {
         const all = await listClientProjects(profile.id);
+        const naoObra = all.filter((p) => !isObra(p.status));
+        const counts = await quoteCountsByProject(naoObra.map((p) => p.id));
         next = [
           { title: '🏗️ Em obra', data: all.filter((p) => isObra(p.status)) },
-          { title: 'Meus pedidos', data: all.filter((p) => !isObra(p.status)) },
+          { title: '💬 Com orçamentos', data: naoObra.filter((p) => (counts[p.id] ?? 0) > 0) },
+          { title: 'Aguardando orçamentos', data: naoObra.filter((p) => (counts[p.id] ?? 0) === 0) },
         ];
       }
     } catch {

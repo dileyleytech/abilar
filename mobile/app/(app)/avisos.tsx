@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { DeviceEventEmitter, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 import { listNotifications, type NotificationRow } from '@/lib/data';
 import { api } from '@/lib/api';
@@ -10,8 +10,21 @@ import { color, radius, space } from '@/theme';
 
 export const NOTIF_READ_EVENT = 'abilar:notif-read';
 
+// Converte o link da notificação (rota web) para a rota do app.
+function toMobileRoute(link: string | null): string | null {
+  if (!link) return null;
+  const m = link.match(/\/(pedidos|conversas|contratos)\/([0-9a-f-]+)/i);
+  if (m) return `/(app)/${m[1]}/${m[2]}`;
+  if (link.includes('/marceneiro/pedidos/')) {
+    const id = link.split('/marceneiro/pedidos/')[1]?.split(/[/?#]/)[0];
+    if (id) return `/(app)/pedidos/${id}`;
+  }
+  return null;
+}
+
 export default function AvisosScreen() {
   const { profile } = useAuth();
+  const router = useRouter();
   const [items, setItems] = useState<NotificationRow[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [marking, setMarking] = useState(false);
@@ -69,13 +82,20 @@ export default function AvisosScreen() {
         ) : null
       }
       ListEmptyComponent={<EmptyState emoji="🔔" title="Sem avisos" subtitle="Mudanças nos seus pedidos e obras aparecem aqui." />}
-      renderItem={({ item }) => (
-        <View style={[styles.card, !item.read_at && styles.unread]}>
-          <Text style={styles.title}>{item.title}</Text>
-          {item.body ? <Text style={styles.body}>{item.body}</Text> : null}
-          <Text style={styles.date}>{formatDateTime(item.created_at)}</Text>
-        </View>
-      )}
+      renderItem={({ item }) => {
+        const route = toMobileRoute(item.link);
+        return (
+          <Pressable
+            style={[styles.card, !item.read_at && styles.unread]}
+            disabled={!route}
+            onPress={() => route && router.push(route)}
+          >
+            <Text style={styles.title}>{item.title}</Text>
+            {item.body ? <Text style={styles.body}>{item.body}</Text> : null}
+            <Text style={styles.date}>{formatDateTime(item.created_at)}{route ? '  ›' : ''}</Text>
+          </Pressable>
+        );
+      }}
     />
   );
 }
