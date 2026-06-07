@@ -445,6 +445,7 @@ export const projectMilestones = pgTable(
     pct: integer('pct').notNull(),
     amountCents: bigint('amount_cents', { mode: 'number' }).notNull(),
     status: milestoneStatusEnum('status').notNull().default('PENDING'),
+    evidenceUrl: text('evidence_url'), // foto de evidência (path no Storage) — §6.4
     doneAt: timestamp('done_at', { withTimezone: true }),
     approvedAt: timestamp('approved_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -454,6 +455,37 @@ export const projectMilestones = pgTable(
 
 export type ProjectMilestone = typeof projectMilestones.$inferSelect;
 export type NewProjectMilestone = typeof projectMilestones.$inferInsert;
+
+/** Evidências de uma etapa (§6.4): cada registro tem comentário + várias fotos.
+ *  clientId/carpenterId denormalizados p/ RLS simples (igual aos marcos). */
+export const milestoneEvidences = pgTable(
+  'milestone_evidences',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    milestoneId: uuid('milestone_id')
+      .notNull()
+      .references(() => projectMilestones.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    clientId: uuid('client_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    carpenterId: uuid('carpenter_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    authorId: uuid('author_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    comment: text('comment'),
+    photos: jsonb('photos').notNull().default(sql`'[]'::jsonb`), // paths no Storage
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('milestone_evidences_milestone_idx').on(t.milestoneId, t.createdAt)],
+);
+
+export type MilestoneEvidence = typeof milestoneEvidences.$inferSelect;
+export type NewMilestoneEvidence = typeof milestoneEvidences.$inferInsert;
 
 /** Notificações in-app (mudança de status de pedido/orçamento/obra). Realtime + RLS. */
 export const notifications = pgTable(

@@ -6,7 +6,7 @@ import { REPORT_REASONS, type ConversationStatus, type ReportReason } from '@abi
 import { REPORT_REASON_LABEL } from '@/lib/labels';
 import { reportConversation, setConversationStatus } from '@/lib/chat/actions';
 
-const SUPPORT_EMAIL = 'suporte@abilar.com.br'; // TODO: confirmar e-mail oficial de suporte
+const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? 'suporte@abilar.com.br';
 
 /** Menu de moderação do chat (§7.8): denunciar, encerrar/reabrir, bloquear, suporte. */
 export function ChatMenu({
