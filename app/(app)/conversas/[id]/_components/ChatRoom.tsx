@@ -214,7 +214,7 @@ export function ChatRoom({
               <textarea
                 rows={1}
                 className="max-h-40 min-h-[3rem] flex-1 resize-none rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
-                placeholder="Escreva uma mensagem…  (Enter envia · Shift+Enter quebra linha)"
+                placeholder="Mensagem…"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => {
