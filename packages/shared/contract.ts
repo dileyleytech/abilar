@@ -6,6 +6,12 @@ export const CONTRACT_STATUS = ['DRAFT', 'SIGNED', 'CANCELLED'] as const;
 export const contractStatusSchema = z.enum(CONTRACT_STATUS);
 export type ContractStatus = z.infer<typeof contractStatusSchema>;
 
+// Andamento de cada marco da obra (§6.4): pendente → em andamento (marceneiro) →
+// concluído (aguardando cliente) → aprovado (cliente).
+export const MILESTONE_STATUS = ['PENDING', 'IN_PROGRESS', 'DONE', 'APPROVED'] as const;
+export const milestoneStatusSchema = z.enum(MILESTONE_STATUS);
+export type MilestoneStatus = z.infer<typeof milestoneStatusSchema>;
+
 /** Marco de liberação de pagamento (§2.7). Percentuais default, configuráveis. */
 export interface Milestone {
   key: string;

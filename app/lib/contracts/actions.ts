@@ -2,9 +2,9 @@
 
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
-import { DEFAULT_MILESTONES, type QuoteLineItem } from '@abilar/shared';
-import { quotePricing, maxClientInstallments } from '@abilar/pricing';
-import { contracts, quotes, projects, eq, sql } from '@abilar/db';
+import { DEFAULT_MILESTONES, type Milestone, type QuoteLineItem } from '@abilar/shared';
+import { quotePricing, maxClientInstallments, allocateProportional } from '@abilar/pricing';
+import { contracts, quotes, projects, projectMilestones, eq, sql } from '@abilar/db';
 import { getDb } from '@/lib/db';
 import { getSessionProfile } from '@/lib/auth/session';
 import { getActivePricingConfig } from '@/lib/pricing/config';
@@ -24,13 +24,18 @@ async function ipHash(): Promise<string | null> {
     .join('');
 }
 
-/** Quando as duas partes aceitaram: contrato ASSINADO, orçamento ACEITO, projeto HIRED. */
+/** Quando as duas partes aceitaram: contrato ASSINADO, orçamento ACEITO, projeto
+ *  HIRED — e cria os marcos da obra (§6.4) a partir do snapshot do contrato. */
 async function finalizeIfBothSigned(contractId: string): Promise<void> {
   const db = getDb();
   const [c] = await db
     .select({
       quoteId: contracts.quoteId,
       projectId: contracts.projectId,
+      clientId: contracts.clientId,
+      carpenterId: contracts.carpenterId,
+      valueCents: contracts.valueCents,
+      terms: contracts.terms,
       status: contracts.status,
       client: contracts.acceptedByClientAt,
       carpenter: contracts.acceptedByCarpenterAt,
@@ -39,9 +44,36 @@ async function finalizeIfBothSigned(contractId: string): Promise<void> {
     .where(eq(contracts.id, contractId))
     .limit(1);
   if (!c || c.status !== 'DRAFT' || !c.client || !c.carpenter) return;
+
   await db.update(contracts).set({ status: 'SIGNED' }).where(eq(contracts.id, contractId));
   await db.update(quotes).set({ status: 'ACCEPTED', updatedAt: sql`now()` }).where(eq(quotes.id, c.quoteId));
   await db.update(projects).set({ status: 'HIRED', updatedAt: sql`now()` }).where(eq(projects.id, c.projectId));
+
+  // Cria os marcos da obra (idempotente — só se ainda não existirem).
+  const [exists] = await db
+    .select({ id: projectMilestones.id })
+    .from(projectMilestones)
+    .where(eq(projectMilestones.contractId, contractId))
+    .limit(1);
+  if (exists) return;
+
+  const ms = ((c.terms as { milestones?: Milestone[] })?.milestones ?? DEFAULT_MILESTONES);
+  const amounts = allocateProportional(c.valueCents, ms.map((m) => m.pct));
+  await db.insert(projectMilestones).values(
+    ms.map((m, i) => ({
+      projectId: c.projectId,
+      contractId,
+      clientId: c.clientId,
+      carpenterId: c.carpenterId,
+      ord: i,
+      key: m.key,
+      label: m.label,
+      event: m.event,
+      pct: m.pct,
+      amountCents: amounts[i] ?? 0,
+      status: 'PENDING' as const,
+    })),
+  );
 }
 
 /** Cliente ACEITA o orçamento → gera o contrato padrão (§6.5) e registra o aceite

@@ -169,12 +169,8 @@ export function MarceneiroFeed({ open, quoted }: { open: OpenCard[]; quoted: Quo
             ) : (
               <ul className={gridCls}>
                 {quotedFiltered.map((q) => {
-                  const href =
-                    q.projectStatus === 'OPEN_FOR_QUOTES' || q.projectStatus === 'IN_NEGOTIATION'
-                      ? `/marceneiro/pedidos/${q.projectId}`
-                      : q.conversationId
-                        ? `/conversas/${q.conversationId}`
-                        : null;
+                  // Abre a tela do pedido (orçamento se em negociação; obra se contratado).
+                  const href = `/marceneiro/pedidos/${q.projectId}`;
                   const inner = (
                     <>
                       <Cover urls={q.photoUrls}>

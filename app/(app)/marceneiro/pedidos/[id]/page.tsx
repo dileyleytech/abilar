@@ -10,6 +10,8 @@ import { getActivePricingConfig } from '@/lib/pricing/config';
 import { getCarpenterQuote } from '@/lib/quotes/queries';
 import { getConversationForProjectCarpenter } from '@/lib/chat/queries';
 import { getContractIdByQuote } from '@/lib/contracts/queries';
+import { getProjectMilestones } from '@/lib/obra/queries';
+import { ObraBoard } from '@/components/ObraBoard';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
 import { StatusBadge } from '@/components/StatusBadge';
 import { backFrom } from '@/lib/nav';
@@ -40,6 +42,7 @@ export default async function CarpenterPedidoPage({
   const detail = existing ? await getProjectDetailById(id) : await getProjectForCarpenter(id, carpenter);
   if (!detail) notFound();
   const contractId = existing ? await getContractIdByQuote(existing.id) : null;
+  const obra = await getProjectMilestones(id, profile.id);
   const { project, modules, photos } = detail;
 
   const materials: MaterialOption[] = catalog.map((m) => ({
@@ -121,6 +124,14 @@ export default async function CarpenterPedidoPage({
             </Link>
           )}
         </div>
+      )}
+
+      {/* Obra contratada: quadro de etapas em destaque */}
+      {obra && (
+        <section className="mb-6 rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
+          <h2 className="mb-4 text-xl font-bold text-charcoal">Sua obra (execução)</h2>
+          <ObraBoard milestones={obra.milestones} meIsClient={obra.meIsClient} meIsCarpenter={obra.meIsCarpenter} approvedPct={obra.approvedPct} />
+        </section>
       )}
 
       {/* Três colunas, largura total: o que o cliente pediu | montar | valores */}

@@ -5,6 +5,7 @@ import type {
   ReportReason,
   MaterialCategory,
   MaterialUnit,
+  MilestoneStatus,
 } from '@abilar/shared';
 
 export const CATEGORY_EMOJI: Record<Category, string> = {
@@ -84,6 +85,21 @@ export const MATERIAL_UNIT_LABEL: Record<MaterialUnit, string> = {
   M2: 'm²',
   ML: 'metro linear',
   H: 'hora',
+};
+
+/** Andamento das etapas da obra (§6.4). */
+export const MILESTONE_STATUS_LABEL: Record<MilestoneStatus, string> = {
+  PENDING: 'Pendente',
+  IN_PROGRESS: 'Em andamento',
+  DONE: 'Concluída — aguardando aprovação',
+  APPROVED: 'Aprovada',
+};
+
+export const MILESTONE_STATUS_BADGE: Record<MilestoneStatus, string> = {
+  PENDING: 'bg-deep text-muted',
+  IN_PROGRESS: 'bg-ochre/25 text-charcoal',
+  DONE: 'bg-brand-secondary/15 text-brand-secondary',
+  APPROVED: 'bg-sage/30 text-charcoal',
 };
 
 /** Razões de denúncia do chat (§7.8). */

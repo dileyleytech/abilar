@@ -36,6 +36,7 @@ import {
   MATERIAL_CATEGORIES,
   MATERIAL_UNITS,
   CONTRACT_STATUS,
+  MILESTONE_STATUS,
 } from '@abilar/shared';
 
 // Enums (fonte única dos literais em @abilar/shared/domain).
@@ -55,6 +56,7 @@ export const reportStatusEnum = pgEnum('report_status', REPORT_STATUS);
 export const materialCategoryEnum = pgEnum('material_category', MATERIAL_CATEGORIES);
 export const materialUnitEnum = pgEnum('material_unit', MATERIAL_UNITS);
 export const contractStatusEnum = pgEnum('contract_status', CONTRACT_STATUS);
+export const milestoneStatusEnum = pgEnum('milestone_status', MILESTONE_STATUS);
 
 /** Perfil 1:1 com auth.users (id = auth.uid()). `role` é a fonte de verdade
  *  do papel (NÃO confiar em user_metadata para autorização). */
@@ -417,6 +419,41 @@ export const contracts = pgTable(
 
 export type Contract = typeof contracts.$inferSelect;
 export type NewContract = typeof contracts.$inferInsert;
+
+/** Marcos da obra (§6.4) — etapas de execução com liberação por evolução. Criados
+ *  quando o contrato é assinado. clientId/carpenterId denormalizados p/ RLS simples. */
+export const projectMilestones = pgTable(
+  'project_milestones',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    contractId: uuid('contract_id')
+      .notNull()
+      .references(() => contracts.id, { onDelete: 'cascade' }),
+    clientId: uuid('client_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    carpenterId: uuid('carpenter_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    ord: integer('ord').notNull(),
+    key: text('key').notNull(),
+    label: text('label').notNull(),
+    event: text('event').notNull(),
+    pct: integer('pct').notNull(),
+    amountCents: bigint('amount_cents', { mode: 'number' }).notNull(),
+    status: milestoneStatusEnum('status').notNull().default('PENDING'),
+    doneAt: timestamp('done_at', { withTimezone: true }),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('project_milestones_project_idx').on(t.projectId, t.ord)],
+);
+
+export type ProjectMilestone = typeof projectMilestones.$inferSelect;
+export type NewProjectMilestone = typeof projectMilestones.$inferInsert;
 
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;

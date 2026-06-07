@@ -6,6 +6,8 @@ import { getProjectDetail } from '@/lib/projects/queries';
 import { getReceivedQuotes } from '@/lib/quotes/queries';
 import { signedProjectPhotoUrl } from '@/lib/storage';
 import { StatusBadge } from '@/components/StatusBadge';
+import { ObraBoard } from '@/components/ObraBoard';
+import { getProjectMilestones } from '@/lib/obra/queries';
 import { backFrom } from '@/lib/nav';
 import { ProjectActions } from './_components/ProjectActions';
 import { ModulesSection, type ModuleView } from './_components/ModulesSection';
@@ -37,6 +39,7 @@ export default async function PedidoDetailPage({
   for (const p of signed) if (p.moduleId) modulePhoto.set(p.moduleId, p.url);
 
   const quotes = await getReceivedQuotes(id);
+  const obra = await getProjectMilestones(id, userId);
   const editable = ['DRAFT', 'OPEN_FOR_QUOTES', 'IN_NEGOTIATION'].includes(project.status);
   const moduleViews: ModuleView[] = modules.map((m) => ({
     id: m.id,
@@ -68,8 +71,15 @@ export default async function PedidoDetailPage({
       </header>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Conteúdo principal: móveis + orçamentos recebidos */}
+        {/* Conteúdo principal: obra (se contratada) + móveis + orçamentos recebidos */}
         <div className="flex flex-col gap-6 lg:col-span-2">
+          {obra && (
+            <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
+              <h2 className="mb-4 text-xl font-bold text-charcoal">Sua obra</h2>
+              <ObraBoard milestones={obra.milestones} meIsClient={obra.meIsClient} meIsCarpenter={obra.meIsCarpenter} approvedPct={obra.approvedPct} />
+            </section>
+          )}
+
           <ModulesSection projectId={project.id} modules={moduleViews} editable={editable} />
 
           {(project.status === 'OPEN_FOR_QUOTES' || quotes.length > 0) && (
