@@ -19,7 +19,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "pnpm --filter @abilar/db run generate",
-    "db:migrate": "pnpm --filter @abilar/db run migrate"
+    "db:migrate": "pnpm --filter @abilar/db run migrate",
+    "db:seed:admin": "pnpm --filter @abilar/db run seed:admin"
   },
   "dependencies": {
     "@abilar/ai-vision": "workspace:*",
