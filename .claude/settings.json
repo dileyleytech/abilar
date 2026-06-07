@@ -81,7 +81,8 @@
       "Bash(echo \"TYPECHECK=$?\")",
       "Bash(echo \"LINT=$?\")",
       "Bash(echo \"TEST=$?\")",
-      "Bash(echo \"BUILD=$?\")"
+      "Bash(echo \"BUILD=$?\")",
+      "Bash(echo \"TC=$?\")"
     ],
     "additionalDirectories": [
       "/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/brand/svg"

@@ -131,7 +131,7 @@ export function AuthFlow({ mode }: { mode: Mode }) {
       </div>
 
       {method === 'phone' && phase === 'enter' && (
-        <>
+        <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); sendPhone(); }}>
           <label className="text-base text-charcoal" htmlFor="phone">
             Seu número de celular
           </label>
@@ -145,14 +145,14 @@ export function AuthFlow({ mode }: { mode: Mode }) {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
-          <button type="button" className={`${big} bg-brand text-white`} onClick={sendPhone} disabled={loading}>
+          <button type="submit" className={`${big} bg-brand text-white`} disabled={loading}>
             {loading ? 'Enviando…' : 'Enviar código por SMS'}
           </button>
-        </>
+        </form>
       )}
 
       {method === 'phone' && phase === 'otp' && (
-        <>
+        <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); confirmPhone(); }}>
           <label className="text-base text-charcoal" htmlFor="otp">
             Digite o código que chegou por SMS
           </label>
@@ -167,17 +167,17 @@ export function AuthFlow({ mode }: { mode: Mode }) {
             value={token}
             onChange={(e) => setToken(e.target.value.replace(/\D/g, ''))}
           />
-          <button type="button" className={`${big} bg-brand text-white`} onClick={confirmPhone} disabled={loading}>
+          <button type="submit" className={`${big} bg-brand text-white`} disabled={loading}>
             {loading ? 'Conferindo…' : 'Entrar'}
           </button>
           <button type="button" className="text-base text-muted underline" onClick={() => setPhase('enter')}>
             Trocar o número
           </button>
-        </>
+        </form>
       )}
 
       {method === 'email' && (
-        <>
+        <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); sendEmail(); }}>
           <label className="text-base text-charcoal" htmlFor="email">
             Seu e-mail
           </label>
@@ -191,14 +191,14 @@ export function AuthFlow({ mode }: { mode: Mode }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <button type="button" className={`${big} bg-brand text-white`} onClick={sendEmail} disabled={loading}>
+          <button type="submit" className={`${big} bg-brand text-white`} disabled={loading}>
             {loading ? 'Enviando…' : 'Enviar link de acesso'}
           </button>
-        </>
+        </form>
       )}
 
       {method === 'password' && (
-        <>
+        <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); loginPwd(); }}>
           <label className="text-base text-charcoal" htmlFor="ident">
             Telefone ou e-mail
           </label>
@@ -223,13 +223,13 @@ export function AuthFlow({ mode }: { mode: Mode }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <button type="button" className={`${big} bg-brand text-white`} onClick={loginPwd} disabled={loading}>
+          <button type="submit" className={`${big} bg-brand text-white`} disabled={loading}>
             {loading ? 'Entrando…' : 'Entrar'}
           </button>
           <p className="text-center text-sm text-muted">
             Ainda não tem senha? Entre por celular/e-mail e defina uma senha em “Minha conta”.
           </p>
-        </>
+        </form>
       )}
 
       {error && (
