@@ -1,31 +1,52 @@
 import { useCallback, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth';
-import { listClientProjects, listOpenProjects, type ProjectRow } from '@/lib/data';
-import { PROJECT_STATUS_LABEL } from '@/lib/types';
+import {
+  listClientProjects,
+  listOpenProjects,
+  listProjectsByStatus,
+  type ProjectRow,
+} from '@/lib/data';
+import { PROJECT_STATUS_LABEL, type ProjectStatus } from '@/lib/types';
 import { formatDate } from '@/lib/format';
 import { Badge, EmptyState, Loading } from '@/components/ui';
 import { color, radius, space } from '@/theme';
+
+type Section = { title: string; data: ProjectRow[] };
+const isObra = (s: ProjectStatus) => s === 'HIRED' || s === 'EXECUTED';
 
 export default function PedidosScreen() {
   const { profile } = useAuth();
   const router = useRouter();
   const isCarpenter = profile?.role === 'CARPENTER';
-  const [items, setItems] = useState<ProjectRow[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [sections, setSections] = useState<Section[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     if (!profile) return;
-    setError(null);
+    let next: Section[] = [];
     try {
-      const data = isCarpenter ? await listOpenProjects() : await listClientProjects(profile.id);
-      setItems(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erro ao carregar.');
-      setItems([]);
+      if (isCarpenter) {
+        const [obras, open] = await Promise.all([
+          listProjectsByStatus(['HIRED', 'EXECUTED']),
+          listOpenProjects(),
+        ]);
+        next = [
+          { title: '🏗️ Em obra', data: obras },
+          { title: 'Pedidos na região', data: open },
+        ];
+      } else {
+        const all = await listClientProjects(profile.id);
+        next = [
+          { title: '🏗️ Em obra', data: all.filter((p) => isObra(p.status)) },
+          { title: 'Meus pedidos', data: all.filter((p) => !isObra(p.status)) },
+        ];
+      }
+    } catch {
+      next = [];
     }
+    setSections(next.filter((s) => s.data.length > 0));
   }, [profile, isCarpenter]);
 
   useFocusEffect(
@@ -40,46 +61,53 @@ export default function PedidosScreen() {
     setRefreshing(false);
   };
 
-  if (items === null) return <Loading label="Carregando pedidos…" />;
+  if (sections === null) return <Loading label="Carregando pedidos…" />;
 
-  return (
-    <FlatList
-      data={items}
-      keyExtractor={(p) => p.id}
-      contentContainerStyle={items.length === 0 ? styles.empty : styles.list}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={color.brand.primary} />}
-      ListHeaderComponent={
-        <Text style={styles.heading}>{isCarpenter ? 'Pedidos na região' : 'Meus pedidos'}</Text>
-      }
-      ListEmptyComponent={
+  if (sections.length === 0) {
+    return (
+      <View style={styles.flex}>
         <EmptyState
           emoji={isCarpenter ? '🔍' : '🪵'}
-          title={error ?? (isCarpenter ? 'Nenhum pedido aberto agora' : 'Você ainda não tem pedidos')}
-          subtitle={isCarpenter ? 'Volte mais tarde para novos pedidos.' : 'Crie um pedido no site para começar.'}
+          title={isCarpenter ? 'Nada por aqui ainda' : 'Você ainda não tem pedidos'}
+          subtitle={isCarpenter ? 'Novos pedidos da região aparecem aqui.' : 'Crie um pedido no site para começar.'}
         />
-      }
-      renderItem={({ item }) => (
-        <Pressable style={styles.card} onPress={() => router.push(`/(app)/pedidos/${item.id}`)}>
-          <View style={styles.cardTop}>
-            <Text style={styles.cardTitle} numberOfLines={1}>
-              {item.title}
+      </View>
+    );
+  }
+
+  return (
+    <SectionList
+      sections={sections}
+      keyExtractor={(p) => p.id}
+      contentContainerStyle={styles.list}
+      stickySectionHeadersEnabled={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={color.brand.primary} />}
+      renderSectionHeader={({ section }) => <Text style={styles.heading}>{section.title}</Text>}
+      renderItem={({ item }) => {
+        const obra = isObra(item.status);
+        return (
+          <Pressable style={styles.card} onPress={() => router.push(`/(app)/pedidos/${item.id}`)}>
+            <View style={styles.cardTop}>
+              <Text style={styles.cardTitle} numberOfLines={1}>
+                {item.title}
+              </Text>
+              <Badge label={PROJECT_STATUS_LABEL[item.status] ?? item.status} tone={obra ? 'success' : 'primary'} />
+            </View>
+            <Text style={styles.cardMeta}>
+              {item.city ? `${item.city} · ` : ''}
+              {formatDate(item.created_at)}
             </Text>
-            <Badge label={PROJECT_STATUS_LABEL[item.status] ?? item.status} tone="primary" />
-          </View>
-          <Text style={styles.cardMeta}>
-            {item.city ? `${item.city} · ` : ''}
-            {formatDate(item.created_at)}
-          </Text>
-        </Pressable>
-      )}
+          </Pressable>
+        );
+      }}
     />
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1, backgroundColor: color.bg.base },
   list: { padding: space.lg, gap: space.md },
-  empty: { flexGrow: 1 },
-  heading: { fontSize: 22, fontWeight: '700', color: color.text.primary, marginBottom: space.sm },
+  heading: { fontSize: 18, fontWeight: '700', color: color.text.primary, marginTop: space.sm, marginBottom: 2 },
   card: {
     backgroundColor: color.bg.surface,
     borderRadius: radius.lg,

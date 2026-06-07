@@ -54,6 +54,18 @@ export async function listClientProjects(userId: string): Promise<ProjectRow[]> 
   return (data as ProjectRow[]) ?? [];
 }
 
+/** Projetos do usuário num conjunto de status (a RLS limita ao que ele pode ver:
+ *  cliente → os seus; marceneiro → aqueles em que tem conversa/obra). */
+export async function listProjectsByStatus(statuses: ProjectStatus[]): Promise<ProjectRow[]> {
+  const { data, error } = await supabase
+    .from('projects')
+    .select(PROJECT_COLS)
+    .in('status', statuses)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data as ProjectRow[]) ?? [];
+}
+
 export async function listOpenProjects(): Promise<ProjectRow[]> {
   const { data, error } = await supabase
     .from('projects')
