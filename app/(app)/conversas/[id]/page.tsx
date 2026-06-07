@@ -18,13 +18,19 @@ export default async function ConversaPage({ params }: { params: Promise<{ id: s
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-8 sm:px-6 lg:px-8">
-      <Link href="/conversas" className="text-sm text-muted hover:text-charcoal">
-        ← Conversas
-      </Link>
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h1 className="text-xl font-bold text-charcoal">Conversa com {conv.otherName}</h1>
-          <p className="truncate text-sm text-muted">{conv.projectTitle}</p>
+        <div className="flex min-w-0 items-center gap-2">
+          <Link
+            href="/conversas"
+            aria-label="Voltar para conversas"
+            className="shrink-0 rounded-lg px-2 py-1.5 text-lg text-muted transition hover:bg-deep hover:text-charcoal"
+          >
+            ←
+          </Link>
+          <div className="min-w-0">
+            <h1 className="truncate text-xl font-bold text-charcoal">Conversa com {conv.otherName}</h1>
+            <p className="truncate text-sm text-muted">{conv.projectTitle}</p>
+          </div>
         </div>
         <ChatMenu conversationId={conv.id} status={conv.status as ConversationStatus} />
       </div>
