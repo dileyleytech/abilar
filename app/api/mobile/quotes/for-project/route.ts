@@ -34,6 +34,7 @@ export async function POST(req: Request): Promise<Response> {
       dilutionSharePct: quotes.dilutionSharePct,
       status: quotes.status,
       note: quotes.note,
+      lineItems: quotes.lineItems,
       carpenterName: carpenterProfiles.name,
       contractId: contracts.id,
       contractStatus: contracts.status,
@@ -52,11 +53,13 @@ export async function POST(req: Request): Promise<Response> {
 
   const list = rows.map((r) => {
     const prices = computeClientPrices(config, r.baseValueCents, r.maxInstallments, Number(r.dilutionSharePct));
+    const items = (((r.lineItems as { name: string; qty: number; unit: string }[]) ?? []).map((it) => ({ name: it.name, qty: it.qty, unit: it.unit })));
     return {
       quoteId: r.quoteId,
       carpenterName: r.carpenterName ?? 'Marceneiro',
       status: r.status,
       note: r.note,
+      items,
       ...prices,
       contractId: r.contractId ?? null,
       contractStatus: r.contractStatus ?? null,

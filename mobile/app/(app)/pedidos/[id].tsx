@@ -187,64 +187,67 @@ export default function PedidoDetail() {
           </View>
         </Card>
 
-        {photos.length > 0 && (
-          <View style={{ gap: space.sm }}>
-            <Text style={styles.section}>Fotos do pedido</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }}>
-              {photos.map((u, i) => (
-                <Pressable key={i} onPress={() => setLightbox(u)}>
-                  <Image source={{ uri: u }} style={styles.galleryImg} contentFit="cover" transition={150} />
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {milestones.length === 0 && id && (
-          <ModulesSection projectId={id} status={project.status} isOwner={isClient} onPublished={() => void load()} />
-        )}
-
         {milestones.length === 0 && project.status !== 'DRAFT' && (
           <View style={{ gap: space.md }}>
-            <Text style={styles.section}>Orçamentos</Text>
+            <Text style={styles.section}>Orçamentos {quotes.length > 0 ? `(${quotes.length})` : ''}</Text>
 
             {isCarpenter && quotes.length === 0 && (
               project.status === 'OPEN_FOR_QUOTES' ? (
                 <Button title="Enviar orçamento" onPress={() => setQuoteForm(true)} />
               ) : (
-                <Card>
-                  <Text style={styles.meta}>Este pedido não está aberto para orçamento.</Text>
-                </Card>
+                <Card><Text style={styles.meta}>Este pedido não está aberto para orçamento.</Text></Card>
               )
             )}
             {!isCarpenter && quotes.length === 0 && (
-              <Card>
-                <Text style={styles.meta}>Aguardando orçamentos dos marceneiros…</Text>
-              </Card>
+              <Card><Text style={styles.meta}>Aguardando orçamentos dos marceneiros…</Text></Card>
             )}
 
             {quotes.map((q) => {
               const busy = busyId === q.quoteId;
               const signed = q.contractStatus === 'SIGNED';
               const awaitingCarpenter = !!q.contractId && q.clientSigned && !q.carpenterSigned;
+              const economia = q.parceladoCents != null ? q.parceladoCents - q.avistaCents : 0;
               return (
-                <Card key={q.quoteId} style={{ gap: 6 }}>
+                <Card key={q.quoteId} style={{ gap: space.sm }}>
                   <View style={styles.cardTop}>
-                    <Text style={styles.mLabel}>{q.carpenterName}</Text>
-                    {signed && <Badge label="Contratado ✓" tone="success" />}
+                    <Text style={styles.qCarpenter}>{q.carpenterName}</Text>
+                    <Badge
+                      label={signed ? 'Contratado ✓' : awaitingCarpenter ? 'Em negociação' : q.status === 'PRE_APPROVED' ? 'Em negociação' : 'Recebido'}
+                      tone={signed ? 'success' : 'primary'}
+                    />
                   </View>
-                  <Text style={styles.amount}>À vista: {formatCents(q.avistaCents)}</Text>
-                  {q.parceladoCents != null && q.installmentValueCents != null && (
-                    <Text style={styles.meta}>
-                      ou {q.clientInstallments}x de {formatCents(q.installmentValueCents)}
-                    </Text>
+
+                  <View style={styles.priceBox}>
+                    <Text style={styles.priceLabel}>À VISTA NO PIX</Text>
+                    <Text style={styles.priceBig}>{formatCents(q.avistaCents)}</Text>
+                    {q.parceladoCents != null && q.installmentValueCents != null && (
+                      <Text style={styles.meta}>
+                        ou {q.clientInstallments}x de {formatCents(q.installmentValueCents)} no cartão (total {formatCents(q.parceladoCents)})
+                      </Text>
+                    )}
+                    {economia > 0 && <Text style={styles.economia}>💰 Economize {formatCents(economia)} à vista</Text>}
+                  </View>
+
+                  {q.items.length > 0 && (
+                    <View>
+                      <Text style={styles.incluiTitle}>O que está incluído</Text>
+                      {q.items.map((it, i) => (
+                        <Text key={i} style={styles.meta}>• {it.qty} {it.unit} · {it.name}</Text>
+                      ))}
+                    </View>
                   )}
-                  {q.note ? <Text style={styles.note}>{q.note}</Text> : null}
+
+                  {q.note ? (
+                    <View style={styles.noteBox}>
+                      <Text style={styles.incluiTitle}>Mensagem do marceneiro</Text>
+                      <Text style={styles.note}>“{q.note}”</Text>
+                    </View>
+                  ) : null}
 
                   {signed ? null : awaitingCarpenter ? (
                     isClient ? (
                       <View style={{ gap: space.sm }}>
-                        <Text style={styles.waiting}>✓ Você aceitou — aguardando o marceneiro assinar o contrato.</Text>
+                        <Text style={styles.waiting}>✓ Você aceitou — aguardando o marceneiro assinar.</Text>
                         {q.contractId && <Button title="Ver contrato" variant="outline" onPress={() => router.push(`/(app)/contratos/${q.contractId}`)} />}
                       </View>
                     ) : (
@@ -265,6 +268,23 @@ export default function PedidoDetail() {
               );
             })}
           </View>
+        )}
+
+        {photos.length > 0 && (
+          <View style={{ gap: space.sm }}>
+            <Text style={styles.section}>Fotos do pedido</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }}>
+              {photos.map((u, i) => (
+                <Pressable key={i} onPress={() => setLightbox(u)}>
+                  <Image source={{ uri: u }} style={styles.galleryImg} contentFit="cover" transition={150} />
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {milestones.length === 0 && id && (
+          <ModulesSection projectId={id} status={project.status} isOwner={isClient} onPublished={() => void load()} />
         )}
 
         {milestones.length > 0 ? (
@@ -381,6 +401,13 @@ const styles = StyleSheet.create({
   mLabel: { flex: 1, fontSize: 16, fontWeight: '600', color: color.text.primary },
   note: { color: color.text.muted, fontStyle: 'italic' },
   waiting: { color: color.text.muted },
+  qCarpenter: { flex: 1, fontSize: 17, fontWeight: '700', color: color.text.primary },
+  priceBox: { backgroundColor: 'rgba(197,106,51,0.06)', borderWidth: 1, borderColor: 'rgba(197,106,51,0.2)', borderRadius: radius.md, padding: space.md, gap: 2 },
+  priceLabel: { fontSize: 11, fontWeight: '700', color: color.text.muted, letterSpacing: 0.5 },
+  priceBig: { fontSize: 26, fontWeight: '800', color: color.text.primary },
+  economia: { color: color.brand.secondary, fontWeight: '700', fontSize: 13, marginTop: 2 },
+  incluiTitle: { fontSize: 13, fontWeight: '700', color: color.text.primary, marginBottom: 2 },
+  noteBox: { backgroundColor: color.bg.base, borderRadius: radius.md, padding: space.sm },
   evidence: { backgroundColor: color.bg.base, borderRadius: radius.md, padding: space.sm, gap: 6 },
   evImg: { width: 110, height: 110, borderRadius: radius.sm, backgroundColor: color.bg.deep },
   galleryImg: { width: 130, height: 130, borderRadius: radius.md, backgroundColor: color.bg.deep },

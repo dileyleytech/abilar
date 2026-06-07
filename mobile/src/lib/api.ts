@@ -194,6 +194,7 @@ export type QuoteView = {
   carpenterName: string;
   status: string;
   note: string | null;
+  items: { name: string; qty: number; unit: string }[];
   avistaCents: number;
   parceladoCents: number | null;
   installmentValueCents: number | null;
