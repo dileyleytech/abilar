@@ -66,8 +66,10 @@ export const api = {
   markNotificationsRead: () => postJson<{ ok: true }>('/api/mobile/notifications/read', {}),
 
   // --- Sprint: criar pedido · orçamento · contrato ---
-  createProject: (input: { title: string; city?: string; cep?: string; lat?: number; lng?: number }) =>
+  createProject: (input: { title: string; sourceType?: string; city?: string; cep?: string; lat?: number; lng?: number }) =>
     postJson<{ ok: true; projectId: string }>('/api/mobile/projects', input),
+  uploadProjectPdf: (projectId: string, file: Photo) =>
+    postForm<{ ok: true }>('/api/mobile/projects/pdf', { projectId }, [file], 'file'),
   addModule: (
     input: { projectId: string; ambiente?: string; category: string; label?: string; workType?: string; widthCm: number; heightCm: number; depthCm: number },
     photo?: Photo | null,

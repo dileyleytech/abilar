@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { api, lookupCep } from '@/lib/api';
+import * as DocumentPicker from 'expo-document-picker';
+import { api, lookupCep, type Photo } from '@/lib/api';
 import { Button } from '@/components/ui';
 import { color, radius, space } from '@/theme';
 
 export default function NovoPedido() {
   const router = useRouter();
   const [title, setTitle] = useState('');
+  const [source, setSource] = useState<'AI_GENERATED' | 'ARCHITECT_PROJECT'>('AI_GENERATED');
+  const [pdf, setPdf] = useState<Photo | null>(null);
   const [cep, setCep] = useState('');
   const [city, setCity] = useState('');
   const [coords, setCoords] = useState<{ lat?: number; lng?: number }>({});
@@ -29,22 +32,36 @@ export default function NovoPedido() {
     }
   };
 
+  const pickPdf = async () => {
+    const res = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
+    if (res.canceled) return;
+    const a = res.assets[0];
+    if (a) setPdf({ uri: a.uri, name: a.name ?? 'projeto.pdf', type: 'application/pdf' });
+  };
+
   const submit = async () => {
     if (title.trim().length < 2) return Alert.alert('Pedido', 'Dê um nome ao pedido.');
     if (city.trim().length < 2) return Alert.alert('Pedido', 'Informe a cidade da obra.');
+    if (source === 'ARCHITECT_PROJECT' && !pdf) return Alert.alert('Projeto', 'Anexe o PDF do projeto de arquiteto.');
     setLoading(true);
     try {
       const r = await api.createProject({
         title: title.trim(),
+        sourceType: source,
         city: city.trim(),
         cep: cep.trim() || undefined,
         lat: coords.lat,
         lng: coords.lng,
       });
+      if (source === 'ARCHITECT_PROJECT' && pdf) {
+        await api.uploadProjectPdf(r.projectId, pdf);
+      }
       setTitle('');
       setCep('');
       setCity('');
       setCoords({});
+      setPdf(null);
+      setSource('AI_GENERATED');
       setCepStatus('idle');
       setLoading(false);
       router.replace(`/(app)/pedidos/${r.projectId}`);
@@ -62,6 +79,31 @@ export default function NovoPedido() {
       automaticallyAdjustKeyboardInsets
     >
       <Text style={styles.help}>Um pedido pode ter vários móveis. Dê um nome e informe onde é a obra; os móveis você adiciona em seguida.</Text>
+
+      <Text style={styles.label}>Como você quer começar?</Text>
+      <View style={styles.srcRow}>
+        <Pressable onPress={() => setSource('AI_GENERATED')} style={[styles.src, source === 'AI_GENERATED' && styles.srcOn]}>
+          <Text style={styles.srcEmoji}>💬</Text>
+          <Text style={[styles.srcText, source === 'AI_GENERATED' && styles.srcTextOn]}>Montar com a ABI</Text>
+        </Pressable>
+        <Pressable onPress={() => setSource('ARCHITECT_PROJECT')} style={[styles.src, source === 'ARCHITECT_PROJECT' && styles.srcOn]}>
+          <Text style={styles.srcEmoji}>📐</Text>
+          <Text style={[styles.srcText, source === 'ARCHITECT_PROJECT' && styles.srcTextOn]}>Tenho projeto de arquiteto</Text>
+        </Pressable>
+      </View>
+
+      {source === 'ARCHITECT_PROJECT' && (
+        <>
+          {pdf ? (
+            <View style={styles.pdfRow}>
+              <Text style={styles.pdfName} numberOfLines={1}>📄 {pdf.name}</Text>
+              <Text style={styles.pdfRemove} onPress={() => setPdf(null)}>Remover</Text>
+            </View>
+          ) : (
+            <Button title="📎 Selecionar PDF do projeto" variant="outline" onPress={pickPdf} />
+          )}
+        </>
+      )}
 
       <Text style={styles.label}>Nome do pedido</Text>
       <TextInput style={styles.input} placeholder="Ex.: Reforma do apê" placeholderTextColor={color.text.subtle} value={title} onChangeText={setTitle} />
@@ -86,6 +128,15 @@ const styles = StyleSheet.create({
   container: { padding: space.lg, gap: space.sm, backgroundColor: color.bg.base },
   help: { fontSize: 13, color: color.text.muted, marginBottom: space.sm },
   label: { fontSize: 15, fontWeight: '600', color: color.text.primary, marginTop: space.md },
+  srcRow: { flexDirection: 'row', gap: space.sm },
+  src: { flex: 1, borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.md, padding: space.md, gap: 4, alignItems: 'center', backgroundColor: color.bg.surface },
+  srcOn: { borderColor: color.brand.primary, backgroundColor: 'rgba(197,106,51,0.08)' },
+  srcEmoji: { fontSize: 24 },
+  srcText: { fontSize: 13, color: color.text.muted, textAlign: 'center' },
+  srcTextOn: { color: color.text.primary, fontWeight: '600' },
+  pdfRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, backgroundColor: color.bg.surface, borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.md, padding: space.md },
+  pdfName: { flex: 1, color: color.text.primary },
+  pdfRemove: { color: color.state.danger, fontWeight: '600' },
   input: { backgroundColor: color.bg.surface, borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 12, fontSize: 16, color: color.text.primary },
   cepMuted: { color: color.text.muted, fontSize: 13 },
   cepErr: { color: color.accent.ochre, fontSize: 13 },

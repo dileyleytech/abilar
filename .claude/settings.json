@@ -116,7 +116,9 @@
       "Bash(curl -s -o /dev/null -w \"dev http=%{http_code}\\\\n\" http://localhost:3001)",
       "Bash(echo \"web TC=$?\")",
       "Bash(echo \"web LINT=$?\")",
-      "Bash(echo \"web BUILD=$?\")"
+      "Bash(echo \"web BUILD=$?\")",
+      "Bash(node -e \"console.log\\('doc-picker', require\\('./node_modules/expo-document-picker/package.json'\\).version\\)\")",
+      "Bash(node -e \"console.log\\('print', require\\('./node_modules/expo-print/package.json'\\).version, '| sharing', require\\('./node_modules/expo-sharing/package.json'\\).version\\)\")"
     ],
     "additionalDirectories": [
       "/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/brand/svg"

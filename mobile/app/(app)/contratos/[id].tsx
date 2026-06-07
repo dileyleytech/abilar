@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth';
 import { getContract, type ContractView } from '@/lib/data';
 import { api } from '@/lib/api';
 import { CONTRACT_CLAUSES, CONTRACT_LEGAL_NOTE } from '@/lib/contract';
+import { shareContractPdf } from '@/lib/pdf';
 import { formatCents } from '@/lib/format';
 import { Badge, Button, Card, Loading } from '@/components/ui';
 import { color, space } from '@/theme';
@@ -96,6 +97,8 @@ export default function ContratoScreen() {
           <Text style={styles.sigLine}>{c.accepted_by_client_at ? '✓' : '○'} Cliente {c.accepted_by_client_at ? 'assinou' : 'pendente'}</Text>
           <Text style={styles.sigLine}>{c.accepted_by_carpenter_at ? '✓' : '○'} Marceneiro {c.accepted_by_carpenter_at ? 'assinou' : 'pendente'}</Text>
         </Card>
+
+        <Button title="📄 Compartilhar em PDF" variant="outline" onPress={() => shareContractPdf(c).catch(() => {})} />
 
         {signed ? (
           <Button title="Ver a obra" variant="secondary" onPress={() => router.replace(`/(app)/pedidos/${c.project_id}`)} />
