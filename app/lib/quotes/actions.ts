@@ -9,6 +9,7 @@ import { getSessionProfile } from '@/lib/auth/session';
 import { getCarpenterProfile } from '@/lib/carpenter/profile';
 import { getProjectForCarpenter } from '@/lib/carpenter/feed';
 import { getActivePricingConfig } from '@/lib/pricing/config';
+import { notify } from '@/lib/notifications/notify';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -29,6 +30,7 @@ export async function sendQuote(projectId: string, input: unknown): Promise<Acti
     .where(and(eq(quotes.projectId, projectId), eq(quotes.carpenterId, profile.id)))
     .limit(1);
 
+  let notifyClientId: string | null = null;
   if (existingQuote) {
     // Já tem orçamento → pode atualizar enquanto o pedido está em negociação.
     const [proj] = await db.select({ status: projects.status }).from(projects).where(eq(projects.id, projectId)).limit(1);
@@ -40,6 +42,7 @@ export async function sendQuote(projectId: string, input: unknown): Promise<Acti
     // Novo orçamento: exige elegibilidade (pedido aberto, na área e categoria).
     const eligible = await getProjectForCarpenter(projectId, carpenter);
     if (!eligible) return { ok: false, error: 'Pedido indisponível para orçamento.' };
+    notifyClientId = eligible.project.clientId;
   }
 
   const parsed = quoteInputSchema.safeParse(input);
@@ -105,6 +108,14 @@ export async function sendQuote(projectId: string, input: unknown): Promise<Acti
         updatedAt: sql`now()`,
       },
     });
+
+  if (notifyClientId) {
+    await notify(notifyClientId, {
+      title: 'Novo orçamento recebido 📩',
+      body: `${carpenter.name} enviou uma proposta para o seu pedido.`,
+      link: `/pedidos/${projectId}`,
+    });
+  }
 
   revalidatePath(`/marceneiro/pedidos/${projectId}`);
   revalidatePath(`/pedidos/${projectId}`);

@@ -6,6 +6,7 @@ import { conversations, messages, reports, quotes, projects, eq, and, sql } from
 import { getDb } from '@/lib/db';
 import { getSessionProfile } from '@/lib/auth/session';
 import { countUnreadMessages } from '@/lib/chat/queries';
+import { notify } from '@/lib/notifications/notify';
 
 export type PreApproveResult = { ok: true; conversationId: string } | { ok: false; error: string };
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -63,6 +64,11 @@ export async function preApproveQuote(quoteId: string): Promise<PreApproveResult
   }
   if (!conversationId) return { ok: false, error: 'Não foi possível abrir a conversa.' };
 
+  await notify(row.carpenterId, {
+    title: 'Seu orçamento foi pré-aprovado! 🎉',
+    body: 'O cliente liberou o chat. Combine os detalhes para fechar.',
+    link: `/conversas/${conversationId}`,
+  });
   revalidatePath(`/pedidos/${row.projectId}`);
   return { ok: true, conversationId };
 }

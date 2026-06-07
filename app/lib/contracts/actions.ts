@@ -8,6 +8,7 @@ import { contracts, quotes, projects, projectMilestones, eq, sql } from '@abilar
 import { getDb } from '@/lib/db';
 import { getSessionProfile } from '@/lib/auth/session';
 import { getActivePricingConfig } from '@/lib/pricing/config';
+import { notify } from '@/lib/notifications/notify';
 
 export type AcceptQuoteResult = { ok: true; contractId: string } | { ok: false; error: string };
 export type ActionResult = { ok: true } | { ok: false; error: string };
@@ -74,6 +75,17 @@ async function finalizeIfBothSigned(contractId: string): Promise<void> {
       status: 'PENDING' as const,
     })),
   );
+
+  await notify(c.carpenterId, {
+    title: 'Contrato assinado — obra contratada! 🏗️',
+    body: 'A obra foi criada. Toque etapa a etapa para tocar o trabalho.',
+    link: `/marceneiro/pedidos/${c.projectId}`,
+  });
+  await notify(c.clientId, {
+    title: 'Contrato assinado — obra contratada! 🏗️',
+    body: 'Acompanhe as etapas da sua obra por aqui.',
+    link: `/pedidos/${c.projectId}`,
+  });
 }
 
 /** Cliente ACEITA o orçamento → gera o contrato padrão (§6.5) e registra o aceite
@@ -151,6 +163,11 @@ export async function acceptQuote(quoteId: string): Promise<AcceptQuoteResult> {
   }
   if (!contractId) return { ok: false, error: 'Não foi possível gerar o contrato.' };
 
+  await notify(row.carpenterId, {
+    title: 'Cliente aprovou o orçamento! ✅',
+    body: 'Assine o contrato para fechar e iniciar a obra.',
+    link: `/contratos/${contractId}`,
+  });
   await finalizeIfBothSigned(contractId);
   revalidatePath(`/pedidos/${row.projectId}`);
   revalidatePath(`/contratos/${contractId}`);
