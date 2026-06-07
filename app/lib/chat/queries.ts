@@ -5,6 +5,8 @@ import {
   projects,
   profiles,
   carpenterProfiles,
+  quotes,
+  contracts,
   eq,
   and,
   or,
@@ -13,7 +15,10 @@ import {
   inArray,
 } from '@abilar/db';
 import type { Message } from '@abilar/db';
+import type { QuoteStatus } from '@abilar/shared';
+import { quotePricing, maxClientInstallments } from '@abilar/pricing';
 import { getDb } from '@/lib/db';
+import { getActivePricingConfig } from '@/lib/pricing/config';
 
 export type ConversationView = {
   id: string;
@@ -54,6 +59,64 @@ export async function getConversation(id: string, userId: string): Promise<Conve
     status: row.status,
     meIsClient,
     otherName: (meIsClient ? row.carpenterName : row.clientName) ?? (meIsClient ? 'Marceneiro' : 'Cliente'),
+  };
+}
+
+export type ConversationProposal = {
+  projectId: string;
+  quoteId: string;
+  quoteStatus: QuoteStatus;
+  avistaCents: number;
+  parceladoCents: number | null;
+  installmentValueCents: number | null;
+  clientInstallments: number;
+  contractId: string | null;
+} | null;
+
+/** Proposta (orçamento) vinculada à conversa, com valores face ao cliente e o
+ *  contrato (se houver). O chat é parte da negociação. Só participantes acessam. */
+export async function getConversationProposal(conversationId: string, userId: string): Promise<ConversationProposal> {
+  const db = getDb();
+  const [row] = await db
+    .select({
+      clientId: conversations.clientId,
+      carpenterId: conversations.carpenterId,
+      projectId: conversations.projectId,
+      quoteId: conversations.quoteId,
+      baseValueCents: quotes.baseValueCents,
+      maxInstallments: quotes.maxInstallments,
+      dilutionSharePct: quotes.dilutionSharePct,
+      quoteStatus: quotes.status,
+      contractId: contracts.id,
+    })
+    .from(conversations)
+    .leftJoin(quotes, eq(quotes.id, conversations.quoteId))
+    .leftJoin(contracts, eq(contracts.quoteId, conversations.quoteId))
+    .where(eq(conversations.id, conversationId))
+    .limit(1);
+  if (!row || (row.clientId !== userId && row.carpenterId !== userId)) return null;
+  if (!row.quoteId || row.baseValueCents == null || row.quoteStatus == null) return null;
+
+  const config = await getActivePricingConfig();
+  if (!config) return null;
+  const nClient = maxClientInstallments(config);
+  const subsidizes = (row.maxInstallments ?? 1) > 1;
+  const sShare = subsidizes ? Number(row.dilutionSharePct) : 0;
+  const avista = quotePricing({ baseValueCents: row.baseValueCents, config, installments: 1, method: 'PIX', carpenterDilutionSharePct: sShare });
+  const parc =
+    nClient > 1
+      ? quotePricing({ baseValueCents: row.baseValueCents, config, installments: subsidizes ? (row.maxInstallments ?? 1) : 1, clientInstallments: nClient, method: 'CARD', carpenterDilutionSharePct: sShare })
+      : null;
+
+  return {
+    projectId: row.projectId,
+    quoteId: row.quoteId,
+    quoteStatus: row.quoteStatus,
+    avistaCents: avista.displayedAmountCents,
+    parceladoCents: parc?.displayedAmountCents ?? null,
+    installmentValueCents: parc ? Math.round(parc.displayedAmountCents / nClient) : null,
+    clientInstallments: nClient,
+    contractId: row.contractId ?? null,
   };
 }
 
