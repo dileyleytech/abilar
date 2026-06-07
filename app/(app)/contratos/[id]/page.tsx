@@ -5,6 +5,7 @@ import { allocateProportional } from '@abilar/pricing';
 import { requireUserId } from '@/lib/auth/session';
 import { getContract } from '@/lib/contracts/queries';
 import { MATERIAL_UNIT_LABEL } from '@/lib/labels';
+import { backFrom } from '@/lib/nav';
 import { ContractActions } from './_components/ContractActions';
 
 export const metadata = { title: 'Contrato — Abilar' };
@@ -12,8 +13,15 @@ export const metadata = { title: 'Contrato — Abilar' };
 const dt = (d: Date) =>
   new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-export default async function ContratoPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ContratoPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
+}) {
   const { id } = await params;
+  const { from } = await searchParams;
   const userId = await requireUserId();
   const c = await getContract(id, userId);
   if (!c) notFound();
@@ -22,12 +30,12 @@ export default async function ContratoPage({ params }: { params: Promise<{ id: s
   const amounts = ms.length ? allocateProportional(c.valueCents, ms.map((m) => m.pct)) : [];
   const iSigned = c.meIsClient ? c.acceptedByClientAt : c.acceptedByCarpenterAt;
   const canSign = c.status === 'DRAFT' && !iSigned;
-  const backHref = c.meIsClient ? `/pedidos/${c.projectId}` : `/marceneiro/pedidos/${c.projectId}`;
+  const back = backFrom(from, c.meIsClient ? `/pedidos/${c.projectId}` : `/marceneiro/pedidos/${c.projectId}`);
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8 print:py-0">
       <div className="mb-5 flex items-center justify-between gap-2 print:hidden">
-        <Link href={backHref} className="text-sm text-muted hover:text-charcoal">← Voltar ao pedido</Link>
+        <Link href={back.href} className="text-sm text-muted hover:text-charcoal">{back.label}</Link>
         <ContractActions contractId={c.id} canSign={canSign} />
       </div>
 

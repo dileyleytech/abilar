@@ -12,10 +12,19 @@ import { getConversationForProjectCarpenter } from '@/lib/chat/queries';
 import { getContractIdByQuote } from '@/lib/contracts/queries';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
 import { StatusBadge } from '@/components/StatusBadge';
+import { backFrom } from '@/lib/nav';
 import { QuoteForm, type QuoteInitial, type MaterialOption } from './_components/QuoteForm';
 
-export default async function CarpenterPedidoPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CarpenterPedidoPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
+}) {
   const { id } = await params;
+  const { from } = await searchParams;
+  const back = backFrom(from, '/marceneiro');
   const profile = await requireRole('CARPENTER');
   // Queries independentes em paralelo (1 ida em vez de várias sequenciais).
   const [carpenter, config, existing, conversationId, catalog] = await Promise.all([
@@ -71,8 +80,8 @@ export default async function CarpenterPedidoPage({ params }: { params: Promise<
 
   return (
     <main className="mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6 lg:px-8">
-      <Link href="/marceneiro" className="text-sm text-muted hover:text-charcoal">
-        ← Voltar
+      <Link href={back.href} className="text-sm text-muted hover:text-charcoal">
+        {back.label}
       </Link>
       <header className="mt-2 mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>

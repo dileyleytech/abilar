@@ -4,27 +4,33 @@ import { formatBRL } from '@abilar/shared';
 import { requireUserId } from '@/lib/auth/session';
 import { getQuoteForPrint } from '@/lib/quotes/queries';
 import { MATERIAL_UNIT_LABEL } from '@/lib/labels';
+import { backFrom } from '@/lib/nav';
 import { PrintButton } from './_components/PrintButton';
 
 export const metadata = { title: 'Orçamento — Abilar' };
 
 const date = (d: Date) => new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-export default async function OrcamentoImprimirPage({ params }: { params: Promise<{ quoteId: string }> }) {
+export default async function OrcamentoImprimirPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ quoteId: string }>;
+  searchParams: Promise<{ from?: string }>;
+}) {
   const { quoteId } = await params;
+  const { from } = await searchParams;
   const userId = await requireUserId();
   const q = await getQuoteForPrint(quoteId, userId);
   if (!q) notFound();
+  const back = backFrom(from, q.meIsClient ? `/pedidos/${q.projectId}` : `/marceneiro/pedidos/${q.projectId}`);
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 print:py-0">
       {/* Barra de ações (some na impressão) */}
       <div className="mb-5 flex items-center justify-between gap-2 print:hidden">
-        <Link
-          href={q.meIsClient ? `/pedidos/${q.projectId}` : `/marceneiro/pedidos/${q.projectId}`}
-          className="text-sm text-muted hover:text-charcoal"
-        >
-          ← Voltar ao pedido
+        <Link href={back.href} className="text-sm text-muted hover:text-charcoal">
+          {back.label}
         </Link>
         <PrintButton />
       </div>

@@ -29,7 +29,7 @@ export default async function ConversaPage({ params }: { params: Promise<{ id: s
         <ChatMenu conversationId={conv.id} status={conv.status as ConversationStatus} />
       </div>
 
-      {proposal && <ProposalPanel meIsClient={conv.meIsClient} proposal={proposal} />}
+      {proposal && <ProposalPanel meIsClient={conv.meIsClient} conversationId={conv.id} proposal={proposal} />}
 
       {conv.status === 'BLOCKED' && (
         <p className="rounded-xl bg-ochre/20 px-4 py-3 text-sm text-charcoal">

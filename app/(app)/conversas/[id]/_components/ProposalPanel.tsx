@@ -19,19 +19,30 @@ export type Proposal = {
 
 /** Painel da proposta no topo do chat: valores + ações (ver pedido, orçamento,
  *  aprovar/gerar contrato). O chat faz parte da negociação. */
-export function ProposalPanel({ meIsClient, proposal }: { meIsClient: boolean; proposal: Proposal }) {
+export function ProposalPanel({
+  meIsClient,
+  conversationId,
+  proposal,
+}: {
+  meIsClient: boolean;
+  conversationId: string;
+  proposal: Proposal;
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const pedidoHref = meIsClient ? `/pedidos/${proposal.projectId}` : `/marceneiro/pedidos/${proposal.projectId}`;
+  // Origem p/ poder voltar à conversa a partir das telas linkadas.
+  const from = `?from=${encodeURIComponent(`/conversas/${conversationId}`)}`;
+  const pedidoHref =
+    (meIsClient ? `/pedidos/${proposal.projectId}` : `/marceneiro/pedidos/${proposal.projectId}`) + from;
 
   const approve = () =>
     start(async () => {
       setError(null);
       const r = await acceptQuote(proposal.quoteId);
       if (!r.ok) return setError(r.error);
-      router.push(`/contratos/${r.contractId}`);
+      router.push(`/contratos/${r.contractId}${from}`);
     });
 
   return (
@@ -57,7 +68,7 @@ export function ProposalPanel({ meIsClient, proposal }: { meIsClient: boolean; p
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Link
-          href={`/orcamentos/${proposal.quoteId}/imprimir`}
+          href={`/orcamentos/${proposal.quoteId}/imprimir${from}`}
           className="rounded-xl border border-subtle px-3 py-2 text-sm font-semibold text-charcoal hover:bg-deep"
         >
           🖨️ Ver orçamento
@@ -65,7 +76,7 @@ export function ProposalPanel({ meIsClient, proposal }: { meIsClient: boolean; p
 
         {proposal.contractId ? (
           <Link
-            href={`/contratos/${proposal.contractId}`}
+            href={`/contratos/${proposal.contractId}${from}`}
             className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
           >
             📄 {meIsClient ? 'Ver contrato' : 'Contrato (assinar)'}

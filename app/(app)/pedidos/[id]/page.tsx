@@ -6,14 +6,23 @@ import { getProjectDetail } from '@/lib/projects/queries';
 import { getReceivedQuotes } from '@/lib/quotes/queries';
 import { signedProjectPhotoUrl } from '@/lib/storage';
 import { StatusBadge } from '@/components/StatusBadge';
+import { backFrom } from '@/lib/nav';
 import { ProjectActions } from './_components/ProjectActions';
 import { ModulesSection, type ModuleView } from './_components/ModulesSection';
 import { ProjectLocation } from './_components/ProjectLocation';
 import { PreApproveButton } from './_components/PreApproveButton';
 import { AcceptQuoteButton } from './_components/AcceptQuoteButton';
 
-export default async function PedidoDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PedidoDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
+}) {
   const { id } = await params;
+  const { from } = await searchParams;
+  const back = backFrom(from, '/pedidos');
   const userId = await requireUserId();
   const detail = await getProjectDetail(id, userId);
   if (!detail) notFound();
@@ -43,8 +52,8 @@ export default async function PedidoDetailPage({ params }: { params: Promise<{ i
 
   return (
     <main className="mx-auto w-full max-w-screen-2xl px-4 py-8 sm:px-6 lg:px-8">
-      <Link href="/pedidos" className="inline-flex items-center gap-1 text-sm text-muted hover:text-charcoal">
-        ← Meus pedidos
+      <Link href={back.href} className="inline-flex items-center gap-1 text-sm text-muted hover:text-charcoal">
+        {from ? back.label : '← Meus pedidos'}
       </Link>
 
       <header className="mt-3 mb-6 flex flex-wrap items-center justify-between gap-3">
