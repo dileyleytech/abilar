@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { api } from '@/lib/api';
 import { CATEGORIES, CATEGORY_LABEL } from '@/lib/types';
@@ -8,6 +9,7 @@ import { color, radius, space } from '@/theme';
 
 export default function NovoPedido() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
   const [city, setCity] = useState('');
   const [category, setCategory] = useState<string | null>(null);
@@ -15,6 +17,15 @@ export default function NovoPedido() {
   const [h, setH] = useState('');
   const [d, setD] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const reset = () => {
+    setTitle('');
+    setCity('');
+    setCategory(null);
+    setW('');
+    setH('');
+    setD('');
+  };
 
   const submit = async () => {
     if (title.trim().length < 2) return Alert.alert('Pedido', 'Dê um nome ao pedido.');
@@ -27,6 +38,8 @@ export default function NovoPedido() {
     setLoading(true);
     try {
       const r = await api.createProject({ title: title.trim(), city: city.trim() || undefined, category, widthCm, heightCm, depthCm });
+      reset();
+      setLoading(false);
       router.replace(`/(app)/pedidos/${r.projectId}`);
     } catch (e) {
       Alert.alert('Ops', e instanceof Error ? e.message : 'Não foi possível criar o pedido.');
@@ -35,7 +48,9 @@ export default function NovoPedido() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + space.lg }]} keyboardShouldPersistTaps="handled">
+      <Text style={styles.heading}>Novo pedido</Text>
+
       <Text style={styles.label}>Nome do pedido</Text>
       <TextInput style={styles.input} placeholder="Ex.: Cozinha do apê" placeholderTextColor={color.text.subtle} value={title} onChangeText={setTitle} />
 
@@ -75,6 +90,7 @@ function Measure({ label, value, onChange }: { label: string; value: string; onC
 
 const styles = StyleSheet.create({
   container: { padding: space.lg, gap: space.sm, backgroundColor: color.bg.base },
+  heading: { fontSize: 24, fontWeight: '700', color: color.text.primary, marginBottom: space.sm },
   label: { fontSize: 15, fontWeight: '600', color: color.text.primary, marginTop: space.md },
   mLabel: { fontSize: 13, color: color.text.muted, marginBottom: 4 },
   input: { backgroundColor: color.bg.surface, borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 12, fontSize: 16, color: color.text.primary },

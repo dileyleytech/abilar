@@ -37,6 +37,15 @@ export default function AppLayout() {
       }}
     >
       <Tabs.Screen name="pedidos" options={{ title: 'Pedidos', tabBarIcon: () => <Icon emoji="📋" /> }} />
+      <Tabs.Screen
+        name="novo"
+        options={{
+          title: 'Criar',
+          tabBarIcon: () => <Icon emoji="➕" />,
+          // Só o cliente cria pedido; escondido para os demais papéis.
+          href: profile?.role === 'CLIENT' ? undefined : null,
+        }}
+      />
       <Tabs.Screen name="conversas" options={{ title: 'Conversas', tabBarIcon: () => <Icon emoji="💬" /> }} />
       <Tabs.Screen
         name="avisos"
