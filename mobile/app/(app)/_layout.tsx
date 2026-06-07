@@ -73,6 +73,7 @@ export default function AppLayout() {
       />
       <Tabs.Screen name="conta" options={{ ...header, title: 'Minha conta', tabBarLabel: 'Conta', tabBarIcon: () => <Icon emoji="👤" /> }} />
       <Tabs.Screen name="contratos" options={{ href: null }} />
+      <Tabs.Screen name="marceneiro-perfil" options={{ href: null }} />
     </Tabs>
   );
 }

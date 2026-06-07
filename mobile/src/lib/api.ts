@@ -22,6 +22,12 @@ async function handle<T>(p: Promise<Response>): Promise<T> {
   return json;
 }
 
+async function getJson<T>(path: string): Promise<T> {
+  if (!config.API_URL) throw new Error('API_URL não configurada (veja .env).');
+  const token = await authToken();
+  return handle<T>(fetch(`${config.API_URL}${path}`, { headers: { Authorization: `Bearer ${token}` } }));
+}
+
 async function postJson<T>(path: string, body: unknown): Promise<T> {
   if (!config.API_URL) throw new Error('API_URL não configurada (veja .env).');
   const token = await authToken();
@@ -129,6 +135,36 @@ export const api = {
   updateMaterial: (id: string, input: { name: string; category: string; unit: string; unitCostCents: number }) =>
     postJson<{ ok: true }>('/api/mobile/materials/update', { id, ...input }),
   setMaterialActive: (id: string, active: boolean) => postJson<{ ok: true }>('/api/mobile/materials/active', { id, active }),
+
+  // Perfil profissional do marceneiro (onboarding)
+  getCarpenterProfile: () => getJson<{ profile: CarpenterProfileRow | null }>('/api/mobile/carpenter/profile'),
+  saveCarpenterProfile: (input: CarpenterOnboarding) => postJson<{ ok: true }>('/api/mobile/carpenter/profile', input),
+};
+
+export type CarpenterOnboarding = {
+  personType: string;
+  name: string;
+  companyName?: string;
+  cnpjOrCpf: string;
+  serviceCity: string;
+  serviceCep: string;
+  serviceRadiusKm: number;
+  serviceLat?: number;
+  serviceLng?: number;
+  categories: string[];
+  bio?: string;
+};
+
+export type CarpenterProfileRow = {
+  name: string;
+  personType: string;
+  companyName: string | null;
+  cnpjOrCpf: string;
+  serviceCity: string;
+  serviceCep: string;
+  serviceRadiusKm: number;
+  categories: string[];
+  bio: string | null;
 };
 
 export type QuoteLineItem = {

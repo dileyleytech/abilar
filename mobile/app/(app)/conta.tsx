@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
@@ -17,6 +18,7 @@ const ROLE_LABEL: Record<string, string> = {
 
 export default function ContaScreen() {
   const { profile, session, signOut, reloadProfile } = useAuth();
+  const router = useRouter();
   const user = session?.user;
 
   const [editingName, setEditingName] = useState(false);
@@ -103,6 +105,10 @@ export default function ContaScreen() {
           <TextInput style={styles.input} value={pwd} onChangeText={setPwd} secureTextEntry placeholder="Nova senha (mín. 8)" placeholderTextColor={color.text.subtle} />
           <Button title="Salvar senha" onPress={savePassword} loading={savingPwd} />
         </Card>
+
+        {profile?.role === 'CARPENTER' && (
+          <Button title="Perfil profissional" variant="outline" onPress={() => router.push('/(app)/marceneiro-perfil')} />
+        )}
 
         <Button title="Sair" variant="outline" onPress={signOut} />
 
