@@ -15,6 +15,7 @@ export default tseslint.config(
       '.wrangler/**',
       'next-env.d.ts',
       'cloudflare-env.d.ts',
+      'mobile/**',
     ],
   },
   js.configs.recommended,

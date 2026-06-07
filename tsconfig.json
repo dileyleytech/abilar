@@ -30,6 +30,7 @@
     "packages",
     "db",
     "workers",
-    "apps"
+    "apps",
+    "mobile"
   ]
 }

@@ -82,7 +82,20 @@
       "Bash(echo \"LINT=$?\")",
       "Bash(echo \"TEST=$?\")",
       "Bash(echo \"BUILD=$?\")",
-      "Bash(echo \"TC=$?\")"
+      "Bash(echo \"TC=$?\")",
+      "Bash(yes)",
+      "Bash(npx create-expo-app@latest mobile --template blank-typescript)",
+      "Bash(npx expo *)",
+      "Bash(node -e \"const f='package.json';const p=require\\('./'+f\\);p.main='expo-router/entry';require\\('fs'\\).writeFileSync\\(f,JSON.stringify\\(p,null,2\\)+'\\\\n'\\)\")",
+      "Bash(node -e \"const f='app.json';const a=require\\('./'+f\\);a.expo.scheme='abilar';a.expo.newArchEnabled=true;require\\('fs'\\).writeFileSync\\(f,JSON.stringify\\(a,null,2\\)+'\\\\n'\\)\")",
+      "Bash(node -e \"console.log\\(require\\('./package.json'\\).main\\)\")",
+      "Bash(echo \"main=$\\(node -e \"console.log\\(require\\('./package.json'\\).main\\)\"\\)\")",
+      "Bash(node -e \"console.log\\(require\\('./app.json'\\).expo.scheme\\)\")",
+      "Bash(npx tsc *)",
+      "Bash(sed -n '19,40p' tsconfig.json)",
+      "Bash(sed -n '8,20p' eslint.config.mjs)",
+      "Bash(npx expo-doctor *)",
+      "Bash(node -e \"const f='app.json';const a=require\\('./'+f\\);delete a.expo.newArchEnabled;require\\('fs'\\).writeFileSync\\(f,JSON.stringify\\(a,null,2\\)+'\\\\n'\\)\")"
     ],
     "additionalDirectories": [
       "/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/brand/svg"
