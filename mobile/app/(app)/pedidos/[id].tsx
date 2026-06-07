@@ -38,7 +38,9 @@ export default function PedidoDetail() {
   const [milestones, setMilestones] = useState<MilestoneRow[] | null>(null);
   const [evidences, setEvidences] = useState<Record<string, EvidenceView[]>>({});
   const [quotes, setQuotes] = useState<QuoteView[]>([]);
+  const [dealLoading, setDealLoading] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [photosLoading, setPhotosLoading] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [concluding, setConcluding] = useState<MilestoneRow | null>(null);
@@ -50,50 +52,65 @@ export default function PedidoDetail() {
   const isClient = profile?.role === 'CLIENT';
   const isCarpenter = profile?.role === 'CARPENTER';
 
+  // Evidências de todas as etapas EM PARALELO; 1 assinatura por etapa (lote).
   const loadEvidences = useCallback(async (ms: MilestoneRow[]) => {
-    const map: Record<string, EvidenceView[]> = {};
-    for (const m of ms) {
-      const rows = await listEvidences(m.id);
-      const views: EvidenceView[] = [];
-      for (const ev of rows) {
-        const paths = ev.photos ?? [];
+    const entries = await Promise.all(
+      ms.map(async (m) => {
+        const rows = await listEvidences(m.id);
+        const paths = rows.flatMap((ev) => ev.photos ?? []);
         let urls: string[] = [];
         if (paths.length > 0) {
           try {
-            const r = await api.signedUrls(paths, { milestoneId: m.id });
-            urls = r.urls;
+            urls = (await api.signedUrls(paths, { milestoneId: m.id })).urls;
           } catch {
             urls = [];
           }
         }
-        views.push({ id: ev.id, comment: ev.comment, urls, date: ev.created_at });
-      }
-      if (views.length > 0) map[m.id] = views;
-    }
+        // redistribui as URLs assinadas por evidência (na ordem dos paths)
+        let cursor = 0;
+        const views: EvidenceView[] = rows.map((ev) => {
+          const n = (ev.photos ?? []).length;
+          const slice = urls.slice(cursor, cursor + n);
+          cursor += n;
+          return { id: ev.id, comment: ev.comment, urls: slice, date: ev.created_at };
+        });
+        return [m.id, views] as const;
+      }),
+    );
+    const map: Record<string, EvidenceView[]> = {};
+    for (const [mid, views] of entries) if (views.length > 0) map[mid] = views;
     setEvidences(map);
   }, []);
 
   const load = useCallback(async () => {
     if (!id) return;
+    // Projeto + marcos primeiro (porta da tela). O resto carrega EM PARALELO e
+    // cada seção aparece assim que fica pronta (não bloqueia as outras).
     const [p, ms] = await Promise.all([getProject(id), listMilestones(id)]);
     setProject(p);
     setMilestones(ms);
-    await loadEvidences(ms);
-    // Fotos do pedido (cômodo + móveis), assinadas — qualquer participante abre.
-    try {
-      const paths = await listProjectPhotos(id);
-      setPhotos(paths.length ? (await api.signedUrls(paths, { projectId: id })).urls : []);
-    } catch {
-      setPhotos([]);
-    }
-    // Orçamentos/contrato só importam antes da obra começar.
-    if (ms.length === 0) {
+
+    void loadEvidences(ms);
+
+    setPhotosLoading(true);
+    void (async () => {
       try {
-        const deal = await api.quotesForProject(id);
-        setQuotes(deal.quotes);
+        const paths = await listProjectPhotos(id);
+        setPhotos(paths.length ? (await api.signedUrls(paths, { projectId: id })).urls : []);
       } catch {
-        setQuotes([]);
+        setPhotos([]);
+      } finally {
+        setPhotosLoading(false);
       }
+    })();
+
+    if (ms.length === 0) {
+      setDealLoading(true);
+      void api
+        .quotesForProject(id)
+        .then((deal) => setQuotes(deal.quotes))
+        .catch(() => setQuotes([]))
+        .finally(() => setDealLoading(false));
     } else {
       setQuotes([]);
     }
@@ -199,7 +216,7 @@ export default function PedidoDetail() {
               )
             )}
             {!isCarpenter && quotes.length === 0 && (
-              <Card><Text style={styles.meta}>Aguardando orçamentos dos marceneiros…</Text></Card>
+              <Card><Text style={styles.meta}>{dealLoading ? 'Carregando orçamentos…' : 'Aguardando orçamentos dos marceneiros…'}</Text></Card>
             )}
 
             {quotes.map((q) => {

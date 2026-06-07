@@ -31,16 +31,16 @@ export default async function PedidoDetailPage({
   if (!detail) notFound();
   const { project, modules, photos } = detail;
 
-  // URLs assinadas curtas; separa fotos do ambiente (sem módulo) das fotos por móvel.
-  const signed = await Promise.all(
-    photos.map(async (p) => ({ ...p, url: await signedProjectPhotoUrl(p.path) })),
-  );
+  // Tudo que não depende um do outro carrega EM PARALELO (assinatura de fotos,
+  // orçamentos e obra) — evita encadear as esperas.
+  const [signed, quotes, obra] = await Promise.all([
+    Promise.all(photos.map(async (p) => ({ ...p, url: await signedProjectPhotoUrl(p.path) }))),
+    getReceivedQuotes(id),
+    getProjectMilestones(id, userId),
+  ]);
   const roomPhotos = signed.filter((p) => !p.moduleId);
   const modulePhoto = new Map<string, string | null>();
   for (const p of signed) if (p.moduleId) modulePhoto.set(p.moduleId, p.url);
-
-  const quotes = await getReceivedQuotes(id);
-  const obra = await getProjectMilestones(id, userId);
   const editable = ['DRAFT', 'OPEN_FOR_QUOTES', 'IN_NEGOTIATION'].includes(project.status);
   const moduleViews: ModuleView[] = modules.map((m) => ({
     id: m.id,

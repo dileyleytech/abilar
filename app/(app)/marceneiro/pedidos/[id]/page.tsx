@@ -39,11 +39,14 @@ export default async function CarpenterPedidoPage({
   if (!carpenter) notFound();
 
   // Já orçou → pode abrir/editar em qualquer status; senão, vale a elegibilidade (pedido aberto).
-  const detail = existing ? await getProjectDetailById(id) : await getProjectForCarpenter(id, carpenter);
+  // detail, contract e obra são independentes → em paralelo.
+  const [detail, contract, obra] = await Promise.all([
+    existing ? getProjectDetailById(id) : getProjectForCarpenter(id, carpenter),
+    existing ? getContractForQuote(existing.id) : Promise.resolve(null),
+    getProjectMilestones(id, profile.id),
+  ]);
   if (!detail) notFound();
-  const contract = existing ? await getContractForQuote(existing.id) : null;
   const contractNeedsSign = contract != null && contract.status === 'DRAFT' && !contract.carpenterSigned;
-  const obra = await getProjectMilestones(id, profile.id);
   const { project, modules, photos } = detail;
 
   const materials: MaterialOption[] = catalog.map((m) => ({

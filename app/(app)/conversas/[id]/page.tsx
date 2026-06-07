@@ -14,9 +14,13 @@ export default async function ConversaPage({ params }: { params: Promise<{ id: s
   const profile = await getSessionProfile();
   if (!profile) notFound();
   const userId = profile.id;
-  const conv = await getConversation(id, userId, profile.role === 'ADMIN');
+  // Conversa + mensagens + proposta em paralelo (notFound checado depois).
+  const [conv, msgs, proposal] = await Promise.all([
+    getConversation(id, userId, profile.role === 'ADMIN'),
+    listMessages(id),
+    getConversationProposal(id, userId),
+  ]);
   if (!conv) notFound();
-  const [msgs, proposal] = await Promise.all([listMessages(id), getConversationProposal(id, userId)]);
   const backHref = conv.isModerator ? '/admin/denuncias' : '/conversas';
 
   return (
