@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatBRL, type MilestoneStatus } from '@abilar/shared';
-import { advanceMilestone, approveMilestone, concludeMilestone } from '@/lib/obra/actions';
+import { advanceMilestone, approveMilestone, concludeMilestone, addMilestoneEvidence } from '@/lib/obra/actions';
 import type { ObraMilestone } from '@/lib/obra/queries';
 
 const COLUMNS: { status: MilestoneStatus; title: string; tint: string }[] = [
@@ -71,11 +71,24 @@ export function ObraBoard({
                       {m.pct}% · <strong className="text-charcoal">{formatBRL(m.amountCents)}</strong>
                     </p>
 
-                    {m.evidenceUrl && (
-                      <a href={m.evidenceUrl} target="_blank" rel="noreferrer" className="mt-2 block">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={m.evidenceUrl} alt="Evidência" className="h-20 w-full rounded-lg border border-subtle object-cover" />
-                      </a>
+                    {m.evidences.length > 0 && (
+                      <div className="mt-2 flex flex-col gap-2">
+                        {m.evidences.map((ev) => (
+                          <div key={ev.id} className="rounded-lg bg-surface/70 p-2">
+                            {ev.photoUrls.length > 0 && (
+                              <div className="grid grid-cols-3 gap-1">
+                                {ev.photoUrls.map((u, i) => (
+                                  <a key={i} href={u} target="_blank" rel="noreferrer">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={u} alt="Evidência" className="aspect-square w-full rounded-md border border-subtle object-cover" />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                            {ev.comment && <p className="mt-1 text-xs text-charcoal">{ev.comment}</p>}
+                          </div>
+                        ))}
+                      </div>
                     )}
 
                     {meIsCarpenter && m.status === 'PENDING' && (
@@ -83,7 +96,7 @@ export function ObraBoard({
                         Iniciar →
                       </button>
                     )}
-                    {meIsCarpenter && m.status === 'IN_PROGRESS' && <ConcludeForm milestoneId={m.id} />}
+                    {meIsCarpenter && m.status === 'IN_PROGRESS' && <EvidenceForm milestoneId={m.id} />}
                     {meIsClient && m.status === 'DONE' && (
                       <button type="button" onClick={() => run(() => approveMilestone(m.id))} disabled={pending} className="mt-2 w-full rounded-lg bg-brand-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
                         ✓ Aprovar
@@ -103,39 +116,52 @@ export function ObraBoard({
   );
 }
 
-/** Concluir etapa com foto de evidência opcional (câmera no celular). */
-function ConcludeForm({ milestoneId }: { milestoneId: string }) {
+/** Evidência da etapa: várias fotos + comentário. "Adicionar" registra sem mudar
+ *  o status; "Concluir" marca como concluída (com a evidência, se houver). */
+function EvidenceForm({ milestoneId }: { milestoneId: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<FileList | null>(null);
+  const [comment, setComment] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const submit = () =>
+  const build = () => {
+    const fd = new FormData();
+    fd.set('milestoneId', milestoneId);
+    if (comment.trim()) fd.set('comment', comment.trim());
+    if (files) Array.from(files).forEach((f) => fd.append('photos', f));
+    return fd;
+  };
+  const exec = (fn: (fd: FormData) => Promise<{ ok: true } | { ok: false; error: string }>) =>
     start(async () => {
       setError(null);
-      const fd = new FormData();
-      fd.set('milestoneId', milestoneId);
-      if (file) fd.set('evidence', file);
-      const r = await concludeMilestone(fd);
+      const r = await fn(build());
       if (!r.ok) return setError(r.error);
+      setComment('');
+      setFiles(null);
       router.refresh();
     });
 
   return (
     <div className="mt-2 flex flex-col gap-1.5">
       <label className="cursor-pointer rounded-lg border border-dashed border-subtle px-2 py-1.5 text-center text-xs text-muted hover:bg-deep">
-        {file ? `📷 ${file.name.slice(0, 18)}` : '📷 Anexar foto (opcional)'}
-        <input
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-        />
+        {files && files.length ? `📷 ${files.length} foto(s)` : '📷 Adicionar fotos (pode várias)'}
+        <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => setFiles(e.target.files)} />
       </label>
-      <button type="button" onClick={submit} disabled={pending} className="w-full rounded-lg bg-brand-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
-        {pending ? 'Enviando…' : 'Concluir →'}
-      </button>
+      <textarea
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        placeholder="Comentário (opcional)"
+        className="min-h-12 rounded-lg border border-subtle bg-surface px-2 py-1.5 text-xs outline-none focus:border-brand"
+      />
+      <div className="flex gap-1.5">
+        <button type="button" onClick={() => exec(addMilestoneEvidence)} disabled={pending} className="flex-1 rounded-lg border border-subtle px-2 py-2 text-xs font-semibold text-charcoal disabled:opacity-50">
+          Adicionar
+        </button>
+        <button type="button" onClick={() => exec(concludeMilestone)} disabled={pending} className="flex-1 rounded-lg bg-brand-primary px-2 py-2 text-xs font-semibold text-white disabled:opacity-50">
+          Concluir →
+        </button>
+      </div>
       {error && <p className="text-xs text-ochre">{error}</p>}
     </div>
   );
