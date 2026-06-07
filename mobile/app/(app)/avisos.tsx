@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { DeviceEventEmitter, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { DeviceEventEmitter, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 import { listNotifications, type NotificationRow } from '@/lib/data';
@@ -14,17 +14,12 @@ export default function AvisosScreen() {
   const { profile } = useAuth();
   const [items, setItems] = useState<NotificationRow[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [marking, setMarking] = useState(false);
 
   const load = useCallback(async () => {
     if (!profile) return;
     try {
-      const data = await listNotifications(profile.id);
-      setItems(data);
-      // Marca como lidas e zera o badge.
-      if (data.some((n) => !n.read_at)) {
-        await api.markNotificationsRead().catch(() => {});
-        DeviceEventEmitter.emit(NOTIF_READ_EVENT);
-      }
+      setItems(await listNotifications(profile.id));
     } catch {
       setItems([]);
     }
@@ -42,7 +37,23 @@ export default function AvisosScreen() {
     setRefreshing(false);
   };
 
+  const markAll = async () => {
+    setMarking(true);
+    try {
+      await api.markNotificationsRead();
+      const now = new Date().toISOString();
+      setItems((prev) => (prev ?? []).map((n) => (n.read_at ? n : { ...n, read_at: now })));
+      DeviceEventEmitter.emit(NOTIF_READ_EVENT); // zera o badge
+    } catch {
+      // silencioso
+    } finally {
+      setMarking(false);
+    }
+  };
+
   if (items === null) return <Loading label="Carregando avisos…" />;
+
+  const hasUnread = items.some((n) => !n.read_at);
 
   return (
     <FlatList
@@ -50,7 +61,16 @@ export default function AvisosScreen() {
       keyExtractor={(n) => n.id}
       contentContainerStyle={items.length === 0 ? styles.empty : styles.list}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={color.brand.primary} />}
-      ListHeaderComponent={<Text style={styles.heading}>Avisos</Text>}
+      ListHeaderComponent={
+        <View style={styles.header}>
+          <Text style={styles.heading}>Avisos</Text>
+          {hasUnread && (
+            <Pressable onPress={markAll} disabled={marking} style={styles.markBtn}>
+              <Text style={styles.markText}>{marking ? 'Marcando…' : 'Marcar todas como lidas'}</Text>
+            </Pressable>
+          )}
+        </View>
+      }
       ListEmptyComponent={<EmptyState emoji="🔔" title="Sem avisos" subtitle="Mudanças nos seus pedidos e obras aparecem aqui." />}
       renderItem={({ item }) => (
         <View style={[styles.card, !item.read_at && styles.unread]}>
@@ -66,7 +86,10 @@ export default function AvisosScreen() {
 const styles = StyleSheet.create({
   list: { padding: space.lg, gap: space.sm },
   empty: { flexGrow: 1 },
-  heading: { fontSize: 24, fontWeight: '700', color: color.text.primary, marginBottom: space.sm },
+  header: { marginBottom: space.sm, gap: space.sm },
+  heading: { fontSize: 24, fontWeight: '700', color: color.text.primary },
+  markBtn: { alignSelf: 'flex-start', borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 8 },
+  markText: { color: color.text.primary, fontWeight: '600', fontSize: 13 },
   card: { backgroundColor: color.bg.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: color.border.subtle, padding: space.lg, gap: 4 },
   unread: { borderColor: color.brand.primary, backgroundColor: 'rgba(197,106,51,0.06)' },
   title: { fontSize: 16, fontWeight: '600', color: color.text.primary },

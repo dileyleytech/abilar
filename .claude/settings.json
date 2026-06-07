@@ -113,7 +113,9 @@
       "Bash(sed -n '/export const moduleInputSchema/,/}\\);/p' packages/shared/domain.ts)",
       "Bash(sed -n '1,40p' app/lib/carpenter/profile.ts)",
       "Bash(sed -n \"/getProjectForCarpenter/,/^}/p\" app/lib/carpenter/feed.ts)",
-      "Bash(curl -s -o /dev/null -w \"dev http=%{http_code}\\\\n\" http://localhost:3001)"
+      "Bash(curl -s -o /dev/null -w \"dev http=%{http_code}\\\\n\" http://localhost:3001)",
+      "Bash(echo \"web TC=$?\")",
+      "Bash(echo \"web LINT=$?\")"
     ],
     "additionalDirectories": [
       "/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/brand/svg"
