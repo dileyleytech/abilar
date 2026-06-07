@@ -62,14 +62,11 @@ export default function AvisosScreen() {
       contentContainerStyle={items.length === 0 ? styles.empty : styles.list}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={color.brand.primary} />}
       ListHeaderComponent={
-        <View style={styles.header}>
-          <Text style={styles.heading}>Avisos</Text>
-          {hasUnread && (
-            <Pressable onPress={markAll} disabled={marking} style={styles.markBtn}>
-              <Text style={styles.markText}>{marking ? 'Marcando…' : 'Marcar todas como lidas'}</Text>
-            </Pressable>
-          )}
-        </View>
+        hasUnread ? (
+          <Pressable onPress={markAll} disabled={marking} style={styles.markBtn}>
+            <Text style={styles.markText}>{marking ? 'Marcando…' : 'Marcar todas como lidas'}</Text>
+          </Pressable>
+        ) : null
       }
       ListEmptyComponent={<EmptyState emoji="🔔" title="Sem avisos" subtitle="Mudanças nos seus pedidos e obras aparecem aqui." />}
       renderItem={({ item }) => (

@@ -145,7 +145,7 @@ export default function PedidoDetail() {
   return (
     <>
       <Stack.Screen options={{ title: project.title }} />
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <Card>
           {renaming ? (
             <View style={{ gap: space.sm }}>

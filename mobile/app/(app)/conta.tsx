@@ -1,5 +1,4 @@
 import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { Button, Card } from '@/components/ui';
@@ -16,7 +15,6 @@ const ROLE_LABEL: Record<string, string> = {
 
 export default function ContaScreen() {
   const { profile, session, signOut } = useAuth();
-  const insets = useSafeAreaInsets();
   const user = session?.user;
 
   const confirmDelete = () => {
@@ -42,9 +40,7 @@ export default function ContaScreen() {
   };
 
   return (
-    <ScrollView style={{ backgroundColor: color.bg.base }} contentContainerStyle={[styles.container, { paddingTop: insets.top + space.xl }]}>
-      <Text style={styles.heading}>Minha conta</Text>
-
+    <ScrollView style={{ backgroundColor: color.bg.base }} contentContainerStyle={styles.container}>
       <Card style={{ gap: space.sm }}>
         <Text style={styles.name}>{profile?.name || 'Sem nome'}</Text>
         <Text style={styles.role}>{ROLE_LABEL[profile?.role ?? ''] ?? profile?.role}</Text>

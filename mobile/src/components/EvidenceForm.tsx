@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { api, type Photo } from '@/lib/api';
 import { chooseAndPick } from '@/lib/pickImages';
 import { Button } from '@/components/ui';
@@ -50,14 +50,14 @@ export function EvidenceForm({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={styles.container}>
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <Text style={styles.title}>Concluir: {milestoneLabel}</Text>
           <Pressable onPress={onClose}>
             <Text style={styles.close}>✕</Text>
           </Pressable>
         </View>
-        <ScrollView contentContainerStyle={styles.body}>
+        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
           <Text style={styles.help}>Envie fotos do que ficou pronto e descreva a etapa. O cliente revisa e aprova.</Text>
 
           <View style={styles.thumbs}>
@@ -87,7 +87,7 @@ export function EvidenceForm({
 
           <Button title="Concluir etapa →" variant="secondary" onPress={submit} loading={loading} />
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

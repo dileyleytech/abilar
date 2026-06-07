@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { api, lookupCep } from '@/lib/api';
 import { Button } from '@/components/ui';
@@ -8,7 +7,6 @@ import { color, radius, space } from '@/theme';
 
 export default function NovoPedido() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
   const [cep, setCep] = useState('');
   const [city, setCity] = useState('');
@@ -57,8 +55,12 @@ export default function NovoPedido() {
   };
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + space.lg }]} keyboardShouldPersistTaps="handled">
-      <Text style={styles.heading}>Novo pedido</Text>
+    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
+    >
       <Text style={styles.help}>Um pedido pode ter vários móveis. Dê um nome e informe onde é a obra; os móveis você adiciona em seguida.</Text>
 
       <Text style={styles.label}>Nome do pedido</Text>
@@ -75,12 +77,13 @@ export default function NovoPedido() {
 
       <Button title="Criar pedido" onPress={submit} loading={loading} />
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1, backgroundColor: color.bg.base },
   container: { padding: space.lg, gap: space.sm, backgroundColor: color.bg.base },
-  heading: { fontSize: 24, fontWeight: '700', color: color.text.primary },
   help: { fontSize: 13, color: color.text.muted, marginBottom: space.sm },
   label: { fontSize: 15, fontWeight: '600', color: color.text.primary, marginTop: space.md },
   input: { backgroundColor: color.bg.surface, borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 12, fontSize: 16, color: color.text.primary },

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { api, type QuotePreview } from '@/lib/api';
 import { formatCents } from '@/lib/format';
 import { Button } from '@/components/ui';
@@ -59,14 +59,14 @@ export function QuoteForm({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={styles.container}>
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <Text style={styles.title}>Enviar orçamento</Text>
           <Pressable onPress={onClose}>
             <Text style={styles.close}>✕</Text>
           </Pressable>
         </View>
-        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
           <Text style={styles.label}>Valor do serviço (R$)</Text>
           <TextInput
             style={styles.input}
@@ -106,7 +106,7 @@ export function QuoteForm({
           <Button title="Enviar orçamento" onPress={submit} loading={loading} />
           <Text style={styles.hint}>O cliente sempre vê parcelamento nas taxas do sistema. Subsídio de parcela é configurável na web.</Text>
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

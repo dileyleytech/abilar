@@ -93,6 +93,7 @@ export default function Login() {
       <ScrollView
         contentContainerStyle={[styles.container, { paddingTop: insets.top + space.xxl }]}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
         <Text style={styles.brand}>abilar</Text>
         <Text style={styles.subtitle}>Marcenaria sob medida, do orçamento à entrega.</Text>

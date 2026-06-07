@@ -27,6 +27,15 @@ export default function AppLayout() {
     };
   }, [profile]);
 
+  // Header nativo para as abas que não têm Stack próprio (evita título sob o
+  // status bar). Pedidos/Conversas têm Stack interno e mantêm headerShown:false.
+  const header = {
+    headerShown: true,
+    headerStyle: { backgroundColor: color.bg.base },
+    headerShadowVisible: false,
+    headerTintColor: color.text.primary,
+  } as const;
+
   return (
     <Tabs
       screenOptions={{
@@ -40,7 +49,9 @@ export default function AppLayout() {
       <Tabs.Screen
         name="novo"
         options={{
-          title: 'Criar',
+          ...header,
+          title: 'Novo pedido',
+          tabBarLabel: 'Criar',
           tabBarIcon: () => <Icon emoji="➕" />,
           // Só o cliente cria pedido; escondido para os demais papéis.
           href: profile?.role === 'CLIENT' ? undefined : null,
@@ -49,9 +60,9 @@ export default function AppLayout() {
       <Tabs.Screen name="conversas" options={{ title: 'Conversas', tabBarIcon: () => <Icon emoji="💬" /> }} />
       <Tabs.Screen
         name="avisos"
-        options={{ title: 'Avisos', tabBarIcon: () => <Icon emoji="🔔" />, tabBarBadge: unread > 0 ? unread : undefined }}
+        options={{ ...header, title: 'Avisos', tabBarIcon: () => <Icon emoji="🔔" />, tabBarBadge: unread > 0 ? unread : undefined }}
       />
-      <Tabs.Screen name="conta" options={{ title: 'Conta', tabBarIcon: () => <Icon emoji="👤" /> }} />
+      <Tabs.Screen name="conta" options={{ ...header, title: 'Minha conta', tabBarLabel: 'Conta', tabBarIcon: () => <Icon emoji="👤" /> }} />
     </Tabs>
   );
 }
