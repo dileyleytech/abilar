@@ -1,17 +1,20 @@
 import { moduleInputSchema, categorySchema } from '@abilar/shared';
-import { projects, modules, and, eq } from '@abilar/db';
+import { projects, modules, projectPhotos, and, eq } from '@abilar/db';
 import { getDb } from '@/lib/db';
+import { createSupabaseAdminClient } from '@/lib/supabase/admin';
+import { PROJECT_PHOTOS_BUCKET } from '@/lib/storage';
 import { authenticateBearer, json } from '@/lib/api/mobile-auth';
 
 // Cliente adiciona um móvel ao pedido (dono). Tipo = categoria; quando OUTRO, o
-// `label` diz qual é. Medidas em cm → mm (schema). JSON:
-// { projectId, ambiente?, category, label?, workType?, widthCm, heightCm, depthCm }.
+// `label` diz qual é. Medidas cm → mm. Foto opcional (galeria ou câmera).
+// Multipart: projectId, ambiente?, category, label?, workType?, widthCm, heightCm, depthCm, photo?
 export async function POST(req: Request): Promise<Response> {
   const auth = await authenticateBearer(req);
   if (!auth) return json({ error: 'Não autenticado.' }, 401);
 
-  const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-  const projectId = String(b.projectId ?? '');
+  const form = await req.formData().catch(() => null);
+  if (!form) return json({ error: 'Envio inválido.' }, 400);
+  const projectId = String(form.get('projectId') ?? '');
   if (!projectId) return json({ error: 'Pedido inválido.' }, 400);
 
   const db = getDb();
@@ -22,19 +25,19 @@ export async function POST(req: Request): Promise<Response> {
     .limit(1);
   if (!own) return json({ error: 'Pedido não encontrado.' }, 404);
 
-  const cat = categorySchema.safeParse(b.category);
+  const cat = categorySchema.safeParse(form.get('category'));
   if (!cat.success) return json({ error: 'Escolha o tipo do móvel.' }, 400);
-  const label = String(b.label ?? '').trim();
+  const label = String(form.get('label') ?? '').trim();
   if (cat.data === 'OUTRO' && !label) return json({ error: 'Diga qual é o móvel.' }, 400);
 
   const m = moduleInputSchema.safeParse({
-    ambiente: b.ambiente,
+    ambiente: form.get('ambiente') || undefined,
     type: cat.data,
     label: label || undefined,
-    workType: b.workType,
-    widthMm: b.widthCm,
-    heightMm: b.heightCm,
-    depthMm: b.depthCm,
+    workType: form.get('workType') || undefined,
+    widthMm: Number(form.get('widthCm')),
+    heightMm: Number(form.get('heightCm')),
+    depthMm: Number(form.get('depthCm')),
   });
   if (!m.success) return json({ error: 'Confira as medidas (em cm, maior que zero).' }, 400);
 
@@ -51,5 +54,24 @@ export async function POST(req: Request): Promise<Response> {
       depthMm: m.data.depthMm,
     })
     .returning({ id: modules.id });
-  return json({ ok: true, moduleId: created?.id });
+  const moduleId = created?.id;
+  if (!moduleId) return json({ error: 'Não foi possível salvar o móvel.' }, 502);
+
+  // Foto opcional do móvel (galeria/câmera).
+  const file = form.get('photo');
+  if (file instanceof File && file.size > 0) {
+    if (!file.type.startsWith('image/')) return json({ error: 'Anexo deve ser uma imagem.' }, 400);
+    if (file.size > 10 * 1024 * 1024) return json({ error: 'A foto deve ter no máx 10 MB.' }, 400);
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+    const path = `${projectId}/${moduleId}/${Date.now()}.${ext}`;
+    const supabase = createSupabaseAdminClient();
+    const { error } = await supabase.storage
+      .from(PROJECT_PHOTOS_BUCKET)
+      .upload(path, new Uint8Array(await file.arrayBuffer()), { contentType: file.type || 'image/jpeg', upsert: true });
+    if (!error) {
+      await db.insert(projectPhotos).values({ projectId, moduleId, kind: 'REFERENCE', path });
+    }
+  }
+
+  return json({ ok: true, moduleId });
 }

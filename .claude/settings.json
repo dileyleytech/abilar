@@ -115,7 +115,8 @@
       "Bash(sed -n \"/getProjectForCarpenter/,/^}/p\" app/lib/carpenter/feed.ts)",
       "Bash(curl -s -o /dev/null -w \"dev http=%{http_code}\\\\n\" http://localhost:3001)",
       "Bash(echo \"web TC=$?\")",
-      "Bash(echo \"web LINT=$?\")"
+      "Bash(echo \"web LINT=$?\")",
+      "Bash(echo \"web BUILD=$?\")"
     ],
     "additionalDirectories": [
       "/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/brand/svg"

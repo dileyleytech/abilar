@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Alert, Image, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 import {
@@ -38,6 +38,9 @@ export default function PedidoDetail() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [concluding, setConcluding] = useState<MilestoneRow | null>(null);
   const [quoteForm, setQuoteForm] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  const [savingTitle, setSavingTitle] = useState(false);
 
   const isClient = profile?.role === 'CLIENT';
   const isCarpenter = profile?.role === 'CARPENTER';
@@ -120,16 +123,52 @@ export default function PedidoDetail() {
       { text: 'Aceitar', onPress: () => act(() => api.acceptQuote(q.quoteId), q.quoteId) },
     ]);
 
+  const saveTitle = async () => {
+    if (!id || titleDraft.trim().length < 2) return Alert.alert('Nome', 'Dê um nome ao pedido (mín. 2 letras).');
+    setSavingTitle(true);
+    try {
+      await api.renameProject(id, titleDraft.trim());
+      setRenaming(false);
+      await load();
+    } catch (e) {
+      Alert.alert('Ops', e instanceof Error ? e.message : 'Não foi possível renomear.');
+    } finally {
+      setSavingTitle(false);
+    }
+  };
+
   if (!project || milestones === null) return <Loading label="Carregando pedido…" />;
 
   const approvedPct = milestones.filter((m) => m.status === 'APPROVED').reduce((a, m) => a + m.pct, 0);
+  const canRename = isClient && ['DRAFT', 'OPEN_FOR_QUOTES', 'IN_NEGOTIATION'].includes(project.status);
 
   return (
     <>
       <Stack.Screen options={{ title: project.title }} />
       <ScrollView contentContainerStyle={styles.container}>
         <Card>
-          <Text style={styles.title}>{project.title}</Text>
+          {renaming ? (
+            <View style={{ gap: space.sm }}>
+              <TextInput style={styles.titleInput} value={titleDraft} onChangeText={setTitleDraft} autoFocus />
+              <View style={{ flexDirection: 'row', gap: space.sm }}>
+                <View style={{ flex: 1 }}>
+                  <Button title="Salvar" onPress={saveTitle} loading={savingTitle} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button title="Cancelar" variant="outline" onPress={() => setRenaming(false)} />
+                </View>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>{project.title}</Text>
+              {canRename && (
+                <Pressable onPress={() => { setTitleDraft(project.title); setRenaming(true); }} hitSlop={8}>
+                  <Text style={styles.pencil}>✏️</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
           <View style={styles.metaRow}>
             <Badge label={PROJECT_STATUS_LABEL[project.status] ?? project.status} tone="primary" />
             {project.city ? <Text style={styles.meta}>{project.city}</Text> : null}
@@ -294,7 +333,10 @@ export default function PedidoDetail() {
 
 const styles = StyleSheet.create({
   container: { padding: space.lg, gap: space.md },
-  title: { fontSize: 20, fontWeight: '700', color: color.text.primary },
+  title: { flex: 1, fontSize: 20, fontWeight: '700', color: color.text.primary },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  pencil: { fontSize: 18 },
+  titleInput: { borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 10, fontSize: 18, fontWeight: '700', color: color.text.primary, backgroundColor: color.bg.base },
   metaRow: { marginTop: 6, flexDirection: 'row', gap: space.sm, alignItems: 'center', flexWrap: 'wrap' },
   section: { fontSize: 18, fontWeight: '700', color: color.text.primary },
   meta: { fontSize: 14, color: color.text.muted },

@@ -127,6 +127,22 @@ export async function addModule(
   return { ok: true, data: { moduleId: created.id } };
 }
 
+/** Renomeia o pedido (dono). */
+export async function renameProject(projectId: string, title: unknown): Promise<Result> {
+  const userId = await uid();
+  if (!userId) return { ok: false, error: 'Faça login.' };
+  if (!(await ownProject(projectId, userId))) return { ok: false, error: 'Pedido não encontrado.' };
+
+  const parsed = createProjectSchema.shape.title.safeParse(title);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Nome inválido.' };
+
+  const db = getDb();
+  await db.update(projects).set({ title: parsed.data, updatedAt: sql`now()` }).where(eq(projects.id, projectId));
+  revalidatePath(`/pedidos/${projectId}`);
+  revalidatePath('/pedidos');
+  return { ok: true, data: undefined };
+}
+
 /** Atualiza o local da obra (cidade/CEP/coords) do pedido — alimenta o matching. */
 export async function updateProjectLocation(projectId: string, input: unknown): Promise<Result> {
   const userId = await uid();

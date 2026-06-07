@@ -17,7 +17,7 @@ import { useAuth } from '@/lib/auth';
 import { getConversation, listMessages, type ConversationRow, type MessageRow } from '@/lib/data';
 import { subscribeMessages } from '@/lib/realtime';
 import { api, type Photo } from '@/lib/api';
-import { pickImages } from '@/lib/pickImages';
+import { chooseAndPick } from '@/lib/pickImages';
 import { Loading } from '@/components/ui';
 import { color, radius, space } from '@/theme';
 
@@ -89,12 +89,8 @@ export default function ChatScreen() {
   }, []);
 
   const addPhotos = async () => {
-    try {
-      const picked = await pickImages(4 - photos.length);
-      setPhotos((p) => [...p, ...picked].slice(0, 4));
-    } catch (e) {
-      Alert.alert('Fotos', e instanceof Error ? e.message : 'Não foi possível abrir as fotos.');
-    }
+    const picked = await chooseAndPick(4 - photos.length);
+    if (picked.length) setPhotos((p) => [...p, ...picked].slice(0, 4));
   };
 
   const send = async () => {

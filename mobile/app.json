@@ -27,7 +27,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "O Abilar usa suas fotos para anexar evidências da obra e imagens no chat."
+          "photosPermission": "O Abilar usa suas fotos para anexar imagens do móvel, evidências da obra e no chat.",
+          "cameraPermission": "O Abilar usa a câmera para você fotografar o móvel, a obra e enviar fotos no chat."
         }
       ]
     ],

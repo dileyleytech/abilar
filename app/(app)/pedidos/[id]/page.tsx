@@ -10,6 +10,7 @@ import { ObraBoard } from '@/components/ObraBoard';
 import { getProjectMilestones } from '@/lib/obra/queries';
 import { backFrom } from '@/lib/nav';
 import { ProjectActions } from './_components/ProjectActions';
+import { ProjectTitle } from './_components/ProjectTitle';
 import { ModulesSection, type ModuleView } from './_components/ModulesSection';
 import { ProjectLocation } from './_components/ProjectLocation';
 import { PreApproveButton } from './_components/PreApproveButton';
@@ -65,7 +66,7 @@ export default async function PedidoDetailPage({
             ←
           </Link>
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-bold text-charcoal sm:text-3xl">{project.title}</h1>
+            <ProjectTitle projectId={project.id} title={project.title} editable={editable} />
             <p className="text-sm text-muted">
               {moduleViews.length} {moduleViews.length === 1 ? 'móvel' : 'móveis'}
               {project.sourceType === 'ARCHITECT_PROJECT' ? ' · Projeto de arquiteto' : ''}

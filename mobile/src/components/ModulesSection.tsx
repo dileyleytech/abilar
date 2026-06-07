@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { api } from '@/lib/api';
-import { listModules, type ModuleRow } from '@/lib/data';
+import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { api, type Photo } from '@/lib/api';
+import { listModules, listModulePhotos, type ModuleRow } from '@/lib/data';
+import { chooseAndPick } from '@/lib/pickImages';
 import { CATEGORIES, CATEGORY_LABEL } from '@/lib/types';
 import { formatCm } from '@/lib/format';
 import { Button, Card } from '@/components/ui';
@@ -25,6 +26,7 @@ export function ModulesSection({
   onPublished: () => void;
 }) {
   const [modules, setModules] = useState<ModuleRow[] | null>(null);
+  const [photos, setPhotos] = useState<Record<string, string>>({});
   const [open, setOpen] = useState(false);
   const [ambiente, setAmbiente] = useState('');
   const [category, setCategory] = useState<string | null>(null);
@@ -33,6 +35,7 @@ export function ModulesSection({
   const [w, setW] = useState('');
   const [h, setH] = useState('');
   const [d, setD] = useState('');
+  const [photo, setPhoto] = useState<Photo | null>(null);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
 
@@ -40,7 +43,17 @@ export function ModulesSection({
 
   const load = useCallback(async () => {
     try {
-      setModules(await listModules(projectId));
+      const ms = await listModules(projectId);
+      setModules(ms);
+      const phs = await listModulePhotos(projectId);
+      if (phs.length > 0) {
+        const r = await api.signedUrls(phs.map((p) => p.path), { projectId });
+        const map: Record<string, string> = {};
+        phs.forEach((p, i) => { if (r.urls[i]) map[p.module_id] = r.urls[i]; });
+        setPhotos(map);
+      } else {
+        setPhotos({});
+      }
     } catch {
       setModules([]);
     }
@@ -58,7 +71,13 @@ export function ModulesSection({
     setW('');
     setH('');
     setD('');
+    setPhoto(null);
     setOpen(false);
+  };
+
+  const addPhoto = async () => {
+    const picked = await chooseAndPick(1);
+    if (picked[0]) setPhoto(picked[0]);
   };
 
   const add = async () => {
@@ -71,16 +90,19 @@ export function ModulesSection({
 
     setSaving(true);
     try {
-      await api.addModule({
-        projectId,
-        ambiente: ambiente.trim() || undefined,
-        category,
-        label: category === 'OUTRO' ? label.trim() : undefined,
-        workType,
-        widthCm,
-        heightCm,
-        depthCm,
-      });
+      await api.addModule(
+        {
+          projectId,
+          ambiente: ambiente.trim() || undefined,
+          category,
+          label: category === 'OUTRO' ? label.trim() : undefined,
+          workType,
+          widthCm,
+          heightCm,
+          depthCm,
+        },
+        photo,
+      );
       resetForm();
       await load();
     } catch (e) {
@@ -114,15 +136,26 @@ export function ModulesSection({
       )}
 
       {modules.map((m) => (
-        <Card key={m.id} style={{ gap: 2 }}>
-          <Text style={styles.mTitle}>{m.label ?? CATEGORY_LABEL[m.type] ?? m.type}</Text>
-          <Text style={styles.mDim}>
-            {formatCm(m.width_mm)} × {formatCm(m.height_mm)} × {formatCm(m.depth_mm)} (L×A×P)
-          </Text>
-          <Text style={styles.muted}>
-            {m.ambiente ? `${m.ambiente} · ` : ''}
-            {m.work_type === 'REPLACE_EXISTING' ? 'Substituição' : 'Móvel novo'}
-          </Text>
+        <Card key={m.id}>
+          <View style={styles.mRow}>
+            {photos[m.id] ? (
+              <Image source={{ uri: photos[m.id] }} style={styles.mThumb} />
+            ) : (
+              <View style={[styles.mThumb, styles.mThumbEmpty]}>
+                <Text style={{ fontSize: 24 }}>🪵</Text>
+              </View>
+            )}
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.mTitle}>{m.label ?? CATEGORY_LABEL[m.type] ?? m.type}</Text>
+              <Text style={styles.mDim}>
+                {formatCm(m.width_mm)} × {formatCm(m.height_mm)} × {formatCm(m.depth_mm)} (L×A×P)
+              </Text>
+              <Text style={styles.muted}>
+                {m.ambiente ? `${m.ambiente} · ` : ''}
+                {m.work_type === 'REPLACE_EXISTING' ? 'Substituição' : 'Móvel novo'}
+              </Text>
+            </View>
+          </View>
         </Card>
       ))}
 
@@ -164,6 +197,18 @@ export function ModulesSection({
             <TextInput style={[styles.input, styles.flex1]} keyboardType="numeric" placeholder="Prof." placeholderTextColor={color.text.subtle} value={d} onChangeText={setD} />
           </View>
 
+          <Text style={styles.fLabel}>Foto do móvel (opcional)</Text>
+          {photo ? (
+            <View style={styles.row}>
+              <Image source={{ uri: photo.uri }} style={styles.formThumb} />
+              <Pressable onPress={() => setPhoto(null)} style={styles.removePhoto}>
+                <Text style={styles.removePhotoText}>Remover</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Button title="📷 Adicionar foto" variant="outline" onPress={addPhoto} />
+          )}
+
           <View style={styles.row}>
             <View style={styles.flex1}>
               <Button title="Adicionar" onPress={add} loading={saving} />
@@ -186,6 +231,12 @@ export function ModulesSection({
 const styles = StyleSheet.create({
   section: { fontSize: 18, fontWeight: '700', color: color.text.primary },
   muted: { color: color.text.muted, fontSize: 13 },
+  mRow: { flexDirection: 'row', gap: space.md, alignItems: 'center' },
+  mThumb: { width: 64, height: 64, borderRadius: radius.md },
+  mThumbEmpty: { backgroundColor: color.bg.deep, alignItems: 'center', justifyContent: 'center' },
+  formThumb: { width: 84, height: 84, borderRadius: radius.md },
+  removePhoto: { justifyContent: 'center', paddingHorizontal: space.md },
+  removePhotoText: { color: color.state.danger, fontWeight: '600' },
   mTitle: { fontSize: 16, fontWeight: '600', color: color.text.primary },
   mDim: { fontSize: 14, color: color.text.primary },
   fLabel: { fontSize: 14, fontWeight: '600', color: color.text.primary, marginTop: 2 },

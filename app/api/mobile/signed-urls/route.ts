@@ -1,4 +1,4 @@
-import { conversations, projectMilestones, eq } from '@abilar/db';
+import { conversations, projects, projectMilestones, and, eq } from '@abilar/db';
 import { getDb } from '@/lib/db';
 import { signedProjectPhotoUrl } from '@/lib/storage';
 import { authenticateBearer, json } from '@/lib/api/mobile-auth';
@@ -6,21 +6,37 @@ import { authenticateBearer, json } from '@/lib/api/mobile-auth';
 // Assina URLs curtas de mídia para o app. Autoriza por contexto:
 //  - conversationId → participante + paths sob chat/{conversationId}/
 //  - milestoneId    → participante + paths sob evidence/{milestoneId}/
+//  - projectId      → dono OU pedido aberto OU marceneiro engajado + paths sob {projectId}/
 export async function POST(req: Request): Promise<Response> {
   const auth = await authenticateBearer(req);
   if (!auth) return json({ error: 'Não autenticado.' }, 401);
 
-  const { paths, conversationId, milestoneId } = (await req.json().catch(() => ({}))) as {
+  const { paths, conversationId, milestoneId, projectId } = (await req.json().catch(() => ({}))) as {
     paths?: string[];
     conversationId?: string;
     milestoneId?: string;
+    projectId?: string;
   };
   if (!Array.isArray(paths) || paths.length === 0) return json({ urls: [] });
 
   const db = getDb();
   let prefix: string | null = null;
 
-  if (conversationId) {
+  if (projectId) {
+    const [p] = await db.select({ clientId: projects.clientId, status: projects.status }).from(projects).where(eq(projects.id, projectId)).limit(1);
+    if (!p) return json({ error: 'Sem acesso.' }, 403);
+    let allowed = p.clientId === auth.userId || p.status === 'OPEN_FOR_QUOTES';
+    if (!allowed) {
+      const [cv] = await db
+        .select({ id: conversations.id })
+        .from(conversations)
+        .where(and(eq(conversations.projectId, projectId), eq(conversations.carpenterId, auth.userId)))
+        .limit(1);
+      allowed = !!cv;
+    }
+    if (!allowed) return json({ error: 'Sem acesso.' }, 403);
+    prefix = `${projectId}/`;
+  } else if (conversationId) {
     const [c] = await db
       .select({ clientId: conversations.clientId, carpenterId: conversations.carpenterId })
       .from(conversations)

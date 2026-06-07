@@ -98,6 +98,17 @@ export async function listModules(projectId: string): Promise<ModuleRow[]> {
   return (data as ModuleRow[]) ?? [];
 }
 
+// Fotos atuais por módulo (RLS: dono / marceneiro em pedido aberto).
+export async function listModulePhotos(projectId: string): Promise<{ module_id: string; path: string }[]> {
+  const { data } = await supabase
+    .from('project_photos')
+    .select('module_id, path')
+    .eq('project_id', projectId)
+    .eq('is_current', true)
+    .not('module_id', 'is', null);
+  return (data as { module_id: string; path: string }[]) ?? [];
+}
+
 export async function getProject(id: string): Promise<ProjectRow | null> {
   const { data } = await supabase.from('projects').select(PROJECT_COLS).eq('id', id).single();
   return (data as ProjectRow) ?? null;

@@ -34,13 +34,13 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   );
 }
 
-async function postForm<T>(path: string, fields: Record<string, string>, photos: Photo[]): Promise<T> {
+async function postForm<T>(path: string, fields: Record<string, string>, photos: Photo[], fileField = 'photos'): Promise<T> {
   if (!config.API_URL) throw new Error('API_URL não configurada (veja .env).');
   const token = await authToken();
   const fd = new FormData();
   for (const [k, v] of Object.entries(fields)) fd.append(k, v);
   // RN aceita { uri, name, type } como "arquivo" no FormData.
-  for (const ph of photos) fd.append('photos', ph as unknown as Blob);
+  for (const ph of photos) fd.append(fileField, ph as unknown as Blob);
   return handle<T>(
     fetch(`${config.API_URL}${path}`, {
       method: 'POST',
@@ -57,7 +57,7 @@ export const api = {
   approveMilestone: (milestoneId: string) => postJson<{ ok: true }>('/api/mobile/milestones/approve', { milestoneId }),
   concludeMilestone: (milestoneId: string, comment: string, photos: Photo[]) =>
     postForm<{ ok: true }>('/api/mobile/milestones/conclude', { milestoneId, comment }, photos),
-  signedUrls: (paths: string[], ctx: { conversationId?: string; milestoneId?: string }) =>
+  signedUrls: (paths: string[], ctx: { conversationId?: string; milestoneId?: string; projectId?: string }) =>
     postJson<{ urls: string[] }>('/api/mobile/signed-urls', { paths, ...ctx }),
   report: (conversationId: string, reason: string, detail: string) =>
     postJson<{ ok: true }>('/api/mobile/reports', { conversationId, reason, detail }),
@@ -67,9 +67,24 @@ export const api = {
   // --- Sprint: criar pedido · orçamento · contrato ---
   createProject: (input: { title: string; city?: string; cep?: string; lat?: number; lng?: number }) =>
     postJson<{ ok: true; projectId: string }>('/api/mobile/projects', input),
-  addModule: (input: { projectId: string; ambiente?: string; category: string; label?: string; workType?: string; widthCm: number; heightCm: number; depthCm: number }) =>
-    postJson<{ ok: true; moduleId: string }>('/api/mobile/modules', input),
+  addModule: (
+    input: { projectId: string; ambiente?: string; category: string; label?: string; workType?: string; widthCm: number; heightCm: number; depthCm: number },
+    photo?: Photo | null,
+  ) => {
+    const fields: Record<string, string> = {
+      projectId: input.projectId,
+      category: input.category,
+      widthCm: String(input.widthCm),
+      heightCm: String(input.heightCm),
+      depthCm: String(input.depthCm),
+    };
+    if (input.ambiente) fields.ambiente = input.ambiente;
+    if (input.label) fields.label = input.label;
+    if (input.workType) fields.workType = input.workType;
+    return postForm<{ ok: true; moduleId: string }>('/api/mobile/modules', fields, photo ? [photo] : [], 'photo');
+  },
   publishProject: (projectId: string) => postJson<{ ok: true }>('/api/mobile/projects/publish', { projectId }),
+  renameProject: (projectId: string, title: string) => postJson<{ ok: true }>('/api/mobile/projects/rename', { projectId, title }),
   quotesForProject: (projectId: string) =>
     postJson<{ projectStatus: string; isClient: boolean; quotes: QuoteView[] }>('/api/mobile/quotes/for-project', { projectId }),
   preapproveQuote: (quoteId: string) => postJson<{ ok: true; conversationId: string }>('/api/mobile/quotes/preapprove', { quoteId }),

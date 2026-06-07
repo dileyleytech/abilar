@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { api, type Photo } from '@/lib/api';
-import { pickImages } from '@/lib/pickImages';
+import { chooseAndPick } from '@/lib/pickImages';
 import { Button } from '@/components/ui';
 import { color, radius, space } from '@/theme';
 
@@ -30,12 +30,8 @@ export function EvidenceForm({
   };
 
   const add = async () => {
-    try {
-      const picked = await pickImages(8 - photos.length);
-      setPhotos((p) => [...p, ...picked].slice(0, 8));
-    } catch (e) {
-      Alert.alert('Fotos', e instanceof Error ? e.message : 'Não foi possível abrir as fotos.');
-    }
+    const picked = await chooseAndPick(8 - photos.length);
+    if (picked.length) setPhotos((p) => [...p, ...picked].slice(0, 8));
   };
 
   const submit = async () => {
