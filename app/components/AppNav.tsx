@@ -22,6 +22,8 @@ const ITEMS: Record<'CLIENT' | 'CARPENTER' | 'ARCHITECT' | 'ADMIN', Item[]> = {
   CARPENTER: [
     { href: '/marceneiro', label: 'Início', icon: '🏠' },
     { href: '/marceneiro/catalogo', label: 'Catálogo', icon: '📦' },
+    { href: '/marceneiro/avulsos', label: 'Avulsos', icon: '📄' },
+    { href: '/marceneiro/relatorios', label: 'Relatórios', icon: '📊' },
     { href: '/conversas', label: 'Conversas', icon: '💬', badge: 'chat' },
     NOTIF,
   ],

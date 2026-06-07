@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { listMaterials, type MaterialRow } from '@/lib/data';
 import { api } from '@/lib/api';
 import { MATERIAL_CATEGORIES, MATERIAL_CATEGORY_LABEL, MATERIAL_UNITS, MATERIAL_UNIT_LABEL } from '@/lib/types';
@@ -21,6 +21,7 @@ import { Badge, Button, Card, EmptyState, Loading } from '@/components/ui';
 import { color, radius, space } from '@/theme';
 
 export default function CatalogoScreen() {
+  const router = useRouter();
   const [items, setItems] = useState<MaterialRow[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [editing, setEditing] = useState<MaterialRow | 'new' | null>(null);
@@ -62,7 +63,18 @@ export default function CatalogoScreen() {
         contentContainerStyle={items.length === 0 ? styles.empty : styles.list}
         ListHeaderComponent={
           <View style={{ gap: space.sm, marginBottom: space.sm }}>
-            <Text style={styles.help}>Seu custo de materiais e serviços. Use no orçamento por itens. Preços mudam por compra — atualize quando precisar.</Text>
+            <View style={styles.hubRow}>
+              <Pressable style={styles.hub} onPress={() => router.push('/(app)/avulsos')}>
+                <Text style={styles.hubEmoji}>📄</Text>
+                <Text style={styles.hubText}>Orçamentos avulsos</Text>
+              </Pressable>
+              <Pressable style={styles.hub} onPress={() => router.push('/(app)/relatorios')}>
+                <Text style={styles.hubEmoji}>📊</Text>
+                <Text style={styles.hubText}>Relatórios</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.catTitle}>Catálogo de custos</Text>
+            <Text style={styles.help}>Seu custo de materiais e serviços. Use no orçamento por itens. Atualize quando o preço mudar.</Text>
             <Button title="+ Novo item" onPress={() => setEditing('new')} />
           </View>
         }
@@ -154,6 +166,11 @@ const styles = StyleSheet.create({
   list: { padding: space.lg, gap: space.sm },
   empty: { flexGrow: 1 },
   help: { color: color.text.muted, fontSize: 13 },
+  hubRow: { flexDirection: 'row', gap: space.sm },
+  hub: { flex: 1, backgroundColor: color.bg.surface, borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.md, padding: space.md, alignItems: 'center', gap: 4 },
+  hubEmoji: { fontSize: 24 },
+  hubText: { fontSize: 13, fontWeight: '600', color: color.text.primary, textAlign: 'center' },
+  catTitle: { fontSize: 18, fontWeight: '700', color: color.text.primary, marginTop: space.sm },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
   name: { flex: 1, fontSize: 16, fontWeight: '600', color: color.text.primary },
   cost: { fontSize: 16, fontWeight: '700', color: color.brand.secondary },

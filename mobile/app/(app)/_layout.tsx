@@ -61,8 +61,8 @@ export default function AppLayout() {
         name="catalogo"
         options={{
           ...header,
-          title: 'Catálogo',
-          tabBarIcon: () => <Icon emoji="📦" />,
+          title: 'Gestão',
+          tabBarIcon: () => <Icon emoji="💼" />,
           href: profile?.role === 'CARPENTER' ? undefined : null,
         }}
       />
@@ -74,6 +74,8 @@ export default function AppLayout() {
       <Tabs.Screen name="conta" options={{ ...header, title: 'Minha conta', tabBarLabel: 'Conta', tabBarIcon: () => <Icon emoji="👤" /> }} />
       <Tabs.Screen name="contratos" options={{ href: null }} />
       <Tabs.Screen name="marceneiro-perfil" options={{ href: null }} />
+      <Tabs.Screen name="avulsos" options={{ ...header, title: 'Orçamentos avulsos', href: null }} />
+      <Tabs.Screen name="relatorios" options={{ ...header, title: 'Relatórios', href: null }} />
     </Tabs>
   );
 }

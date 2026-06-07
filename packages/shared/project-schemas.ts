@@ -43,6 +43,18 @@ export const quoteInputSchema = z.object({
 });
 export type QuoteInput = z.infer<typeof quoteInputSchema>;
 
+/** Orçamento avulso do marceneiro (§4.3d) — cliente fora da plataforma.
+ *  V = custo + margem (sem taxas da plataforma); servidor recalcula. */
+export const externalQuoteInputSchema = z.object({
+  clientName: z.string().trim().min(1, 'Informe o nome do cliente').max(120),
+  title: z.string().trim().min(1, 'Dê um título ao orçamento').max(120),
+  lineItems: z.array(quoteLineItemSchema).min(1, 'Adicione ao menos um item').max(200),
+  marginPct: z.number().min(0).max(1000),
+  note: z.string().trim().max(600).optional(),
+  status: z.enum(['SENT', 'ACCEPTED', 'REJECTED']).optional(),
+});
+export type ExternalQuoteInput = z.infer<typeof externalQuoteInputSchema>;
+
 /** Módulo (móvel): a UI envia cm; o schema entrega *Mm prontos para o banco. */
 export const moduleInputSchema = z.object({
   ambiente: z.string().trim().max(60).optional(), // cômodo (ex.: "Cozinha")

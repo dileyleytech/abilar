@@ -128,6 +128,65 @@ export async function listProjectPhotos(projectId: string): Promise<string[]> {
   return ((data as { path: string; kind: string }[]) ?? []).filter((p) => p.kind !== 'ARCHITECT_PDF').map((p) => p.path);
 }
 
+export type ExtLineItem = { materialId?: string | null; name: string; category: string; unit: string; qty: number; unitCostCents: number };
+export type ExternalQuoteRow = {
+  id: string;
+  client_name: string;
+  title: string;
+  line_items: ExtLineItem[];
+  margin_pct: number;
+  subtotal_cost_cents: number;
+  value_cents: number;
+  status: string;
+  note: string | null;
+  created_at: string;
+};
+
+export async function listExternalQuotes(): Promise<ExternalQuoteRow[]> {
+  const { data, error } = await supabase
+    .from('external_quotes')
+    .select('id, client_name, title, line_items, margin_pct, subtotal_cost_cents, value_cents, status, note, created_at')
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data as ExternalQuoteRow[]) ?? [];
+}
+
+function computeExt(items: ExtLineItem[], marginPct: number) {
+  const subtotal = items.reduce((a, i) => a + Math.round(i.qty * i.unitCostCents), 0);
+  return { subtotal, value: Math.round(subtotal * (1 + Math.max(0, marginPct) / 100)) };
+}
+
+export async function saveExternalQuote(
+  carpenterId: string,
+  input: { clientName: string; title: string; lineItems: ExtLineItem[]; marginPct: number; note?: string },
+  id?: string,
+): Promise<void> {
+  const { subtotal, value } = computeExt(input.lineItems, input.marginPct);
+  const values = {
+    client_name: input.clientName,
+    title: input.title,
+    line_items: input.lineItems,
+    margin_pct: Math.round(input.marginPct),
+    subtotal_cost_cents: subtotal,
+    value_cents: value,
+    note: input.note ?? null,
+  };
+  const { error } = id
+    ? await supabase.from('external_quotes').update({ ...values, updated_at: new Date().toISOString() }).eq('id', id)
+    : await supabase.from('external_quotes').insert({ carpenter_id: carpenterId, ...values });
+  if (error) throw new Error(error.message);
+}
+
+export async function setExternalQuoteStatus(id: string, status: string): Promise<void> {
+  const { error } = await supabase.from('external_quotes').update({ status }).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteExternalQuote(id: string): Promise<void> {
+  const { error } = await supabase.from('external_quotes').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 export type MaterialRow = {
   id: string;
   name: string;

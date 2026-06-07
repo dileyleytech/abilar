@@ -139,6 +139,14 @@ export const api = {
   // Perfil profissional do marceneiro (onboarding)
   getCarpenterProfile: () => getJson<{ profile: CarpenterProfileRow | null }>('/api/mobile/carpenter/profile'),
   saveCarpenterProfile: (input: CarpenterOnboarding) => postJson<{ ok: true }>('/api/mobile/carpenter/profile', input),
+  getReport: () => getJson<CarpenterReport>('/api/mobile/report'),
+};
+
+type ReportPart = { sent: number; accepted: number; valueCents: number; costCents: number; profitCents: number };
+export type CarpenterReport = {
+  platform: ReportPart;
+  external: ReportPart;
+  total: { valueCents: number; costCents: number; profitCents: number };
 };
 
 export type CarpenterOnboarding = {
