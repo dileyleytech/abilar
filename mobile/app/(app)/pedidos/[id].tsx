@@ -1,17 +1,20 @@
 import { useCallback, useState } from 'react';
-import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image } from 'expo-image';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 import {
   getProject,
   listEvidences,
   listMilestones,
+  listProjectPhotos,
   type MilestoneRow,
   type ProjectRow,
 } from '@/lib/data';
 import { api, type QuoteView } from '@/lib/api';
 import { QuoteForm } from '@/components/QuoteForm';
 import { ModulesSection } from '@/components/ModulesSection';
+import { Lightbox } from '@/components/Lightbox';
 import { milestoneStatusLabel, PROJECT_STATUS_LABEL } from '@/lib/types';
 import { formatCents, formatDateTime } from '@/lib/format';
 import { Badge, Button, Card, Loading } from '@/components/ui';
@@ -35,6 +38,8 @@ export default function PedidoDetail() {
   const [milestones, setMilestones] = useState<MilestoneRow[] | null>(null);
   const [evidences, setEvidences] = useState<Record<string, EvidenceView[]>>({});
   const [quotes, setQuotes] = useState<QuoteView[]>([]);
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [concluding, setConcluding] = useState<MilestoneRow | null>(null);
   const [quoteForm, setQuoteForm] = useState(false);
@@ -74,6 +79,13 @@ export default function PedidoDetail() {
     setProject(p);
     setMilestones(ms);
     await loadEvidences(ms);
+    // Fotos do pedido (cômodo + móveis), assinadas — qualquer participante abre.
+    try {
+      const paths = await listProjectPhotos(id);
+      setPhotos(paths.length ? (await api.signedUrls(paths, { projectId: id })).urls : []);
+    } catch {
+      setPhotos([]);
+    }
     // Orçamentos/contrato só importam antes da obra começar.
     if (ms.length === 0) {
       try {
@@ -175,6 +187,19 @@ export default function PedidoDetail() {
           </View>
         </Card>
 
+        {photos.length > 0 && (
+          <View style={{ gap: space.sm }}>
+            <Text style={styles.section}>Fotos do pedido</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }}>
+              {photos.map((u, i) => (
+                <Pressable key={i} onPress={() => setLightbox(u)}>
+                  <Image source={{ uri: u }} style={styles.galleryImg} contentFit="cover" transition={150} />
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         {milestones.length === 0 && id && (
           <ModulesSection projectId={id} status={project.status} isOwner={isClient} onPublished={() => void load()} />
         )}
@@ -273,7 +298,9 @@ export default function PedidoDetail() {
                       {ev.urls.length > 0 && (
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }}>
                           {ev.urls.map((u, i) => (
-                            <Image key={i} source={{ uri: u }} style={styles.evImg} />
+                            <Pressable key={i} onPress={() => setLightbox(u)}>
+                              <Image source={{ uri: u }} style={styles.evImg} contentFit="cover" transition={150} />
+                            </Pressable>
                           ))}
                         </ScrollView>
                       )}
@@ -330,6 +357,8 @@ export default function PedidoDetail() {
           }}
         />
       )}
+
+      <Lightbox url={lightbox} onClose={() => setLightbox(null)} />
     </>
   );
 }
@@ -353,7 +382,8 @@ const styles = StyleSheet.create({
   note: { color: color.text.muted, fontStyle: 'italic' },
   waiting: { color: color.text.muted },
   evidence: { backgroundColor: color.bg.base, borderRadius: radius.md, padding: space.sm, gap: 6 },
-  evImg: { width: 110, height: 110, borderRadius: radius.sm },
+  evImg: { width: 110, height: 110, borderRadius: radius.sm, backgroundColor: color.bg.deep },
+  galleryImg: { width: 130, height: 130, borderRadius: radius.md, backgroundColor: color.bg.deep },
   evComment: { color: color.text.primary },
   evDate: { color: color.text.subtle, fontSize: 12 },
   legal: { color: color.text.subtle, textAlign: 'center', textDecorationLine: 'underline', marginTop: space.lg },

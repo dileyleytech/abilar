@@ -109,6 +109,16 @@ export async function listModulePhotos(projectId: string): Promise<{ module_id: 
   return (data as { module_id: string; path: string }[]) ?? [];
 }
 
+// Todas as fotos atuais do pedido (cômodo + móveis) — paths. Exclui PDF do arquiteto.
+export async function listProjectPhotos(projectId: string): Promise<string[]> {
+  const { data } = await supabase
+    .from('project_photos')
+    .select('path, kind')
+    .eq('project_id', projectId)
+    .eq('is_current', true);
+  return ((data as { path: string; kind: string }[]) ?? []).filter((p) => p.kind !== 'ARCHITECT_PDF').map((p) => p.path);
+}
+
 export type MaterialRow = {
   id: string;
   name: string;

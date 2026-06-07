@@ -218,6 +218,13 @@
       "when": 1780694414500,
       "tag": "0030_carpenter_read_engaged",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1780694415000,
+      "tag": "0031_external_quotes",
+      "breakpoints": true
     }
   ]
 }

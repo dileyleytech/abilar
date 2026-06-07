@@ -385,6 +385,32 @@ export const carpenterMaterials = pgTable(
 export type CarpenterMaterial = typeof carpenterMaterials.$inferSelect;
 export type NewCarpenterMaterial = typeof carpenterMaterials.$inferInsert;
 
+/** Orçamentos avulsos do marceneiro (§4.3d) — clientes fora da plataforma.
+ *  V = custo + margem (sem taxas da plataforma). Centavos. RLS: só o dono. */
+export const externalQuotes = pgTable(
+  'external_quotes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    carpenterId: uuid('carpenter_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    clientName: text('client_name').notNull(),
+    title: text('title').notNull(),
+    lineItems: jsonb('line_items').notNull().default(sql`'[]'::jsonb`),
+    marginPct: integer('margin_pct').notNull().default(0),
+    subtotalCostCents: bigint('subtotal_cost_cents', { mode: 'number' }).notNull().default(0),
+    valueCents: bigint('value_cents', { mode: 'number' }).notNull().default(0),
+    status: quoteStatusEnum('status').notNull().default('SENT'),
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('external_quotes_carpenter_idx').on(t.carpenterId, t.createdAt)],
+);
+
+export type ExternalQuote = typeof externalQuotes.$inferSelect;
+export type NewExternalQuote = typeof externalQuotes.$inferInsert;
+
 /** Contrato padrão por projeto aprovado (§6.5). Aceite eletrônico das 2 partes
  *  (timestamp + hash de IP). `terms` é um snapshot do acordo no momento do aceite. */
 export const contracts = pgTable(

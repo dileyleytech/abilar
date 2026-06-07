@@ -119,7 +119,8 @@
       "Bash(echo \"web BUILD=$?\")",
       "Bash(node -e \"console.log\\('doc-picker', require\\('./node_modules/expo-document-picker/package.json'\\).version\\)\")",
       "Bash(node -e \"console.log\\('print', require\\('./node_modules/expo-print/package.json'\\).version, '| sharing', require\\('./node_modules/expo-sharing/package.json'\\).version\\)\")",
-      "Bash(awk '/^## 9|^### 9|Plano de Execução/{f=1} f{print} /^## 10|^## 1[0-9]/{if\\(f && !/^## 9/\\) exit}' docs/ESPECIFICACAO-ABILAR.md)"
+      "Bash(awk '/^## 9|^### 9|Plano de Execução/{f=1} f{print} /^## 10|^## 1[0-9]/{if\\(f && !/^## 9/\\) exit}' docs/ESPECIFICACAO-ABILAR.md)",
+      "Bash(node -e \"console.log\\('expo-image', require\\('./node_modules/expo-image/package.json'\\).version\\)\")"
     ],
     "additionalDirectories": [
       "/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/brand/svg"

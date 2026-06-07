@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image } from 'expo-image';
 import { api, type Photo } from '@/lib/api';
 import { listModules, listModulePhotos, type ModuleRow } from '@/lib/data';
 import { chooseAndPick } from '@/lib/pickImages';
 import { CATEGORIES, CATEGORY_LABEL } from '@/lib/types';
 import { formatCm } from '@/lib/format';
 import { Button, Card } from '@/components/ui';
+import { Lightbox } from '@/components/Lightbox';
 import { color, radius, space } from '@/theme';
 
 const WORK_TYPES = [
@@ -40,6 +42,7 @@ export function ModulesSection({
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   const editable = isOwner && ['DRAFT', 'OPEN_FOR_QUOTES', 'IN_NEGOTIATION'].includes(status);
   const isDraft = isOwner && status === 'DRAFT';
@@ -180,7 +183,9 @@ export function ModulesSection({
         <Card key={m.id}>
           <View style={styles.mRow}>
             {photos[m.id] ? (
-              <Image source={{ uri: photos[m.id] }} style={styles.mThumb} />
+              <Pressable onPress={() => setLightbox(photos[m.id])}>
+                <Image source={{ uri: photos[m.id] }} style={styles.mThumb} contentFit="cover" transition={150} />
+              </Pressable>
             ) : (
               <View style={[styles.mThumb, styles.mThumbEmpty]}>
                 <Text style={{ fontSize: 24 }}>🪵</Text>
@@ -275,6 +280,7 @@ export function ModulesSection({
         <Button title="Publicar pedido →" variant="secondary" onPress={publish} loading={publishing} />
       )}
       {isDraft && <Text style={styles.muted}>Publique para os marceneiros da região enviarem orçamento.</Text>}
+      <Lightbox url={lightbox} onClose={() => setLightbox(null)} />
     </View>
   );
 }
