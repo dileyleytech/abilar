@@ -5,8 +5,61 @@ import { projectMilestones, projects, eq, and, sql } from '@abilar/db';
 import { getDb } from '@/lib/db';
 import { getSessionProfile } from '@/lib/auth/session';
 import { notify } from '@/lib/notifications/notify';
+import { createSupabaseAdminClient } from '@/lib/supabase/admin';
+import { PROJECT_PHOTOS_BUCKET } from '@/lib/storage';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+
+/** Marceneiro conclui a etapa (IN_PROGRESS → DONE) com foto de evidência opcional
+ *  (§6.4). A foto sobe via service-role; a autorização é checada aqui. */
+export async function concludeMilestone(formData: FormData): Promise<ActionResult> {
+  const profile = await getSessionProfile();
+  if (!profile) return { ok: false, error: 'Faça login.' };
+  const milestoneId = String(formData.get('milestoneId') ?? '');
+  const file = formData.get('evidence');
+
+  const db = getDb();
+  const [m] = await db
+    .select({
+      carpenterId: projectMilestones.carpenterId,
+      clientId: projectMilestones.clientId,
+      projectId: projectMilestones.projectId,
+      label: projectMilestones.label,
+      status: projectMilestones.status,
+    })
+    .from(projectMilestones)
+    .where(eq(projectMilestones.id, milestoneId))
+    .limit(1);
+  if (!m || m.carpenterId !== profile.id) return { ok: false, error: 'Etapa não encontrada.' };
+  if (m.status !== 'IN_PROGRESS') return { ok: false, error: 'Esta etapa não pode ser concluída agora.' };
+
+  let evidencePath: string | null = null;
+  if (file instanceof File && file.size > 0) {
+    if (file.size > 10 * 1024 * 1024) return { ok: false, error: 'Foto muito grande (máx 10 MB).' };
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+    const path = `evidence/${milestoneId}/${m.projectId}-${milestoneId}.${ext}`;
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const supabase = createSupabaseAdminClient();
+    const { error } = await supabase.storage
+      .from(PROJECT_PHOTOS_BUCKET)
+      .upload(path, bytes, { contentType: file.type || 'image/jpeg', upsert: true });
+    if (error) return { ok: false, error: 'Não foi possível enviar a foto.' };
+    evidencePath = path;
+  }
+
+  await db
+    .update(projectMilestones)
+    .set({ status: 'DONE', doneAt: sql`now()`, ...(evidencePath ? { evidenceUrl: evidencePath } : {}) })
+    .where(eq(projectMilestones.id, milestoneId));
+  await notify(m.clientId, {
+    title: 'Etapa concluída — aprove ✅',
+    body: `${m.label} foi concluída${evidencePath ? ' (com foto)' : ''}. Confira e aprove para liberar.`,
+    link: `/pedidos/${m.projectId}`,
+  });
+  revalidatePath(`/marceneiro/pedidos/${m.projectId}`);
+  revalidatePath(`/pedidos/${m.projectId}`);
+  return { ok: true };
+}
 
 /** Marceneiro avança a etapa: PENDING → IN_PROGRESS → DONE (aguardando o cliente). */
 export async function advanceMilestone(milestoneId: string): Promise<ActionResult> {

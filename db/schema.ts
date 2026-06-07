@@ -445,6 +445,7 @@ export const projectMilestones = pgTable(
     pct: integer('pct').notNull(),
     amountCents: bigint('amount_cents', { mode: 'number' }).notNull(),
     status: milestoneStatusEnum('status').notNull().default('PENDING'),
+    evidenceUrl: text('evidence_url'), // foto de evidência (path no Storage) — §6.4
     doneAt: timestamp('done_at', { withTimezone: true }),
     approvedAt: timestamp('approved_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

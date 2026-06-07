@@ -2,6 +2,7 @@ import 'server-only';
 import { projectMilestones, asc, eq } from '@abilar/db';
 import type { MilestoneStatus } from '@abilar/shared';
 import { getDb } from '@/lib/db';
+import { signedProjectPhotoUrl } from '@/lib/storage';
 
 export type ObraMilestone = {
   id: string;
@@ -12,6 +13,7 @@ export type ObraMilestone = {
   pct: number;
   amountCents: number;
   status: MilestoneStatus;
+  evidenceUrl: string | null; // URL assinada da foto (ou null)
   doneAt: Date | null;
   approvedAt: Date | null;
 };
@@ -36,11 +38,8 @@ export async function getProjectMilestones(projectId: string, userId: string): P
   if (first.clientId !== userId && first.carpenterId !== userId) return null;
 
   const approvedPct = rows.filter((r) => r.status === 'APPROVED').reduce((a, r) => a + r.pct, 0);
-  return {
-    meIsClient: first.clientId === userId,
-    meIsCarpenter: first.carpenterId === userId,
-    approvedPct,
-    milestones: rows.map((r) => ({
+  const milestones = await Promise.all(
+    rows.map(async (r) => ({
       id: r.id,
       ord: r.ord,
       key: r.key,
@@ -49,8 +48,15 @@ export async function getProjectMilestones(projectId: string, userId: string): P
       pct: r.pct,
       amountCents: r.amountCents,
       status: r.status,
+      evidenceUrl: r.evidenceUrl ? await signedProjectPhotoUrl(r.evidenceUrl) : null,
       doneAt: r.doneAt,
       approvedAt: r.approvedAt,
     })),
+  );
+  return {
+    meIsClient: first.clientId === userId,
+    meIsCarpenter: first.carpenterId === userId,
+    approvedPct,
+    milestones,
   };
 }

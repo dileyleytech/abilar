@@ -75,7 +75,8 @@
       "Bash(echo \"iniciado, pid $!\")",
       "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} em %{time_total}s\\\\n\" http://localhost:3001/)",
       "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} em %{time_total}s\\\\n\" http://localhost:3001/entrar)",
-      "Bash(perl -i -pe \"s/normalize\\\\\\('NFD'\\\\\\)\\\\.replace\\\\\\(\\\\/\\\\[.*?\\\\]\\\\/g, ''\\\\\\)/normalize\\('NFD'\\).replace\\(\\\\/[\\\\\\\\\\\\\\\\u0300-\\\\\\\\\\\\\\\\u036f]\\\\/g, ''\\)/\" packages/shared/moderation.ts)"
+      "Bash(perl -i -pe \"s/normalize\\\\\\('NFD'\\\\\\)\\\\.replace\\\\\\(\\\\/\\\\[.*?\\\\]\\\\/g, ''\\\\\\)/normalize\\('NFD'\\).replace\\(\\\\/[\\\\\\\\\\\\\\\\u0300-\\\\\\\\\\\\\\\\u036f]\\\\/g, ''\\)/\" packages/shared/moderation.ts)",
+      "Bash(ipconfig getifaddr *)"
     ],
     "additionalDirectories": [
       "/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/brand/svg"
