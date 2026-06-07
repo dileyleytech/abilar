@@ -455,6 +455,26 @@ export const projectMilestones = pgTable(
 export type ProjectMilestone = typeof projectMilestones.$inferSelect;
 export type NewProjectMilestone = typeof projectMilestones.$inferInsert;
 
+/** Notificações in-app (mudança de status de pedido/orçamento/obra). Realtime + RLS. */
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    body: text('body'),
+    link: text('link'),
+    readAt: timestamp('read_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('notifications_user_idx').on(t.userId, t.createdAt)],
+);
+
+export type Notification = typeof notifications.$inferSelect;
+export type NewNotification = typeof notifications.$inferInsert;
+
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;
 export type CarpenterProfile = typeof carpenterProfiles.$inferSelect;

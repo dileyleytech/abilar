@@ -6,22 +6,27 @@ import { usePathname } from 'next/navigation';
 import type { Role } from '@abilar/shared';
 import { createAuthedChannel } from '@/lib/supabase/client';
 import { getMyUnreadCount } from '@/lib/chat/actions';
+import { getMyNotificationCount } from '@/lib/notifications/actions';
 
-type Item = { href: string; label: string; icon: string; badge?: boolean };
+type Item = { href: string; label: string; icon: string; badge?: 'chat' | 'notif' };
+
+const NOTIF: Item = { href: '/notificacoes', label: 'Avisos', icon: '🔔', badge: 'notif' };
 
 const ITEMS: Record<'CLIENT' | 'CARPENTER' | 'ARCHITECT' | 'ADMIN', Item[]> = {
   CLIENT: [
     { href: '/pedidos', label: 'Meus pedidos', icon: '📋' },
     { href: '/pedidos/novo', label: 'Novo pedido', icon: '➕' },
-    { href: '/conversas', label: 'Conversas', icon: '💬', badge: true },
+    { href: '/conversas', label: 'Conversas', icon: '💬', badge: 'chat' },
+    NOTIF,
   ],
   CARPENTER: [
     { href: '/marceneiro', label: 'Início', icon: '🏠' },
     { href: '/marceneiro/catalogo', label: 'Catálogo', icon: '📦' },
-    { href: '/conversas', label: 'Conversas', icon: '💬', badge: true },
+    { href: '/conversas', label: 'Conversas', icon: '💬', badge: 'chat' },
+    NOTIF,
   ],
-  ARCHITECT: [{ href: '/conversas', label: 'Conversas', icon: '💬', badge: true }],
-  ADMIN: [{ href: '/admin/precos', label: 'Taxas', icon: '⚙️' }],
+  ARCHITECT: [{ href: '/conversas', label: 'Conversas', icon: '💬', badge: 'chat' }, NOTIF],
+  ADMIN: [{ href: '/admin/precos', label: 'Taxas', icon: '⚙️' }, NOTIF],
 };
 
 export function AppNav({
@@ -29,14 +34,17 @@ export function AppNav({
   firstName,
   userId,
   initialUnread,
+  initialNotif,
 }: {
   role: Role | null;
   firstName: string | null;
   userId: string | null;
   initialUnread: number;
+  initialNotif: number;
 }) {
   const pathname = usePathname();
   const [unread, setUnread] = useState(initialUnread);
+  const [notif, setNotif] = useState(initialNotif);
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -48,27 +56,32 @@ export function AppNav({
       return !v;
     });
 
-  // Não lidas em tempo real (badge de Conversas).
+  // Badges (conversas + avisos): re-sincroniza com o servidor a cada navegação.
   useEffect(() => {
     if (!userId) return;
     let alive = true;
     getMyUnreadCount().then((n) => alive && setUnread(n));
+    getMyNotificationCount().then((n) => alive && setNotif(n));
     return () => {
       alive = false;
     };
   }, [userId, pathname]);
 
+  // Tempo real: novas mensagens (conversas) e notificações (avisos).
   useEffect(() => {
     if (!userId) return;
     let cleanup = () => {};
     let cancelled = false;
-    createAuthedChannel(`nav-unread:${userId}`).then((res) => {
+    createAuthedChannel(`nav:${userId}`).then((res) => {
       if (cancelled || !res) return;
       const { supabase, channel } = res;
       channel
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
           const m = payload.new as { sender_id: string };
           if (m.sender_id !== userId) setUnread((c) => c + 1);
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, () => {
+          setNotif((c) => c + 1);
         })
         .subscribe();
       cleanup = () => supabase.removeChannel(channel);
@@ -87,7 +100,10 @@ export function AppNav({
     .sort((a, b) => b.length - a.length)[0];
   const isActive = (href: string) => href === activeHref;
 
-  const badgeFor = (it: Item) => (it.badge && unread > 0 ? (unread > 9 ? '9+' : String(unread)) : null);
+  const badgeFor = (it: Item) => {
+    const n = it.badge === 'chat' ? unread : it.badge === 'notif' ? notif : 0;
+    return n > 0 ? (n > 9 ? '9+' : String(n)) : null;
+  };
 
   if (!role) {
     // Deslogado: cabeçalho mínimo.

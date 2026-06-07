@@ -1,0 +1,60 @@
+'use client';
+
+import { useEffect } from 'react';
+import Link from 'next/link';
+import { markAllNotificationsRead } from '@/lib/notifications/actions';
+import type { NotificationItem } from '@/lib/notifications/queries';
+
+const when = (d: Date) => {
+  const date = new Date(d);
+  const today = new Date();
+  const sameDay = date.toDateString() === today.toDateString();
+  return sameDay
+    ? date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    : date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+};
+
+/** Lista de avisos. Ao abrir, marca tudo como lido (zera o sino). */
+export function NotificationsList({ items }: { items: NotificationItem[] }) {
+  useEffect(() => {
+    void markAllNotificationsRead();
+  }, []);
+
+  if (items.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-subtle bg-surface p-10 text-center text-muted">
+        <span className="text-3xl" aria-hidden>🔔</span>
+        <p className="mt-2 font-medium text-charcoal">Nenhum aviso ainda</p>
+        <p>Mudanças nos seus pedidos, orçamentos e obras aparecem aqui.</p>
+      </div>
+    );
+  }
+
+  return (
+    <ul className="flex flex-col gap-2">
+      {items.map((n) => {
+        const inner = (
+          <>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-charcoal">{n.title}</p>
+              {n.body && <p className="text-sm text-muted">{n.body}</p>}
+            </div>
+            <span className="shrink-0 text-xs text-subtle">{when(n.createdAt)}</span>
+          </>
+        );
+        const cls = `flex items-start gap-3 rounded-2xl border p-4 ${
+          n.readAt ? 'border-subtle bg-surface' : 'border-brand-primary/30 bg-brand-primary/5'
+        }`;
+        return (
+          <li key={n.id}>
+            {n.link ? (
+              <Link href={n.link} className={`${cls} transition hover:border-brand-primary/40`}>{inner}</Link>
+            ) : (
+              <div className={cls}>{inner}</div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
