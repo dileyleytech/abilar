@@ -108,7 +108,12 @@
       "Bash(node -e ' *)",
       "Bash(node -e \"for\\(const p of ['expo','react','react-native','expo-router']\\){try{console.log\\(p, require\\('./node_modules/'+p+'/package.json'\\).version\\)}catch\\(e\\){console.log\\(p,'?'\\)}}\")",
       "Bash(grep -iA8 \"policy.*projects.*select\\\\|projects_select\\\\|projects_owner\")",
-      "Bash(node -e \"console.log\\('image-picker', require\\('./node_modules/expo-image-picker/package.json'\\).version\\); console.log\\('secure-store', require\\('./node_modules/expo-secure-store/package.json'\\).version\\)\")"
+      "Bash(node -e \"console.log\\('image-picker', require\\('./node_modules/expo-image-picker/package.json'\\).version\\); console.log\\('secure-store', require\\('./node_modules/expo-secure-store/package.json'\\).version\\)\")",
+      "Bash(sed -n '/export const createProjectSchema/,/}\\);/p' packages/shared/domain.ts)",
+      "Bash(sed -n '/export const moduleInputSchema/,/}\\);/p' packages/shared/domain.ts)",
+      "Bash(sed -n '1,40p' app/lib/carpenter/profile.ts)",
+      "Bash(sed -n \"/getProjectForCarpenter/,/^}/p\" app/lib/carpenter/feed.ts)",
+      "Bash(curl -s -o /dev/null -w \"dev http=%{http_code}\\\\n\" http://localhost:3001)"
     ],
     "additionalDirectories": [
       "/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/brand/svg"

@@ -24,9 +24,26 @@ export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
 export const MILESTONE_STATUS_LABEL: Record<MilestoneStatus, string> = {
   PENDING: 'Pendente',
   IN_PROGRESS: 'Em andamento',
-  DONE: 'Concluída — aguardando você',
+  DONE: 'Concluída — aguardando aprovação',
   APPROVED: 'Aprovada ✓',
 };
+
+/** Rótulo do status conforme o papel (DONE muda de "você" p/ "o cliente"). */
+export function milestoneStatusLabel(status: MilestoneStatus, isClient: boolean): string {
+  if (status === 'DONE') return isClient ? 'Concluída — aguarda você aprovar' : 'Concluída — aguardando o cliente';
+  return MILESTONE_STATUS_LABEL[status];
+}
+
+export const CATEGORIES = [
+  'GUARDA_ROUPA',
+  'COZINHA',
+  'PAINEL_TV',
+  'ESTANTE',
+  'HOME_OFFICE',
+  'BANHEIRO',
+  'LAVANDERIA',
+  'OUTRO',
+] as const;
 
 export const CATEGORY_LABEL: Record<string, string> = {
   GUARDA_ROUPA: 'Guarda-roupa',

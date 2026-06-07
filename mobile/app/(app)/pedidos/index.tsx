@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 import {
   listClientProjects,
@@ -61,11 +61,19 @@ export default function PedidosScreen() {
     setRefreshing(false);
   };
 
+  const headerBtn = () =>
+    !isCarpenter ? (
+      <Pressable onPress={() => router.push('/(app)/pedidos/novo')} hitSlop={10}>
+        <Text style={styles.newBtn}>+ Novo</Text>
+      </Pressable>
+    ) : null;
+
   if (sections === null) return <Loading label="Carregando pedidos…" />;
 
   if (sections.length === 0) {
     return (
       <View style={styles.flex}>
+        <Stack.Screen options={{ headerRight: headerBtn }} />
         <EmptyState
           emoji={isCarpenter ? '🔍' : '🪵'}
           title={isCarpenter ? 'Nada por aqui ainda' : 'Você ainda não tem pedidos'}
@@ -76,6 +84,8 @@ export default function PedidosScreen() {
   }
 
   return (
+    <>
+    <Stack.Screen options={{ headerRight: headerBtn }} />
     <SectionList
       sections={sections}
       keyExtractor={(p) => p.id}
@@ -101,6 +111,7 @@ export default function PedidosScreen() {
         );
       }}
     />
+    </>
   );
 }
 
@@ -119,4 +130,5 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
   cardTitle: { flex: 1, fontSize: 16, fontWeight: '600', color: color.text.primary },
   cardMeta: { fontSize: 13, color: color.text.muted },
+  newBtn: { color: color.brand.primary, fontWeight: '700', fontSize: 16 },
 });

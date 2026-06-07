@@ -63,4 +63,39 @@ export const api = {
     postJson<{ ok: true }>('/api/mobile/reports', { conversationId, reason, detail }),
   deleteAccount: () => postJson<{ ok: true }>('/api/mobile/account/delete', {}),
   markNotificationsRead: () => postJson<{ ok: true }>('/api/mobile/notifications/read', {}),
+
+  // --- Sprint: criar pedido · orçamento · contrato ---
+  createProject: (input: { title: string; city?: string; category: string; widthCm: number; heightCm: number; depthCm: number }) =>
+    postJson<{ ok: true; projectId: string }>('/api/mobile/projects', input),
+  quotesForProject: (projectId: string) =>
+    postJson<{ projectStatus: string; isClient: boolean; quotes: QuoteView[] }>('/api/mobile/quotes/for-project', { projectId }),
+  preapproveQuote: (quoteId: string) => postJson<{ ok: true; conversationId: string }>('/api/mobile/quotes/preapprove', { quoteId }),
+  acceptQuote: (quoteId: string) => postJson<{ ok: true; contractId: string }>('/api/mobile/quotes/accept', { quoteId }),
+  previewQuote: (input: { baseValueCents: number; maxInstallments: number; dilutionSharePct: number }) =>
+    postJson<{ preview: QuotePreview | null }>('/api/mobile/quotes/preview', input),
+  sendQuote: (input: { projectId: string; baseValueCents: number; maxInstallments: number; dilutionSharePct: number; note?: string }) =>
+    postJson<{ ok: true }>('/api/mobile/quotes/send', input),
+  signContract: (contractId: string) => postJson<{ ok: true }>('/api/mobile/contracts/sign', { contractId }),
+};
+
+export type QuoteView = {
+  quoteId: string;
+  carpenterName: string;
+  status: string;
+  note: string | null;
+  avistaCents: number;
+  parceladoCents: number | null;
+  installmentValueCents: number | null;
+  clientInstallments: number;
+  contractId: string | null;
+  contractStatus: string | null;
+  clientSigned: boolean;
+  carpenterSigned: boolean;
+};
+
+export type QuotePreview = {
+  avista: { youGetCents: number; clientPaysCents: number };
+  parcelado: { youGetCents: number; clientPaysCents: number; installmentCents: number; n: number } | null;
+  valid: boolean;
+  warning: string | null;
 };

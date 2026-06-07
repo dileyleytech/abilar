@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Alert, Image, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 import {
   getProject,
@@ -9,8 +9,9 @@ import {
   type MilestoneRow,
   type ProjectRow,
 } from '@/lib/data';
-import { api } from '@/lib/api';
-import { MILESTONE_STATUS_LABEL, PROJECT_STATUS_LABEL } from '@/lib/types';
+import { api, type QuoteView } from '@/lib/api';
+import { QuoteForm } from '@/components/QuoteForm';
+import { milestoneStatusLabel, PROJECT_STATUS_LABEL } from '@/lib/types';
 import { formatCents, formatDateTime } from '@/lib/format';
 import { Badge, Button, Card, Loading } from '@/components/ui';
 import { EvidenceForm } from '@/components/EvidenceForm';
@@ -28,11 +29,14 @@ function badgeTone(status: MilestoneRow['status']) {
 export default function PedidoDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { profile } = useAuth();
+  const router = useRouter();
   const [project, setProject] = useState<ProjectRow | null>(null);
   const [milestones, setMilestones] = useState<MilestoneRow[] | null>(null);
   const [evidences, setEvidences] = useState<Record<string, EvidenceView[]>>({});
+  const [quotes, setQuotes] = useState<QuoteView[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [concluding, setConcluding] = useState<MilestoneRow | null>(null);
+  const [quoteForm, setQuoteForm] = useState(false);
 
   const isClient = profile?.role === 'CLIENT';
   const isCarpenter = profile?.role === 'CARPENTER';
@@ -66,6 +70,17 @@ export default function PedidoDetail() {
     setProject(p);
     setMilestones(ms);
     await loadEvidences(ms);
+    // Orçamentos/contrato só importam antes da obra começar.
+    if (ms.length === 0) {
+      try {
+        const deal = await api.quotesForProject(id);
+        setQuotes(deal.quotes);
+      } catch {
+        setQuotes([]);
+      }
+    } else {
+      setQuotes([]);
+    }
   }, [id, loadEvidences]);
 
   useFocusEffect(
@@ -86,6 +101,24 @@ export default function PedidoDetail() {
     }
   };
 
+  const doPreapprove = async (q: QuoteView) => {
+    setBusyId(q.quoteId);
+    try {
+      const r = await api.preapproveQuote(q.quoteId);
+      router.push(`/(app)/conversas/${r.conversationId}`);
+    } catch (e) {
+      Alert.alert('Ops', e instanceof Error ? e.message : 'Falha ao abrir a conversa.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const doAccept = (q: QuoteView) =>
+    Alert.alert('Aceitar orçamento', `Aceitar a proposta de ${q.carpenterName}? Isso gera o contrato para assinatura.`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Aceitar', onPress: () => act(() => api.acceptQuote(q.quoteId), q.quoteId) },
+    ]);
+
   if (!project || milestones === null) return <Loading label="Carregando pedido…" />;
 
   const approvedPct = milestones.filter((m) => m.status === 'APPROVED').reduce((a, m) => a + m.pct, 0);
@@ -101,6 +134,66 @@ export default function PedidoDetail() {
             {project.city ? <Text style={styles.meta}>{project.city}</Text> : null}
           </View>
         </Card>
+
+        {milestones.length === 0 && (
+          <View style={{ gap: space.md }}>
+            <Text style={styles.section}>Orçamentos</Text>
+
+            {isCarpenter && quotes.length === 0 && (
+              project.status === 'OPEN_FOR_QUOTES' ? (
+                <Button title="Enviar orçamento" onPress={() => setQuoteForm(true)} />
+              ) : (
+                <Card>
+                  <Text style={styles.meta}>Este pedido não está aberto para orçamento.</Text>
+                </Card>
+              )
+            )}
+            {!isCarpenter && quotes.length === 0 && (
+              <Card>
+                <Text style={styles.meta}>Aguardando orçamentos dos marceneiros…</Text>
+              </Card>
+            )}
+
+            {quotes.map((q) => {
+              const busy = busyId === q.quoteId;
+              const signed = q.contractStatus === 'SIGNED';
+              const awaitingCarpenter = !!q.contractId && q.clientSigned && !q.carpenterSigned;
+              return (
+                <Card key={q.quoteId} style={{ gap: 6 }}>
+                  <View style={styles.cardTop}>
+                    <Text style={styles.mLabel}>{q.carpenterName}</Text>
+                    {signed && <Badge label="Contratado ✓" tone="success" />}
+                  </View>
+                  <Text style={styles.amount}>À vista: {formatCents(q.avistaCents)}</Text>
+                  {q.parceladoCents != null && q.installmentValueCents != null && (
+                    <Text style={styles.meta}>
+                      ou {q.clientInstallments}x de {formatCents(q.installmentValueCents)}
+                    </Text>
+                  )}
+                  {q.note ? <Text style={styles.note}>{q.note}</Text> : null}
+
+                  {signed ? null : awaitingCarpenter ? (
+                    isClient ? (
+                      <Text style={styles.waiting}>✓ Você aceitou — aguardando o marceneiro assinar o contrato.</Text>
+                    ) : (
+                      <Button title="Assinar contrato →" variant="secondary" onPress={() => act(() => api.signContract(q.contractId!), q.quoteId)} loading={busy} />
+                    )
+                  ) : isClient ? (
+                    <View style={{ gap: space.sm }}>
+                      <Button title="Conversar" variant="outline" onPress={() => doPreapprove(q)} loading={busy} />
+                      <Button title="Aceitar orçamento" onPress={() => doAccept(q)} loading={busy} />
+                    </View>
+                  ) : (
+                    <View style={{ gap: space.sm }}>
+                      <Text style={styles.waiting}>Aguardando o cliente.</Text>
+                      <Button title="Editar orçamento" variant="outline" onPress={() => setQuoteForm(true)} />
+                    </View>
+                  )}
+                </Card>
+              );
+            })}
+          </View>
+        )}
 
         {milestones.length > 0 ? (
           <>
@@ -121,7 +214,7 @@ export default function PedidoDetail() {
                     <Text style={styles.mLabel}>
                       {m.ord + 1}. {m.label}
                     </Text>
-                    <Badge label={MILESTONE_STATUS_LABEL[m.status]} tone={badgeTone(m.status)} />
+                    <Badge label={milestoneStatusLabel(m.status, isClient)} tone={badgeTone(m.status)} />
                   </View>
                   <Text style={styles.meta}>{m.event}</Text>
                   <Text style={styles.amount}>
@@ -178,6 +271,18 @@ export default function PedidoDetail() {
           }}
         />
       )}
+
+      {quoteForm && id && (
+        <QuoteForm
+          visible={quoteForm}
+          projectId={id}
+          onClose={() => setQuoteForm(false)}
+          onDone={() => {
+            setQuoteForm(false);
+            void load();
+          }}
+        />
+      )}
     </>
   );
 }
@@ -195,6 +300,8 @@ const styles = StyleSheet.create({
   fill: { height: 10, borderRadius: radius.pill, backgroundColor: color.brand.secondary },
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
   mLabel: { flex: 1, fontSize: 16, fontWeight: '600', color: color.text.primary },
+  note: { color: color.text.muted, fontStyle: 'italic' },
+  waiting: { color: color.text.muted },
   evidence: { backgroundColor: color.bg.base, borderRadius: radius.md, padding: space.sm, gap: 6 },
   evImg: { width: 110, height: 110, borderRadius: radius.sm },
   evComment: { color: color.text.primary },

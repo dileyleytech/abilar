@@ -12,6 +12,7 @@ export default function PedidosStack() {
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Pedidos' }} />
+      <Stack.Screen name="novo" options={{ title: 'Novo pedido', presentation: 'modal' }} />
       <Stack.Screen name="[id]" options={{ title: 'Pedido' }} />
     </Stack>
   );
