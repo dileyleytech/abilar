@@ -63,6 +63,7 @@ export default function AppLayout() {
         options={{ ...header, title: 'Avisos', tabBarIcon: () => <Icon emoji="🔔" />, tabBarBadge: unread > 0 ? unread : undefined }}
       />
       <Tabs.Screen name="conta" options={{ ...header, title: 'Minha conta', tabBarLabel: 'Conta', tabBarIcon: () => <Icon emoji="👤" /> }} />
+      <Tabs.Screen name="contratos" options={{ href: null }} />
     </Tabs>
   );
 }

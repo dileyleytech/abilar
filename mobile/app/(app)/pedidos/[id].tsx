@@ -218,9 +218,12 @@ export default function PedidoDetail() {
 
                   {signed ? null : awaitingCarpenter ? (
                     isClient ? (
-                      <Text style={styles.waiting}>✓ Você aceitou — aguardando o marceneiro assinar o contrato.</Text>
+                      <View style={{ gap: space.sm }}>
+                        <Text style={styles.waiting}>✓ Você aceitou — aguardando o marceneiro assinar o contrato.</Text>
+                        {q.contractId && <Button title="Ver contrato" variant="outline" onPress={() => router.push(`/(app)/contratos/${q.contractId}`)} />}
+                      </View>
                     ) : (
-                      <Button title="Assinar contrato →" variant="secondary" onPress={() => act(() => api.signContract(q.contractId!), q.quoteId)} loading={busy} />
+                      <Button title="Ver e assinar contrato →" variant="secondary" onPress={() => router.push(`/(app)/contratos/${q.contractId}`)} />
                     )
                   ) : isClient ? (
                     <View style={{ gap: space.sm }}>

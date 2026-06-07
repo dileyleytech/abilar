@@ -61,6 +61,7 @@ export const api = {
     postJson<{ urls: string[] }>('/api/mobile/signed-urls', { paths, ...ctx }),
   report: (conversationId: string, reason: string, detail: string) =>
     postJson<{ ok: true }>('/api/mobile/reports', { conversationId, reason, detail }),
+  updateName: (name: string) => postJson<{ ok: true }>('/api/mobile/profile', { name }),
   deleteAccount: () => postJson<{ ok: true }>('/api/mobile/account/delete', {}),
   markNotificationsRead: () => postJson<{ ok: true }>('/api/mobile/notifications/read', {}),
 

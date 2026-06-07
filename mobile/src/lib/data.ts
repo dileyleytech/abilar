@@ -206,6 +206,50 @@ export async function countUnreadNotifications(userId: string): Promise<number> 
   return count ?? 0;
 }
 
+export type ContractTerms = {
+  items?: { name: string; qty: number; unit: string; lineTotalCents?: number }[];
+  avistaCents?: number;
+  parceladoCents?: number | null;
+  installmentValueCents?: number | null;
+  clientInstallments?: number;
+  milestones?: { key: string; label: string; event: string; pct: number }[];
+};
+
+export type ContractView = {
+  id: string;
+  status: string;
+  value_cents: number;
+  terms: ContractTerms;
+  client_id: string;
+  carpenter_id: string;
+  project_id: string;
+  accepted_by_client_at: string | null;
+  accepted_by_carpenter_at: string | null;
+  projectTitle: string;
+  otherName: string;
+  meIsClient: boolean;
+};
+
+export async function getContract(id: string, userId: string): Promise<ContractView | null> {
+  const { data } = await supabase
+    .from('contracts')
+    .select('id, status, value_cents, terms, client_id, carpenter_id, project_id, accepted_by_client_at, accepted_by_carpenter_at, projects(title)')
+    .eq('id', id)
+    .single();
+  if (!data) return null;
+  const row = data as unknown as ContractView & { projects: { title: string } | null };
+  if (row.client_id !== userId && row.carpenter_id !== userId) return null;
+  const meIsClient = row.client_id === userId;
+  const otherId = meIsClient ? row.carpenter_id : row.client_id;
+  const { data: prof } = await supabase.from('profiles').select('name').eq('id', otherId).single();
+  return {
+    ...row,
+    projectTitle: row.projects?.title ?? 'Projeto',
+    otherName: (prof as { name: string | null } | null)?.name || (meIsClient ? 'Marceneiro' : 'Cliente'),
+    meIsClient,
+  };
+}
+
 export async function listMessages(conversationId: string): Promise<MessageRow[]> {
   const { data, error } = await supabase
     .from('messages')
