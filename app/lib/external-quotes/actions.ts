@@ -6,6 +6,7 @@ import { computeItemsBase } from '@abilar/pricing';
 import { externalQuotes, and, eq, sql } from '@abilar/db';
 import { getDb } from '@/lib/db';
 import { getSessionProfile } from '@/lib/auth/session';
+import { acceptExternalQuote } from './accept';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -48,9 +49,15 @@ export async function saveExternalQuote(input: unknown, id?: string): Promise<Ac
 export async function setExternalQuoteStatus(id: string, status: 'SENT' | 'ACCEPTED' | 'REJECTED'): Promise<ActionResult> {
   const auth = await requireCarpenter();
   if ('error' in auth) return { ok: false, error: auth.error };
-  const db = getDb();
-  await db.update(externalQuotes).set({ status, updatedAt: sql`now()` }).where(and(eq(externalQuotes.id, id), eq(externalQuotes.carpenterId, auth.id)));
+  // Aceitar → vira obra externa na agenda (mesmo fluxo do orçamento aprovado).
+  if (status === 'ACCEPTED') {
+    const r = await acceptExternalQuote(auth.id, id);
+    if (!r.ok) return r;
+  } else {
+    await getDb().update(externalQuotes).set({ status, updatedAt: sql`now()` }).where(and(eq(externalQuotes.id, id), eq(externalQuotes.carpenterId, auth.id)));
+  }
   revalidatePath('/marceneiro/avulsos');
+  revalidatePath('/marceneiro/agenda');
   return { ok: true };
 }
 

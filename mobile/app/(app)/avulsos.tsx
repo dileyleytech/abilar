@@ -12,6 +12,7 @@ import {
   type ExtLineItem,
   type MaterialRow,
 } from '@/lib/data';
+import { api } from '@/lib/api';
 import { formatCents } from '@/lib/format';
 import { shareExternalQuotePdf } from '@/lib/pdf';
 import { Badge, Button, Card, EmptyState, Loading } from '@/components/ui';
@@ -83,7 +84,7 @@ export default function AvulsosScreen() {
                   }).catch((e) => Alert.alert('PDF', e instanceof Error ? e.message : 'Falha ao gerar.'))}
                 >📄 PDF</Text>
                 <Text style={styles.editLink} onPress={() => setEditing(q)}>Editar</Text>
-                {q.status !== 'ACCEPTED' && <Text style={styles.link} onPress={() => act(() => setExternalQuoteStatus(q.id, 'ACCEPTED'))}>Marcar aceito</Text>}
+                {q.status !== 'ACCEPTED' && <Text style={styles.link} onPress={() => act(async () => { await api.acceptExternalQuote(q.id); })}>Marcar aceito</Text>}
                 {q.status !== 'REJECTED' && <Text style={styles.muted2} onPress={() => act(() => setExternalQuoteStatus(q.id, 'REJECTED'))}>Recusado</Text>}
                 <Text style={styles.danger} onPress={() => Alert.alert('Excluir', 'Excluir este orçamento?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Excluir', style: 'destructive', onPress: () => act(() => deleteExternalQuote(q.id)) }])}>Excluir</Text>
               </View>

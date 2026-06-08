@@ -141,6 +141,7 @@ export const api = {
   saveCarpenterProfile: (input: CarpenterOnboarding) => postJson<{ ok: true }>('/api/mobile/carpenter/profile', input),
   getReport: () => getJson<CarpenterReport>('/api/mobile/report'),
   getPipeline: () => getJson<Pipeline>('/api/mobile/pipeline'),
+  acceptExternalQuote: (id: string) => postJson<{ ok: true }>('/api/mobile/external-quotes/accept', { id }),
 };
 
 export type Pipeline = {

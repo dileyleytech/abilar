@@ -426,6 +426,7 @@ export const carpenterJobs = pgTable(
     startDate: date('start_date'),
     endDate: date('end_date'),
     status: text('status').notNull().default('ACTIVE'), // ACTIVE | DONE
+    sourceExternalQuoteId: uuid('source_external_quote_id').references(() => externalQuotes.id, { onDelete: 'set null' }),
     note: text('note'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
