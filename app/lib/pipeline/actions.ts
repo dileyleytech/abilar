@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { carpenterJobs, carpenterProfiles, and, eq, sql } from '@abilar/db';
+import { carpenterJobs, carpenterProfiles, projects, projectMilestones, and, eq, sql } from '@abilar/db';
 import { getDb } from '@/lib/db';
 import { getSessionProfile } from '@/lib/auth/session';
 
@@ -49,6 +49,26 @@ export async function deleteJob(id: string): Promise<ActionResult> {
   if (!carpenterId) return { ok: false, error: 'Apenas marceneiros.' };
   await getDb().delete(carpenterJobs).where(and(eq(carpenterJobs.id, id), eq(carpenterJobs.carpenterId, carpenterId)));
   revalidatePath('/marceneiro/agenda');
+  return { ok: true };
+}
+
+const datesSchema = z.object({ startDate: dateOpt, endDate: dateOpt });
+
+/** Marceneiro define os prazos (previsão) da obra da plataforma. */
+export async function setProjectDates(projectId: string, input: unknown): Promise<ActionResult> {
+  const carpenterId = await uid();
+  if (!carpenterId) return { ok: false, error: 'Apenas marceneiros.' };
+  const parsed = datesSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'Datas inválidas.' };
+
+  const db = getDb();
+  // Autorização: é o marceneiro contratado desta obra (tem marcos nela).
+  const [m] = await db.select({ id: projectMilestones.id }).from(projectMilestones).where(and(eq(projectMilestones.projectId, projectId), eq(projectMilestones.carpenterId, carpenterId))).limit(1);
+  if (!m) return { ok: false, error: 'Obra não encontrada.' };
+
+  await db.update(projects).set({ plannedStartDate: parsed.data.startDate ?? null, plannedEndDate: parsed.data.endDate ?? null, updatedAt: sql`now()` }).where(eq(projects.id, projectId));
+  revalidatePath('/marceneiro/agenda');
+  revalidatePath(`/marceneiro/pedidos/${projectId}`);
   return { ok: true };
 }
 

@@ -15,6 +15,9 @@ export default function AgendaScreen() {
   const [pipe, setPipe] = useState<Pipeline | null>(null);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [editing, setEditing] = useState<JobRow | 'new' | null>(null);
+  const [editObra, setEditObra] = useState<string | null>(null);
+  const [oStart, setOStart] = useState('');
+  const [oEnd, setOEnd] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -37,7 +40,7 @@ export default function AgendaScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Agenda' }} />
-      <ScrollView style={{ backgroundColor: color.bg.base }} contentContainerStyle={styles.container}>
+      <ScrollView style={{ backgroundColor: color.bg.base }} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <Card style={pipe.overloaded ? styles.over : undefined}>
           <Text style={styles.capacity}>{pipe.activeCount} obra(s) ativa(s) · capacidade {pipe.maxParallel}</Text>
           {pipe.overloaded && <Text style={styles.warn}>⚠️ Acima da capacidade — atenção aos prazos antes de aceitar novas obras.</Text>}
@@ -49,12 +52,27 @@ export default function AgendaScreen() {
           <Card><Text style={styles.muted}>Nenhuma obra contratada agora.</Text></Card>
         ) : (
           pipe.obras.map((o) => (
-            <Pressable key={o.projectId} onPress={() => router.push(`/(app)/pedidos/${o.projectId}`)}>
-              <Card style={styles.rowCard}>
+            <Card key={o.projectId} style={{ gap: 6 }}>
+              <Pressable style={styles.rowCard} onPress={() => router.push(`/(app)/pedidos/${o.projectId}`)}>
                 <Text style={styles.obraTitle}>{o.title}</Text>
                 <Text style={styles.pct}>{o.approvedPct}%</Text>
-              </Card>
-            </Pressable>
+              </Pressable>
+              {editObra === o.projectId ? (
+                <View style={{ gap: space.sm }}>
+                  <TextInput style={styles.dateInput} value={oStart} onChangeText={setOStart} placeholder="Início (AAAA-MM-DD)" placeholderTextColor={color.text.subtle} />
+                  <TextInput style={styles.dateInput} value={oEnd} onChangeText={setOEnd} placeholder="Término (AAAA-MM-DD)" placeholderTextColor={color.text.subtle} />
+                  <View style={{ flexDirection: 'row', gap: space.sm }}>
+                    <Text style={styles.link} onPress={() => act(async () => { await api.setProjectDates(o.projectId, oStart || undefined, oEnd || undefined); setEditObra(null); })}>Salvar</Text>
+                    <Text style={styles.muted} onPress={() => setEditObra(null)}>Cancelar</Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.datesRow}>
+                  <Text style={styles.muted}>{o.startDate || o.endDate ? `📅 ${fmtDate(o.startDate) ?? '—'} → ${fmtDate(o.endDate) ?? '—'}` : 'Sem prazos definidos'}</Text>
+                  <Text style={styles.editLink} onPress={() => { setEditObra(o.projectId); setOStart(o.startDate ?? ''); setOEnd(o.endDate ?? ''); }}>{o.startDate || o.endDate ? 'editar' : 'definir prazos'}</Text>
+                </View>
+              )}
+            </Card>
           ))
         )}
 
@@ -142,6 +160,8 @@ const styles = StyleSheet.create({
   add: { color: color.brand.primary, fontWeight: '700' },
   muted: { color: color.text.muted, fontSize: 13 },
   rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  datesRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
+  dateInput: { backgroundColor: color.bg.base, borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 10, fontSize: 15, color: color.text.primary },
   obraTitle: { fontSize: 16, fontWeight: '600', color: color.text.primary, flex: 1 },
   pct: { fontSize: 16, fontWeight: '700', color: color.brand.primary },
   actions: { flexDirection: 'row', gap: space.lg, marginTop: 4 },

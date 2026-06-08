@@ -155,6 +155,8 @@ export const projects = pgTable(
     lat: numeric('lat', { precision: 9, scale: 6 }),
     lng: numeric('lng', { precision: 9, scale: 6 }),
     architectId: uuid('architect_id').references(() => profiles.id, { onDelete: 'set null' }),
+    plannedStartDate: date('planned_start_date'), // prazos da obra (§7.7) — definidos pelo marceneiro
+    plannedEndDate: date('planned_end_date'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

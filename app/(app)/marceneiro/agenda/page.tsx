@@ -20,7 +20,13 @@ export default async function AgendaPage() {
     <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
       <h1 className="text-2xl font-bold text-charcoal sm:text-3xl">Agenda</h1>
       <p className="mb-6 text-sm text-muted">Suas obras em andamento (plataforma + externas) e sua capacidade.</p>
-      <AgendaManager maxParallel={p.maxParallel} activeCount={p.activeCount} overloaded={p.overloaded} obras={p.obras} jobs={jobs} />
+      <AgendaManager
+        maxParallel={p.maxParallel}
+        activeCount={p.activeCount}
+        overloaded={p.overloaded}
+        obras={p.obras.map((o) => ({ projectId: o.projectId, title: o.title, approvedPct: o.approvedPct, startDate: o.startDate, endDate: o.endDate }))}
+        jobs={jobs}
+      />
     </main>
   );
 }

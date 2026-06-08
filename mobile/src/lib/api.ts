@@ -142,13 +142,15 @@ export const api = {
   getReport: () => getJson<CarpenterReport>('/api/mobile/report'),
   getPipeline: () => getJson<Pipeline>('/api/mobile/pipeline'),
   acceptExternalQuote: (id: string) => postJson<{ ok: true }>('/api/mobile/external-quotes/accept', { id }),
+  setProjectDates: (projectId: string, startDate?: string, endDate?: string) =>
+    postJson<{ ok: true }>('/api/mobile/projects/dates', { projectId, startDate, endDate }),
 };
 
 export type Pipeline = {
   maxParallel: number;
   activeCount: number;
   overloaded: boolean;
-  obras: { projectId: string; title: string; approvedPct: number }[];
+  obras: { projectId: string; title: string; approvedPct: number; startDate: string | null; endDate: string | null }[];
 };
 
 type ReportPart = { sent: number; accepted: number; valueCents: number; costCents: number; profitCents: number };

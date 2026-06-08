@@ -3,10 +3,10 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { saveJob, setJobStatus, deleteJob, setMaxParallel } from '@/lib/pipeline/actions';
+import { saveJob, setJobStatus, deleteJob, setMaxParallel, setProjectDates } from '@/lib/pipeline/actions';
 
 export type JobCard = { id: string; title: string; clientName: string | null; startDate: string | null; endDate: string | null; note: string | null };
-type Obra = { projectId: string; title: string; approvedPct: number };
+type Obra = { projectId: string; title: string; approvedPct: number; startDate: string | null; endDate: string | null };
 
 const fmtDate = (d: string | null) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : null);
 
@@ -47,11 +47,12 @@ export function AgendaManager({ maxParallel, activeCount, overloaded, obras, job
         ) : (
           <ul className="flex flex-col gap-2">
             {obras.map((o) => (
-              <li key={o.projectId}>
-                <Link href={`/marceneiro/pedidos/${o.projectId}`} className="flex items-center justify-between gap-3 rounded-xl border border-subtle bg-surface p-4 hover:border-brand-primary/40">
-                  <span className="font-medium text-charcoal">{o.title}</span>
+              <li key={o.projectId} className="rounded-xl border border-subtle bg-surface p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <Link href={`/marceneiro/pedidos/${o.projectId}`} className="font-medium text-charcoal hover:underline">{o.title}</Link>
                   <span className="text-sm font-semibold text-brand-primary">{o.approvedPct}%</span>
-                </Link>
+                </div>
+                <ProjectDates obra={o} onSaved={refresh} />
               </li>
             ))}
           </ul>
@@ -89,6 +90,36 @@ export function AgendaManager({ maxParallel, activeCount, overloaded, obras, job
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+function ProjectDates({ obra, onSaved }: { obra: Obra; onSaved: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [start, setStart] = useState(obra.startDate ?? '');
+  const [end, setEnd] = useState(obra.endDate ?? '');
+  const [pending, startT] = useTransition();
+
+  if (!editing) {
+    return (
+      <div className="mt-1 flex items-center gap-2 text-sm text-muted">
+        {obra.startDate || obra.endDate ? (
+          <span>📅 {fmtDate(obra.startDate) ?? '—'} → {fmtDate(obra.endDate) ?? '—'}</span>
+        ) : (
+          <span>Sem prazos definidos</span>
+        )}
+        <button type="button" onClick={() => setEditing(true)} className="font-semibold text-brand-secondary hover:underline">
+          {obra.startDate || obra.endDate ? 'editar' : 'definir prazos'}
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="mt-2 flex flex-wrap items-end gap-2">
+      <label className="text-xs text-muted">Início<input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="block rounded-lg border border-subtle px-2 py-1 text-sm" /></label>
+      <label className="text-xs text-muted">Término<input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className="block rounded-lg border border-subtle px-2 py-1 text-sm" /></label>
+      <button type="button" disabled={pending} onClick={() => startT(async () => { await setProjectDates(obra.projectId, { startDate: start || undefined, endDate: end || undefined }); setEditing(false); onSaved(); })} className="rounded-lg bg-brand-primary px-3 py-1.5 text-sm font-semibold text-white">Salvar</button>
+      <button type="button" onClick={() => setEditing(false)} className="text-sm text-muted">Cancelar</button>
     </div>
   );
 }
