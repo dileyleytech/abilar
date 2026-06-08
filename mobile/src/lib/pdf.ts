@@ -46,3 +46,38 @@ export async function shareContractPdf(c: ContractView): Promise<void> {
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch] ?? ch));
 }
+
+// PDF de um orçamento avulso (para o marceneiro mandar ao cliente dele).
+export async function shareExternalQuotePdf(q: {
+  clientName: string;
+  title: string;
+  items: { name: string; qty: number; unit: string }[];
+  valueCents: number;
+  note: string | null;
+  carpenterName?: string;
+}): Promise<void> {
+  const items = q.items.map((i) => `<tr><td>${escapeHtml(i.name)}</td><td style="text-align:right">${i.qty} ${escapeHtml(i.unit)}</td></tr>`).join('');
+  const html = `<!doctype html><html><head><meta charset="utf-8" />
+  <style>
+    body{font-family:-apple-system,Helvetica,Arial,sans-serif;color:#1F2421;padding:28px;font-size:13px;line-height:1.5}
+    h1{color:#C56A33;font-size:22px;margin:0 0 4px} h2{font-size:14px;margin:16px 0 6px;color:#2F6B5E}
+    p{margin:2px 0} .muted{color:#777}
+    table{width:100%;border-collapse:collapse;margin-top:6px} td{border-bottom:1px solid #eee;padding:6px 4px}
+    .total{display:flex;justify-content:space-between;border-top:1px solid #ccc;margin-top:14px;padding-top:10px}
+    .big{font-size:20px;font-weight:700}
+  </style></head><body>
+    <h1>abilar</h1>
+    <p class="muted">Orçamento${q.carpenterName ? ` · ${escapeHtml(q.carpenterName)}` : ''}</p>
+    <h2>Cliente</h2><p>${escapeHtml(q.clientName)}</p>
+    <h2>Serviço</h2><p>${escapeHtml(q.title)}</p>
+    ${items ? `<h2>Itens inclusos</h2><table>${items}</table>` : ''}
+    <div class="total"><span class="muted">TOTAL</span><span class="big">${brl(q.valueCents)}</span></div>
+    ${q.note ? `<h2>Observação</h2><p>${escapeHtml(q.note)}</p>` : ''}
+    <p class="muted" style="margin-top:18px;font-size:11px">Orçamento gerado pela Abilar.</p>
+  </body></html>`;
+
+  const { uri } = await Print.printToFileAsync({ html });
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf' });
+  }
+}

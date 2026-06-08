@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import Link from 'next/link';
 import { formatBRL } from '@abilar/shared';
 import { saveExternalQuote, setExternalQuoteStatus, deleteExternalQuote } from '@/lib/external-quotes/actions';
 
@@ -59,6 +60,7 @@ export function AvulsosManager({ initialQuotes, catalog }: { initialQuotes: Exte
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+                <Link href={`/marceneiro/avulsos/${q.id}/imprimir`} className="font-semibold text-brand-primary hover:underline">🖨️ PDF</Link>
                 <button type="button" onClick={() => setEditing(q)} className="font-semibold text-brand-secondary hover:underline">Editar</button>
                 {q.status !== 'ACCEPTED' && (
                   <button type="button" disabled={pending} onClick={() => start(async () => { await setExternalQuoteStatus(q.id, 'ACCEPTED'); refresh(); })} className="font-semibold text-brand-primary hover:underline">Marcar aceito</button>

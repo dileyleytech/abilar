@@ -13,6 +13,7 @@ import {
   type MaterialRow,
 } from '@/lib/data';
 import { formatCents } from '@/lib/format';
+import { shareExternalQuotePdf } from '@/lib/pdf';
 import { Badge, Button, Card, EmptyState, Loading } from '@/components/ui';
 import { color, radius, space } from '@/theme';
 
@@ -70,6 +71,17 @@ export default function AvulsosScreen() {
                 </View>
               </View>
               <View style={styles.actions}>
+                <Text
+                  style={styles.link}
+                  onPress={() => shareExternalQuotePdf({
+                    clientName: q.client_name,
+                    title: q.title,
+                    items: (q.line_items ?? []).map((i) => ({ name: i.name, qty: i.qty, unit: i.unit })),
+                    valueCents: q.value_cents,
+                    note: q.note,
+                    carpenterName: profile?.name ?? undefined,
+                  }).catch((e) => Alert.alert('PDF', e instanceof Error ? e.message : 'Falha ao gerar.'))}
+                >📄 PDF</Text>
                 <Text style={styles.editLink} onPress={() => setEditing(q)}>Editar</Text>
                 {q.status !== 'ACCEPTED' && <Text style={styles.link} onPress={() => act(() => setExternalQuoteStatus(q.id, 'ACCEPTED'))}>Marcar aceito</Text>}
                 {q.status !== 'REJECTED' && <Text style={styles.muted2} onPress={() => act(() => setExternalQuoteStatus(q.id, 'REJECTED'))}>Recusado</Text>}
