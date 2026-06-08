@@ -140,6 +140,14 @@ export const api = {
   getCarpenterProfile: () => getJson<{ profile: CarpenterProfileRow | null }>('/api/mobile/carpenter/profile'),
   saveCarpenterProfile: (input: CarpenterOnboarding) => postJson<{ ok: true }>('/api/mobile/carpenter/profile', input),
   getReport: () => getJson<CarpenterReport>('/api/mobile/report'),
+  getPipeline: () => getJson<Pipeline>('/api/mobile/pipeline'),
+};
+
+export type Pipeline = {
+  maxParallel: number;
+  activeCount: number;
+  overloaded: boolean;
+  obras: { projectId: string; title: string; approvedPct: number }[];
 };
 
 type ReportPart = { sent: number; accepted: number; valueCents: number; costCents: number; profitCents: number };
@@ -157,6 +165,7 @@ export type CarpenterOnboarding = {
   serviceCity: string;
   serviceCep: string;
   serviceRadiusKm: number;
+  maxParallelProjects?: number;
   serviceLat?: number;
   serviceLng?: number;
   categories: string[];
@@ -171,6 +180,7 @@ export type CarpenterProfileRow = {
   serviceCity: string;
   serviceCep: string;
   serviceRadiusKm: number;
+  maxParallelProjects: number;
   categories: string[];
   bio: string | null;
 };

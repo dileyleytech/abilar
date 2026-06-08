@@ -86,6 +86,14 @@ export default function PedidosScreen() {
       contentContainerStyle={styles.list}
       stickySectionHeadersEnabled={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={color.brand.primary} />}
+      ListHeaderComponent={
+        isCarpenter ? (
+          <Pressable style={styles.agendaBtn} onPress={() => router.push('/(app)/agenda')}>
+            <Text style={styles.agendaText}>🗓️  Minha agenda</Text>
+            <Text style={styles.agendaChev}>›</Text>
+          </Pressable>
+        ) : null
+      }
       renderSectionHeader={({ section }) => <Text style={styles.heading}>{section.title}</Text>}
       renderItem={({ item }) => {
         const obra = isObra(item.status);
@@ -123,4 +131,7 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
   cardTitle: { flex: 1, fontSize: 16, fontWeight: '600', color: color.text.primary },
   cardMeta: { fontSize: 13, color: color.text.muted },
+  agendaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: color.bg.surface, borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.lg, padding: space.lg, marginBottom: space.sm },
+  agendaText: { fontSize: 16, fontWeight: '700', color: color.text.primary },
+  agendaChev: { fontSize: 22, color: color.text.subtle },
 });

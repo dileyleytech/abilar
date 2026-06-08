@@ -9,6 +9,7 @@ import { sql } from 'drizzle-orm';
 import {
   bigint,
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -87,6 +88,7 @@ export const carpenterProfiles = pgTable(
     serviceCity: text('service_city').notNull(),
     serviceCep: text('service_cep').notNull(),
     serviceRadiusKm: integer('service_radius_km').notNull().default(20),
+    maxParallelProjects: integer('max_parallel_projects').notNull().default(3), // capacidade (§7.7)
     serviceLat: numeric('service_lat', { precision: 9, scale: 6 }), // base p/ matching por raio
     serviceLng: numeric('service_lng', { precision: 9, scale: 6 }),
     categories: categoryEnum('categories').array().notNull().default(sql`'{}'`),
@@ -410,6 +412,29 @@ export const externalQuotes = pgTable(
 
 export type ExternalQuote = typeof externalQuotes.$inferSelect;
 export type NewExternalQuote = typeof externalQuotes.$inferInsert;
+
+/** Obras manuais do marceneiro (fora da plataforma) — alimentam a agenda (§7). */
+export const carpenterJobs = pgTable(
+  'carpenter_jobs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    carpenterId: uuid('carpenter_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    clientName: text('client_name'),
+    startDate: date('start_date'),
+    endDate: date('end_date'),
+    status: text('status').notNull().default('ACTIVE'), // ACTIVE | DONE
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('carpenter_jobs_owner_idx').on(t.carpenterId, t.status, t.startDate)],
+);
+
+export type CarpenterJob = typeof carpenterJobs.$inferSelect;
+export type NewCarpenterJob = typeof carpenterJobs.$inferInsert;
 
 /** Contrato padrão por projeto aprovado (§6.5). Aceite eletrônico das 2 partes
  *  (timestamp + hash de IP). `terms` é um snapshot do acordo no momento do aceite. */

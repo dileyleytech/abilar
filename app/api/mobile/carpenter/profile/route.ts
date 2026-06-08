@@ -31,6 +31,7 @@ export async function POST(req: Request): Promise<Response> {
     serviceLat: d.serviceLat != null ? String(d.serviceLat) : null,
     serviceLng: d.serviceLng != null ? String(d.serviceLng) : null,
     categories: d.categories,
+    ...(d.maxParallelProjects != null ? { maxParallelProjects: d.maxParallelProjects } : {}),
   };
   await getDb()
     .insert(carpenterProfiles)

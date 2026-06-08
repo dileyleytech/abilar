@@ -225,6 +225,13 @@
       "when": 1780694415000,
       "tag": "0031_external_quotes",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1780694415500,
+      "tag": "0032_carpenter_pipeline",
+      "breakpoints": true
     }
   ]
 }

@@ -22,6 +22,7 @@ export default function MarceneiroPerfil() {
   const [city, setCity] = useState('');
   const [coords, setCoords] = useState<{ lat?: number; lng?: number }>({});
   const [radiusKm, setRadiusKm] = useState('30');
+  const [maxParallel, setMaxParallel] = useState('3');
   const [cats, setCats] = useState<string[]>([]);
   const [bio, setBio] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,6 +37,7 @@ export default function MarceneiroPerfil() {
       setCep(profile.serviceCep ?? '');
       setCity(profile.serviceCity ?? '');
       setRadiusKm(String(profile.serviceRadiusKm ?? 30));
+      setMaxParallel(String(profile.maxParallelProjects ?? 3));
       setCats(profile.categories ?? []);
       setBio(profile.bio ?? '');
     }).catch(() => {});
@@ -66,6 +68,7 @@ export default function MarceneiroPerfil() {
         serviceCity: city.trim(),
         serviceCep: cep.trim(),
         serviceRadiusKm: Math.round(Number(radiusKm) || 0),
+        maxParallelProjects: Math.max(1, Math.round(Number(maxParallel) || 1)),
         serviceLat: coords.lat,
         serviceLng: coords.lng,
         categories: cats,
@@ -115,6 +118,9 @@ export default function MarceneiroPerfil() {
 
         <Text style={styles.label}>Raio de atuação (km)</Text>
         <TextInput style={styles.input} keyboardType="numeric" value={radiusKm} onChangeText={setRadiusKm} />
+
+        <Text style={styles.label}>Capacidade (obras em paralelo)</Text>
+        <TextInput style={styles.input} keyboardType="numeric" value={maxParallel} onChangeText={setMaxParallel} />
 
         <Text style={styles.label}>O que você faz</Text>
         <View style={styles.chips}>

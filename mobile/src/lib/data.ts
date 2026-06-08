@@ -177,6 +177,54 @@ export async function saveExternalQuote(
   if (error) throw new Error(error.message);
 }
 
+export type JobRow = {
+  id: string;
+  title: string;
+  client_name: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  status: string;
+  note: string | null;
+};
+
+export async function listJobs(): Promise<JobRow[]> {
+  const { data, error } = await supabase
+    .from('carpenter_jobs')
+    .select('id, title, client_name, start_date, end_date, status, note')
+    .eq('status', 'ACTIVE')
+    .order('start_date', { ascending: true, nullsFirst: false });
+  if (error) throw new Error(error.message);
+  return (data as JobRow[]) ?? [];
+}
+
+export async function saveJob(
+  carpenterId: string,
+  input: { title: string; clientName?: string; startDate?: string; endDate?: string; note?: string },
+  id?: string,
+): Promise<void> {
+  const values = {
+    title: input.title,
+    client_name: input.clientName ?? null,
+    start_date: input.startDate || null,
+    end_date: input.endDate || null,
+    note: input.note ?? null,
+  };
+  const { error } = id
+    ? await supabase.from('carpenter_jobs').update({ ...values, updated_at: new Date().toISOString() }).eq('id', id)
+    : await supabase.from('carpenter_jobs').insert({ carpenter_id: carpenterId, ...values });
+  if (error) throw new Error(error.message);
+}
+
+export async function setJobDone(id: string): Promise<void> {
+  const { error } = await supabase.from('carpenter_jobs').update({ status: 'DONE' }).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteJob(id: string): Promise<void> {
+  const { error } = await supabase.from('carpenter_jobs').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 export async function setExternalQuoteStatus(id: string, status: string): Promise<void> {
   const { error } = await supabase.from('external_quotes').update({ status }).eq('id', id);
   if (error) throw new Error(error.message);

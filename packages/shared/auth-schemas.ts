@@ -69,6 +69,7 @@ export const carpenterOnboardingSchema = z
     serviceCity: z.string().trim().min(2, 'Informe a cidade'),
     serviceCep: cepSchema,
     serviceRadiusKm: z.number().int().min(1).max(200),
+    maxParallelProjects: z.number().int().min(1).max(50).optional(),
     serviceLat: z.number().min(-90).max(90).optional(),
     serviceLng: z.number().min(-180).max(180).optional(),
     categories: z.array(z.enum(CATEGORIES)).min(1, 'Escolha ao menos uma categoria'),
