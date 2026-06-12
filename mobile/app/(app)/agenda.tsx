@@ -3,7 +3,7 @@ import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, St
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 import { api, type Pipeline } from '@/lib/api';
-import { listJobs, saveJob, setJobDone, deleteJob, type JobRow } from '@/lib/data';
+import { listJobs, saveJob, setJobDone, setJobDates, deleteJob, type JobRow } from '@/lib/data';
 import { Badge, Button, Card, Loading } from '@/components/ui';
 import { color, radius, space } from '@/theme';
 
@@ -15,9 +15,22 @@ export default function AgendaScreen() {
   const [pipe, setPipe] = useState<Pipeline | null>(null);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [editing, setEditing] = useState<JobRow | 'new' | null>(null);
-  const [editObra, setEditObra] = useState<string | null>(null);
-  const [oStart, setOStart] = useState('');
-  const [oEnd, setOEnd] = useState('');
+  const [dateTarget, setDateTarget] = useState<{ kind: 'obra' | 'job'; id: string } | null>(null);
+  const [dStart, setDStart] = useState('');
+  const [dEnd, setDEnd] = useState('');
+
+  const openDates = (kind: 'obra' | 'job', id: string, s: string | null, e: string | null) => {
+    setDateTarget({ kind, id });
+    setDStart(s ?? '');
+    setDEnd(e ?? '');
+  };
+  const saveDates = () =>
+    act(async () => {
+      if (!dateTarget) return;
+      if (dateTarget.kind === 'obra') await api.setProjectDates(dateTarget.id, dStart || undefined, dEnd || undefined);
+      else await setJobDates(dateTarget.id, dStart || undefined, dEnd || undefined);
+      setDateTarget(null);
+    });
 
   const load = useCallback(async () => {
     try {
@@ -34,6 +47,23 @@ export default function AgendaScreen() {
   const act = async (fn: () => Promise<void>) => {
     try { await fn(); await load(); } catch (e) { Alert.alert('Ops', e instanceof Error ? e.message : 'Falha.'); }
   };
+
+  const datesBlock = (kind: 'obra' | 'job', id: string, s: string | null, e: string | null) =>
+    dateTarget?.kind === kind && dateTarget.id === id ? (
+      <View style={{ gap: space.sm }}>
+        <TextInput style={styles.dateInput} value={dStart} onChangeText={setDStart} placeholder="Início (AAAA-MM-DD)" placeholderTextColor={color.text.subtle} />
+        <TextInput style={styles.dateInput} value={dEnd} onChangeText={setDEnd} placeholder="Término (AAAA-MM-DD)" placeholderTextColor={color.text.subtle} />
+        <View style={{ flexDirection: 'row', gap: space.sm }}>
+          <Text style={styles.link} onPress={saveDates}>Salvar</Text>
+          <Text style={styles.muted} onPress={() => setDateTarget(null)}>Cancelar</Text>
+        </View>
+      </View>
+    ) : (
+      <View style={styles.datesRow}>
+        <Text style={styles.muted}>{s || e ? `📅 ${fmtDate(s) ?? '—'} → ${fmtDate(e) ?? '—'}` : 'Sem prazos definidos'}</Text>
+        <Text style={styles.editLink} onPress={() => openDates(kind, id, s, e)}>{s || e ? 'editar prazos' : 'definir prazos'}</Text>
+      </View>
+    );
 
   if (!pipe) return <Loading label="Carregando agenda…" />;
 
@@ -57,21 +87,7 @@ export default function AgendaScreen() {
                 <Text style={styles.obraTitle}>{o.title}</Text>
                 <Text style={styles.pct}>{o.approvedPct}%</Text>
               </Pressable>
-              {editObra === o.projectId ? (
-                <View style={{ gap: space.sm }}>
-                  <TextInput style={styles.dateInput} value={oStart} onChangeText={setOStart} placeholder="Início (AAAA-MM-DD)" placeholderTextColor={color.text.subtle} />
-                  <TextInput style={styles.dateInput} value={oEnd} onChangeText={setOEnd} placeholder="Término (AAAA-MM-DD)" placeholderTextColor={color.text.subtle} />
-                  <View style={{ flexDirection: 'row', gap: space.sm }}>
-                    <Text style={styles.link} onPress={() => act(async () => { await api.setProjectDates(o.projectId, oStart || undefined, oEnd || undefined); setEditObra(null); })}>Salvar</Text>
-                    <Text style={styles.muted} onPress={() => setEditObra(null)}>Cancelar</Text>
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.datesRow}>
-                  <Text style={styles.muted}>{o.startDate || o.endDate ? `📅 ${fmtDate(o.startDate) ?? '—'} → ${fmtDate(o.endDate) ?? '—'}` : 'Sem prazos definidos'}</Text>
-                  <Text style={styles.editLink} onPress={() => { setEditObra(o.projectId); setOStart(o.startDate ?? ''); setOEnd(o.endDate ?? ''); }}>{o.startDate || o.endDate ? 'editar' : 'definir prazos'}</Text>
-                </View>
-              )}
+              {datesBlock('obra', o.projectId, o.startDate, o.endDate)}
             </Card>
           ))
         )}
@@ -84,12 +100,12 @@ export default function AgendaScreen() {
           <Card><Text style={styles.muted}>Cadastre obras fora da plataforma para vê-las na agenda.</Text></Card>
         ) : (
           jobs.map((j) => (
-            <Card key={j.id} style={{ gap: 4 }}>
+            <Card key={j.id} style={{ gap: 6 }}>
               <Text style={styles.obraTitle}>{j.title}</Text>
               {j.client_name ? <Text style={styles.muted}>{j.client_name}</Text> : null}
-              {(j.start_date || j.end_date) && <Text style={styles.muted}>📅 {fmtDate(j.start_date) ?? '—'} → {fmtDate(j.end_date) ?? '—'}</Text>}
+              {datesBlock('job', j.id, j.start_date, j.end_date)}
               <View style={styles.actions}>
-                <Text style={styles.editLink} onPress={() => setEditing(j)}>Editar</Text>
+                <Text style={styles.editLink} onPress={() => setEditing(j)}>Editar tudo</Text>
                 <Text style={styles.link} onPress={() => act(() => setJobDone(j.id))}>Concluir</Text>
                 <Text style={styles.danger} onPress={() => Alert.alert('Excluir', 'Excluir esta obra?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Excluir', style: 'destructive', onPress: () => act(() => deleteJob(j.id)) }])}>Excluir</Text>
               </View>

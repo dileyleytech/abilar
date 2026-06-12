@@ -36,6 +36,16 @@ export async function saveJob(input: unknown, id?: string): Promise<ActionResult
   return { ok: true };
 }
 
+export async function setJobDates(id: string, input: unknown): Promise<ActionResult> {
+  const carpenterId = await uid();
+  if (!carpenterId) return { ok: false, error: 'Apenas marceneiros.' };
+  const parsed = z.object({ startDate: dateOpt, endDate: dateOpt }).safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'Datas inválidas.' };
+  await getDb().update(carpenterJobs).set({ startDate: parsed.data.startDate ?? null, endDate: parsed.data.endDate ?? null, updatedAt: sql`now()` }).where(and(eq(carpenterJobs.id, id), eq(carpenterJobs.carpenterId, carpenterId)));
+  revalidatePath('/marceneiro/agenda');
+  return { ok: true };
+}
+
 export async function setJobStatus(id: string, status: 'ACTIVE' | 'DONE'): Promise<ActionResult> {
   const carpenterId = await uid();
   if (!carpenterId) return { ok: false, error: 'Apenas marceneiros.' };

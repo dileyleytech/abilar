@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { saveJob, setJobStatus, deleteJob, setMaxParallel, setProjectDates } from '@/lib/pipeline/actions';
+import { saveJob, setJobStatus, setJobDates, deleteJob, setMaxParallel, setProjectDates } from '@/lib/pipeline/actions';
 
 export type JobCard = { id: string; title: string; clientName: string | null; startDate: string | null; endDate: string | null; note: string | null };
 type Obra = { projectId: string; title: string; approvedPct: number; startDate: string | null; endDate: string | null };
@@ -52,7 +52,7 @@ export function AgendaManager({ maxParallel, activeCount, overloaded, obras, job
                   <Link href={`/marceneiro/pedidos/${o.projectId}`} className="font-medium text-charcoal hover:underline">{o.title}</Link>
                   <span className="text-sm font-semibold text-brand-primary">{o.approvedPct}%</span>
                 </div>
-                <ProjectDates obra={o} onSaved={refresh} />
+                <DatesEditor startDate={o.startDate} endDate={o.endDate} onSave={async (s, e) => { await setProjectDates(o.projectId, { startDate: s, endDate: e }); refresh(); }} />
               </li>
             ))}
           </ul>
@@ -76,11 +76,9 @@ export function AgendaManager({ maxParallel, activeCount, overloaded, obras, job
                   <div>
                     <p className="font-medium text-charcoal">{j.title}</p>
                     {j.clientName && <p className="text-sm text-muted">{j.clientName}</p>}
-                    {(j.startDate || j.endDate) && (
-                      <p className="text-sm text-muted">📅 {fmtDate(j.startDate) ?? '—'} → {fmtDate(j.endDate) ?? '—'}</p>
-                    )}
                   </div>
                 </div>
+                <DatesEditor startDate={j.startDate} endDate={j.endDate} onSave={async (s, e) => { await setJobDates(j.id, { startDate: s, endDate: e }); refresh(); }} />
                 <div className="mt-2 flex gap-3 text-sm">
                   <button type="button" disabled={pending} onClick={() => start(async () => { await setJobStatus(j.id, 'DONE'); refresh(); })} className="font-semibold text-brand-primary hover:underline">Concluir</button>
                   <button type="button" disabled={pending} onClick={() => { if (confirm('Excluir?')) start(async () => { await deleteJob(j.id); refresh(); }); }} className="text-ochre hover:underline">Excluir</button>
@@ -94,22 +92,22 @@ export function AgendaManager({ maxParallel, activeCount, overloaded, obras, job
   );
 }
 
-function ProjectDates({ obra, onSaved }: { obra: Obra; onSaved: () => void }) {
+function DatesEditor({ startDate, endDate, onSave }: { startDate: string | null; endDate: string | null; onSave: (s?: string, e?: string) => Promise<void> }) {
   const [editing, setEditing] = useState(false);
-  const [start, setStart] = useState(obra.startDate ?? '');
-  const [end, setEnd] = useState(obra.endDate ?? '');
+  const [start, setStart] = useState(startDate ?? '');
+  const [end, setEnd] = useState(endDate ?? '');
   const [pending, startT] = useTransition();
 
   if (!editing) {
     return (
       <div className="mt-1 flex items-center gap-2 text-sm text-muted">
-        {obra.startDate || obra.endDate ? (
-          <span>📅 {fmtDate(obra.startDate) ?? '—'} → {fmtDate(obra.endDate) ?? '—'}</span>
+        {startDate || endDate ? (
+          <span>📅 {fmtDate(startDate) ?? '—'} → {fmtDate(endDate) ?? '—'}</span>
         ) : (
           <span>Sem prazos definidos</span>
         )}
         <button type="button" onClick={() => setEditing(true)} className="font-semibold text-brand-secondary hover:underline">
-          {obra.startDate || obra.endDate ? 'editar' : 'definir prazos'}
+          {startDate || endDate ? 'editar prazos' : 'definir prazos'}
         </button>
       </div>
     );
@@ -118,7 +116,7 @@ function ProjectDates({ obra, onSaved }: { obra: Obra; onSaved: () => void }) {
     <div className="mt-2 flex flex-wrap items-end gap-2">
       <label className="text-xs text-muted">Início<input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="block rounded-lg border border-subtle px-2 py-1 text-sm" /></label>
       <label className="text-xs text-muted">Término<input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className="block rounded-lg border border-subtle px-2 py-1 text-sm" /></label>
-      <button type="button" disabled={pending} onClick={() => startT(async () => { await setProjectDates(obra.projectId, { startDate: start || undefined, endDate: end || undefined }); setEditing(false); onSaved(); })} className="rounded-lg bg-brand-primary px-3 py-1.5 text-sm font-semibold text-white">Salvar</button>
+      <button type="button" disabled={pending} onClick={() => startT(async () => { await onSave(start || undefined, end || undefined); setEditing(false); })} className="rounded-lg bg-brand-primary px-3 py-1.5 text-sm font-semibold text-white">Salvar</button>
       <button type="button" onClick={() => setEditing(false)} className="text-sm text-muted">Cancelar</button>
     </div>
   );

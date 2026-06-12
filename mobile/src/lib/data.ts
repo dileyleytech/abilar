@@ -220,6 +220,14 @@ export async function setJobDone(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+export async function setJobDates(id: string, startDate?: string, endDate?: string): Promise<void> {
+  const { error } = await supabase
+    .from('carpenter_jobs')
+    .update({ start_date: startDate || null, end_date: endDate || null, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 export async function deleteJob(id: string): Promise<void> {
   const { error } = await supabase.from('carpenter_jobs').delete().eq('id', id);
   if (error) throw new Error(error.message);
