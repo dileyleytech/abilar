@@ -30,6 +30,7 @@ const ITEMS: Record<'CLIENT' | 'CARPENTER' | 'ARCHITECT' | 'ADMIN', Item[]> = {
   ],
   ARCHITECT: [{ href: '/conversas', label: 'Conversas', icon: '💬', badge: 'chat' }, NOTIF],
   ADMIN: [
+    { href: '/admin', label: 'Painel', icon: '📊' },
     { href: '/admin/precos', label: 'Taxas', icon: '⚙️' },
     { href: '/admin/denuncias', label: 'Denúncias', icon: '🚩' },
     NOTIF,

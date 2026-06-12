@@ -20,7 +20,7 @@ export default async function Home() {
   const profile = await getSessionProfile();
   if (profile) {
     const home =
-      profile.role === 'CLIENT' ? '/pedidos' : profile.role === 'CARPENTER' ? '/marceneiro' : '/conta';
+      profile.role === 'CLIENT' ? '/pedidos' : profile.role === 'CARPENTER' ? '/marceneiro' : profile.role === 'ADMIN' ? '/admin' : '/conta';
     redirect(home);
   }
 
@@ -150,6 +150,11 @@ export default async function Home() {
         <div className="mx-auto flex w-full max-w-screen-2xl flex-col items-start justify-between gap-4 px-4 py-10 sm:flex-row sm:items-center sm:px-6 lg:px-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/abilar-wordmark-dark.svg" alt="Abilar" className="h-7 w-auto" />
+          <nav className="flex flex-wrap items-center gap-4 text-sm text-sand/70">
+            <Link href="/arquitetos" className="hover:text-sand">Arquitetos parceiros</Link>
+            <Link href="/cadastro" className="hover:text-sand">Sou marceneiro</Link>
+            <Link href="/entrar" className="hover:text-sand">Entrar</Link>
+          </nav>
           <p className="text-sm text-sand/60">{brand.tagline} · PT-BR · © Abilar</p>
         </div>
       </footer>
