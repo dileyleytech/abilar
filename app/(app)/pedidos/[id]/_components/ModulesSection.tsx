@@ -171,9 +171,9 @@ export function ModulesSection({
   };
 
   return (
-    <section className="rounded-2xl bg-surface p-5 shadow-sm sm:p-6">
+    <div>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-charcoal">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-charcoal sm:text-xl">
           Móveis do pedido
           {pending && (
             <span className="inline-flex items-center gap-1 text-sm font-normal text-muted">
@@ -193,7 +193,7 @@ export function ModulesSection({
       </div>
 
       {optimisticModules.length === 0 && !open ? (
-        <div className="rounded-xl bg-base p-8 text-center">
+        <div className="rounded-2xl bg-surface p-8 text-center shadow-sm">
           <p className="text-3xl" aria-hidden>🪵</p>
           <p className="mt-2 font-medium text-charcoal">Nenhum móvel ainda</p>
           <p className="text-sm text-muted">Adicione o primeiro móvel deste pedido — com medidas e foto.</p>
@@ -211,10 +211,10 @@ export function ModulesSection({
                 {mods.map((m) => (
                   <div
                     key={m.id}
-                    className={`flex gap-3 rounded-xl bg-base p-3 transition ${m.id.startsWith('temp-') ? 'opacity-60' : ''}`}
+                    className={`flex gap-3 rounded-xl bg-surface p-3 shadow-sm transition ${m.id.startsWith('temp-') ? 'opacity-60' : ''}`}
                   >
                     {/* Miniatura / upload da foto do móvel */}
-                    <label className="relative flex h-20 w-20 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-surface text-2xl">
+                    <label className="relative flex h-20 w-20 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-deep text-2xl">
                       {m.photoUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={m.photoUrl} alt={m.label ?? m.type} className="h-full w-full object-cover" />
@@ -367,6 +367,6 @@ export function ModulesSection({
           {error}
         </p>
       )}
-    </section>
+    </div>
   );
 }

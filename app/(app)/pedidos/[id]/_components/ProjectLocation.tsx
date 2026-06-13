@@ -60,9 +60,9 @@ export function ProjectLocation({
     });
 
   return (
-    <section className="rounded-2xl bg-surface p-5 shadow-sm">
+    <div>
       <div className="flex items-start justify-between gap-2">
-        <h2 className="text-lg font-semibold text-charcoal">Local da obra</h2>
+        <h2 className="text-lg font-bold text-charcoal sm:text-xl">Local da obra</h2>
         {editable && !open && (
           <button type="button" onClick={() => setOpen(true)} className="text-sm font-medium text-brand-primary hover:underline">
             Editar
@@ -104,6 +104,6 @@ export function ProjectLocation({
           {error && <p className="rounded-lg bg-ochre/20 px-3 py-2 text-sm text-charcoal">{error}</p>}
         </div>
       )}
-    </section>
+    </div>
   );
 }

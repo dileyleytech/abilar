@@ -56,8 +56,8 @@ export default async function PedidoDetailPage({
   }));
 
   return (
-    <main className="mx-auto w-full max-w-screen-2xl px-4 py-8 sm:px-6 lg:px-8">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <main className="mx-auto w-full max-w-screen-lg px-4 py-8 sm:px-6 lg:px-8">
+      <header className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <Link
             href={back.href}
@@ -77,24 +77,25 @@ export default async function PedidoDetailPage({
         <StatusBadge status={project.status} />
       </header>
 
-      <div className="flex flex-col gap-6">
-        {/* Obra contratada — quadro em destaque, largura total */}
+      <div className="flex flex-col divide-y divide-subtle">
+        {/* Obra contratada — quadro em destaque */}
         {obra && (
-          <section className="rounded-2xl bg-surface p-5 shadow-sm sm:p-6">
-            <h2 className="mb-4 text-xl font-bold text-charcoal">Sua obra</h2>
+          <section className="py-6 first:pt-2">
+            <SectionHead title="Sua obra" />
             <ObraBoard milestones={obra.milestones} meIsClient={obra.meIsClient} meIsCarpenter={obra.meIsCarpenter} approvedPct={obra.approvedPct} />
           </section>
         )}
 
-        {/* Orçamentos recebidos — destaque, no topo, com o máximo de detalhes */}
+        {/* Orçamentos recebidos — destaque, com o máximo de detalhes */}
         {(project.status === 'OPEN_FOR_QUOTES' || quotes.length > 0) && (
-          <section className="rounded-2xl bg-surface p-5 shadow-sm sm:p-6">
-            <h2 className="mb-1 text-xl font-bold text-charcoal sm:text-2xl">
-              Orçamentos recebidos {quotes.length > 0 && <span className="text-brand-secondary">({quotes.length})</span>}
-            </h2>
-            <p className="mb-4 text-sm text-muted">Compare as propostas. Converse antes de fechar e aceite quando estiver seguro.</p>
+          <section className="py-6 first:pt-2">
+            <SectionHead
+              title="Orçamentos recebidos"
+              count={quotes.length}
+              subtitle="Compare as propostas. Converse antes de fechar e aceite quando estiver seguro."
+            />
             {quotes.length === 0 ? (
-              <p className="rounded-xl bg-base p-6 text-center text-muted">
+              <p className="rounded-2xl bg-surface p-6 text-center text-muted shadow-sm">
                 Nenhum orçamento ainda. Marceneiros da sua região vão enviar propostas aqui.
               </p>
             ) : (
@@ -102,7 +103,7 @@ export default async function PedidoDetailPage({
                 {quotes.map((q) => {
                   const economiaCents = q.parceladoCents != null ? q.parceladoCents - q.avistaCents : 0;
                   return (
-                    <li key={q.id} className="flex flex-col gap-3 rounded-2xl bg-base p-5">
+                    <li key={q.id} className="flex flex-col gap-3 rounded-2xl bg-surface p-5 shadow-sm">
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-lg font-bold text-charcoal">{q.carpenterName}</p>
                         <span className="rounded-pill bg-brand-secondary/15 px-2.5 py-0.5 text-xs font-semibold text-brand-secondary">
@@ -168,44 +169,64 @@ export default async function PedidoDetailPage({
 
         {/* Móveis do pedido — projeto de arquiteto dispensa (o PDF já tem tudo) */}
         {isArchitectProject ? (
-          <section className="rounded-2xl bg-surface p-5 shadow-sm sm:p-6">
-            <h2 className="text-lg font-semibold text-charcoal">Projeto de arquiteto</h2>
-            <p className="mt-1 text-sm text-muted">
+          <section className="py-6 first:pt-2">
+            <SectionHead title="Projeto de arquiteto" />
+            <p className="text-sm text-muted">
               Este pedido usa o PDF do projeto — não precisa cadastrar os móveis. Os marceneiros vão orçar a partir do documento abaixo.
             </p>
           </section>
         ) : (
-          <ModulesSection projectId={project.id} modules={moduleViews} editable={editable} autoOpen={novo === '1'} />
+          <section className="py-6 first:pt-2">
+            <ModulesSection projectId={project.id} modules={moduleViews} editable={editable} autoOpen={novo === '1'} />
+          </section>
         )}
 
-        {/* Secundário: local da obra · documentos */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Local da obra */}
+        <section className="py-6">
           <ProjectLocation projectId={project.id} city={project.city} cep={project.cep} editable={editable} />
+        </section>
 
-          {roomPhotos.length > 0 && (
-            <section className="rounded-2xl bg-surface p-5 shadow-sm">
-              <h2 className="mb-3 text-lg font-semibold text-charcoal">Documentos do projeto</h2>
-              <div className="grid grid-cols-3 gap-2">
-                {roomPhotos.map((p) =>
-                  p.url ? (
-                    p.kind === 'ARCHITECT_PDF' ? (
-                      <a key={p.id} href={p.url} target="_blank" rel="noreferrer" className="flex aspect-square items-center justify-center rounded-xl border border-subtle bg-deep text-center text-xs font-medium text-brand-primary">
-                        📄 PDF
-                      </a>
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img key={p.id} src={p.url} alt="Documento do projeto" className="aspect-square w-full rounded-xl border border-subtle object-cover" />
-                    )
-                  ) : null,
-                )}
-              </div>
-            </section>
-          )}
-        </div>
+        {/* Documentos */}
+        {roomPhotos.length > 0 && (
+          <section className="py-6">
+            <SectionHead title="Documentos do projeto" />
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {roomPhotos.map((p) =>
+                p.url ? (
+                  p.kind === 'ARCHITECT_PDF' ? (
+                    <a key={p.id} href={p.url} target="_blank" rel="noreferrer" className="flex aspect-square items-center justify-center rounded-xl bg-surface text-center text-xs font-medium text-brand-primary shadow-sm">
+                      📄 PDF
+                    </a>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={p.id} src={p.url} alt="Documento do projeto" className="aspect-square w-full rounded-xl object-cover shadow-sm" />
+                  )
+                ) : null,
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Ação principal do pedido — publicar / cancelar */}
-        <ProjectActions projectId={project.id} status={project.status} hasModules={isArchitectProject || moduleViews.length > 0} />
+        <section className="py-6">
+          <ProjectActions projectId={project.id} status={project.status} hasModules={isArchitectProject || moduleViews.length > 0} />
+        </section>
       </div>
     </main>
+  );
+}
+
+function SectionHead({ title, count, subtitle, action }: { title: string; count?: number; subtitle?: string; action?: React.ReactNode }) {
+  return (
+    <div className="mb-4 flex items-start justify-between gap-3">
+      <div>
+        <h2 className="text-lg font-bold text-charcoal sm:text-xl">
+          {title}
+          {count != null && count > 0 && <span className="ml-2 text-brand-secondary">({count})</span>}
+        </h2>
+        {subtitle && <p className="mt-0.5 text-sm text-muted">{subtitle}</p>}
+      </div>
+      {action}
+    </div>
   );
 }
