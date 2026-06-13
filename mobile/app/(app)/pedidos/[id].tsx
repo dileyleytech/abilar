@@ -31,7 +31,7 @@ function badgeTone(status: MilestoneRow['status']) {
 }
 
 export default function PedidoDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, novo } = useLocalSearchParams<{ id: string; novo?: string }>();
   const { profile } = useAuth();
   const router = useRouter();
   const [project, setProject] = useState<ProjectRow | null>(null);
@@ -301,7 +301,7 @@ export default function PedidoDetail() {
         )}
 
         {milestones.length === 0 && id && (
-          <ModulesSection projectId={id} status={project.status} isOwner={isClient} onPublished={() => void load()} />
+          <ModulesSection projectId={id} status={project.status} isOwner={isClient} onPublished={() => void load()} autoOpen={novo === '1'} />
         )}
 
         {milestones.length > 0 ? (

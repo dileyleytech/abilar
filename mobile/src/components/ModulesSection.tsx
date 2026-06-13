@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { api, type Photo } from '@/lib/api';
@@ -21,11 +21,13 @@ export function ModulesSection({
   status,
   isOwner,
   onPublished,
+  autoOpen = false,
 }: {
   projectId: string;
   status: string;
   isOwner: boolean;
   onPublished: () => void;
+  autoOpen?: boolean;
 }) {
   const [modules, setModules] = useState<ModuleRow[] | null>(null);
   const [photos, setPhotos] = useState<Record<string, string>>({});
@@ -68,6 +70,16 @@ export function ModulesSection({
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Recém-criado (?novo=1): abre o formulário de móvel para o cliente já
+  // adicionar os cômodos/móveis e fotos.
+  const didAutoOpen = useRef(false);
+  useEffect(() => {
+    if (autoOpen && !didAutoOpen.current && editable) {
+      didAutoOpen.current = true;
+      setOpen(true);
+    }
+  }, [autoOpen, editable]);
 
   const resetForm = () => {
     setAmbiente('');

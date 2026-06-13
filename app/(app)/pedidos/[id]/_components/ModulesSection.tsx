@@ -43,13 +43,15 @@ export function ModulesSection({
   projectId,
   modules,
   editable,
+  autoOpen = false,
 }: {
   projectId: string;
   modules: ModuleView[];
   editable: boolean;
+  autoOpen?: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(autoOpen && editable);
   const [pending, start] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

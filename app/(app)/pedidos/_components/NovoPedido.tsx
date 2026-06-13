@@ -80,7 +80,9 @@ export function NovoPedido({ referred = null }: { referred?: PickedArchitect | n
         const up = await supabase.storage.from('project-photos').upload(objectPath, file);
         if (!up.error) await registerProjectPhoto(projectId, { kind: 'ARCHITECT_PDF', path: objectPath });
       }
-      router.push('/pedidos'); // volta à listagem após criar o pedido
+      // Vai direto PRA DENTRO do pedido, com o form de móvel aberto, para o
+      // cliente já adicionar os cômodos/móveis e as fotos.
+      router.push(`/pedidos/${projectId}?novo=1`);
     } catch {
       setError('Algo deu errado. Tente de novo.');
       setStatus('idle');

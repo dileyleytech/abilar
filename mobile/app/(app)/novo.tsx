@@ -88,7 +88,7 @@ export default function NovoPedido() {
       setArchResults([]);
       setCepStatus('idle');
       setLoading(false);
-      router.replace(`/(app)/pedidos/${r.projectId}`);
+      router.replace(`/(app)/pedidos/${r.projectId}?novo=1`);
     } catch (e) {
       Alert.alert('Ops', e instanceof Error ? e.message : 'Não foi possível criar o pedido.');
       setLoading(false);

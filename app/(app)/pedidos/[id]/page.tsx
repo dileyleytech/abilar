@@ -21,10 +21,10 @@ export default async function PedidoDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; novo?: string }>;
 }) {
   const { id } = await params;
-  const { from } = await searchParams;
+  const { from, novo } = await searchParams;
   const back = backFrom(from, '/pedidos');
   const userId = await requireUserId();
   const detail = await getProjectDetail(id, userId);
@@ -166,7 +166,7 @@ export default async function PedidoDetailPage({
         )}
 
         {/* Móveis do pedido */}
-        <ModulesSection projectId={project.id} modules={moduleViews} editable={editable} />
+        <ModulesSection projectId={project.id} modules={moduleViews} editable={editable} autoOpen={novo === '1'} />
 
         {/* Secundário, largura total: local da obra · documentos · ações */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
