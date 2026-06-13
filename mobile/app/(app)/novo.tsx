@@ -88,7 +88,8 @@ export default function NovoPedido() {
       setArchResults([]);
       setCepStatus('idle');
       setLoading(false);
-      router.replace(`/(app)/pedidos/${r.projectId}?novo=1`);
+      // Projeto de arquiteto: o PDF já tem tudo, não auto-abre o form de móvel.
+      router.replace(source === 'ARCHITECT_PROJECT' ? `/(app)/pedidos/${r.projectId}` : `/(app)/pedidos/${r.projectId}?novo=1`);
     } catch (e) {
       Alert.alert('Ops', e instanceof Error ? e.message : 'Não foi possível criar o pedido.');
       setLoading(false);

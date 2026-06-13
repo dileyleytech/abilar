@@ -301,7 +301,7 @@ export default function PedidoDetail() {
         )}
 
         {milestones.length === 0 && id && (
-          <ModulesSection projectId={id} status={project.status} isOwner={isClient} onPublished={() => void load()} autoOpen={novo === '1'} />
+          <ModulesSection projectId={id} status={project.status} isOwner={isClient} onPublished={() => void load()} autoOpen={novo === '1'} architectProject={project.source_type === 'ARCHITECT_PROJECT'} />
         )}
 
         {milestones.length > 0 ? (

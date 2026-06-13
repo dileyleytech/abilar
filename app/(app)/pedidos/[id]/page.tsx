@@ -42,6 +42,7 @@ export default async function PedidoDetailPage({
   const modulePhoto = new Map<string, string | null>();
   for (const p of signed) if (p.moduleId) modulePhoto.set(p.moduleId, p.url);
   const editable = ['DRAFT', 'OPEN_FOR_QUOTES', 'IN_NEGOTIATION'].includes(project.status);
+  const isArchitectProject = project.sourceType === 'ARCHITECT_PROJECT';
   const moduleViews: ModuleView[] = modules.map((m) => ({
     id: m.id,
     ambiente: m.ambiente,
@@ -165,8 +166,17 @@ export default async function PedidoDetailPage({
           </section>
         )}
 
-        {/* Móveis do pedido */}
-        <ModulesSection projectId={project.id} modules={moduleViews} editable={editable} autoOpen={novo === '1'} />
+        {/* Móveis do pedido — projeto de arquiteto dispensa (o PDF já tem tudo) */}
+        {isArchitectProject ? (
+          <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
+            <h2 className="text-lg font-semibold text-charcoal">Projeto de arquiteto</h2>
+            <p className="mt-1 text-sm text-muted">
+              Este pedido usa o PDF do projeto — não precisa cadastrar os móveis. Os marceneiros vão orçar a partir do documento abaixo.
+            </p>
+          </section>
+        ) : (
+          <ModulesSection projectId={project.id} modules={moduleViews} editable={editable} autoOpen={novo === '1'} />
+        )}
 
         {/* Secundário: local da obra · documentos */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -194,7 +204,7 @@ export default async function PedidoDetailPage({
         </div>
 
         {/* Ação principal do pedido — publicar / cancelar */}
-        <ProjectActions projectId={project.id} status={project.status} hasModules={moduleViews.length > 0} />
+        <ProjectActions projectId={project.id} status={project.status} hasModules={isArchitectProject || moduleViews.length > 0} />
       </div>
     </main>
   );

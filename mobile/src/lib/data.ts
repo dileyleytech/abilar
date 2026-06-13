@@ -6,6 +6,7 @@ export type ProjectRow = {
   title: string;
   status: ProjectStatus;
   city: string | null;
+  source_type: string;
   created_at: string;
 };
 
@@ -42,7 +43,7 @@ export type MessageRow = {
   created_at: string;
 };
 
-const PROJECT_COLS = 'id, title, status, city, created_at';
+const PROJECT_COLS = 'id, title, status, city, source_type, created_at';
 
 export async function listClientProjects(userId: string): Promise<ProjectRow[]> {
   const { data, error } = await supabase

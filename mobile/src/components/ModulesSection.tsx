@@ -22,12 +22,14 @@ export function ModulesSection({
   isOwner,
   onPublished,
   autoOpen = false,
+  architectProject = false,
 }: {
   projectId: string;
   status: string;
   isOwner: boolean;
   onPublished: () => void;
   autoOpen?: boolean;
+  architectProject?: boolean;
 }) {
   const [modules, setModules] = useState<ModuleRow[] | null>(null);
   const [photos, setPhotos] = useState<Record<string, string>>({});
@@ -180,6 +182,20 @@ export function ModulesSection({
   };
 
   if (modules === null) return null;
+
+  // Projeto de arquiteto: o PDF já tem tudo — não cadastra móveis, só publica.
+  if (architectProject) {
+    return (
+      <View style={{ gap: space.md }}>
+        <Text style={styles.section}>Projeto de arquiteto</Text>
+        <Card>
+          <Text style={styles.muted}>Este pedido usa o PDF do projeto — não precisa cadastrar os móveis. Os marceneiros vão orçar pelo documento.</Text>
+        </Card>
+        {isDraft && <Button title="Publicar pedido →" variant="secondary" onPress={publish} loading={publishing} />}
+        {isDraft && <Text style={styles.muted}>Publique para os marceneiros da região enviarem orçamento.</Text>}
+      </View>
+    );
+  }
 
   return (
     <View style={{ gap: space.md }}>

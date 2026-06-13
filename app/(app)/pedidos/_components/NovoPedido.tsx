@@ -80,9 +80,9 @@ export function NovoPedido({ referred = null }: { referred?: PickedArchitect | n
         const up = await supabase.storage.from('project-photos').upload(objectPath, file);
         if (!up.error) await registerProjectPhoto(projectId, { kind: 'ARCHITECT_PDF', path: objectPath });
       }
-      // Vai direto PRA DENTRO do pedido, com o form de móvel aberto, para o
-      // cliente já adicionar os cômodos/móveis e as fotos.
-      router.push(`/pedidos/${projectId}?novo=1`);
+      // Projeto de arquiteto: o PDF já tem tudo, não pede móveis. Fluxo da ABI:
+      // vai com o form de móvel aberto para o cliente adicionar os cômodos/fotos.
+      router.push(isArchitect ? `/pedidos/${projectId}` : `/pedidos/${projectId}?novo=1`);
     } catch {
       setError('Algo deu errado. Tente de novo.');
       setStatus('idle');
@@ -135,13 +135,16 @@ export function NovoPedido({ referred = null }: { referred?: PickedArchitect | n
         </label>
         <p className="text-sm text-muted">Usamos a cidade para mostrar seu pedido aos marceneiros da região.</p>
 
-        {referred ? (
-          <div className="rounded-xl bg-sage/15 px-4 py-3 text-sm text-charcoal">
-            📐 Indicado por <strong>{referred.name}</strong>. A comissão do arquiteto sai da fatia da plataforma — você não paga a mais.
-          </div>
-        ) : (
-          <ArchitectPicker value={architect} onChange={setArchitect} />
-        )}
+        <div className="flex flex-col gap-2 rounded-2xl border border-subtle bg-base p-4">
+          <span className="flex items-center gap-2 text-base font-semibold text-charcoal">📐 Arquiteto parceiro <span className="text-sm font-normal text-muted">(opcional)</span></span>
+          {referred ? (
+            <div className="rounded-xl bg-sage/15 px-4 py-3 text-sm text-charcoal">
+              Indicado por <strong>{referred.name}</strong> pelo link. A comissão sai da fatia da plataforma — você não paga a mais.
+            </div>
+          ) : (
+            <ArchitectPicker value={architect} onChange={setArchitect} />
+          )}
+        </div>
 
         {path === 'AI' ? (
           <button type="button" className={`${big} bg-brand-primary text-white`} disabled={!nameOk || busy} onClick={submit}>
@@ -206,7 +209,7 @@ function ArchitectPicker({ value, onChange }: { value: PickedArchitect | null; o
 
   return (
     <div className="relative flex flex-col gap-1">
-      <span className="text-base text-charcoal">Indicado por um arquiteto? <span className="text-muted">(opcional)</span></span>
+      <span className="text-sm text-muted">Se um arquiteto te indicou, busque pelo nome.</span>
       <input
         className={fld}
         placeholder="Digite o nome do arquiteto"
