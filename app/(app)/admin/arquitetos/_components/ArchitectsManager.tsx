@@ -49,7 +49,7 @@ export function ArchitectsManager({ initial }: { initial: AdminArchitect[] }) {
 
 function ReferralLink({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
-  const link = typeof window !== 'undefined' ? `${window.location.origin}/cadastro?ref=${code}` : `/cadastro?ref=${code}`;
+  const link = typeof window !== 'undefined' ? `${window.location.origin}/r/${code}` : `/r/${code}`;
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(link);

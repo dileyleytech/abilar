@@ -5,7 +5,7 @@ import { useState } from 'react';
 /** Mostra o link de indicação do arquiteto com botão copiar/compartilhar. */
 export function ShareReferral({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
-  const link = typeof window !== 'undefined' ? `${window.location.origin}/cadastro?ref=${code}` : `/cadastro?ref=${code}`;
+  const link = typeof window !== 'undefined' ? `${window.location.origin}/r/${code}` : `/r/${code}`;
 
   const copy = async () => {
     try {

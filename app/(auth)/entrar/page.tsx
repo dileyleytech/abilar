@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AuthFlow } from '../_components/AuthFlow';
+import { ReferredBanner } from '../_components/ReferredBanner';
 
 export const metadata = { title: 'Entrar — Abilar' };
 
@@ -7,6 +8,7 @@ export default function EntrarPage() {
   return (
     <div className="flex flex-col gap-5">
       <h1 className="text-center text-xl font-semibold text-charcoal">Entrar</h1>
+      <ReferredBanner />
       <AuthFlow mode="login" />
       <p className="text-center text-base text-muted">
         Ainda não tem conta?{' '}

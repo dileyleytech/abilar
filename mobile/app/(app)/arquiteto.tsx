@@ -28,7 +28,7 @@ export default function ArquitetoScreen() {
   if (loading) return <Loading label="Carregando seu painel…" />;
   if (!d) return <EmptyState emoji="📐" title="Não foi possível carregar" subtitle="Tente novamente em instantes." />;
 
-  const link = d.referralCode ? `${config.API_URL}/cadastro?ref=${d.referralCode}` : null;
+  const link = d.referralCode ? `${config.API_URL}/r/${d.referralCode}` : null;
   const share = () => {
     if (!link) return;
     void Share.share({ message: `Faça seu projeto comigo na Abilar: ${link}` });
