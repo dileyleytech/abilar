@@ -171,7 +171,7 @@ export function ModulesSection({
   };
 
   return (
-    <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
+    <section className="rounded-2xl bg-surface p-5 shadow-sm sm:p-6">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-charcoal">
           Móveis do pedido

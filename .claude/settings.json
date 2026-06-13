@@ -125,7 +125,8 @@
       "Bash(grep -n \"await \" \"app/\\(app\\)/marceneiro/page.tsx\")",
       "Bash(awk '/FUNCTION public.handle_new_user/{f=1} f{print} /\\\\$\\\\$;/{if\\(f\\)exit}' db/migrations/0001_rls_trigger_authz.sql)",
       "Bash(rm -f \"/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/.claude/projects/-Users-rodrigodiley-Documents-Projetos-Leytech-abilar/memory/arquiteto-vinculo-e-area.md\")",
-      "Bash(rmdir -p \"/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/.claude/projects/-Users-rodrigodiley-Documents-Projetos-Leytech-abilar/memory\")"
+      "Bash(rmdir -p \"/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/.claude/projects/-Users-rodrigodiley-Documents-Projetos-Leytech-abilar/memory\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001/entrar)"
     ],
     "additionalDirectories": [
       "/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/brand/svg"

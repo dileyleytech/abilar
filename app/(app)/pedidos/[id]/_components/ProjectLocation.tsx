@@ -60,7 +60,7 @@ export function ProjectLocation({
     });
 
   return (
-    <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
+    <section className="rounded-2xl bg-surface p-5 shadow-sm">
       <div className="flex items-start justify-between gap-2">
         <h2 className="text-lg font-semibold text-charcoal">Local da obra</h2>
         {editable && !open && (

@@ -80,7 +80,7 @@ export function PedidosList({ projects }: { projects: ProjectCard[] }) {
 
 function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <p className="rounded-2xl border border-subtle bg-surface p-10 text-center text-muted">{children}</p>
+    <p className="rounded-2xl bg-surface p-10 text-center text-muted shadow-sm">{children}</p>
   );
 }
 
@@ -91,7 +91,7 @@ function Grid({ projects }: { projects: ProjectCard[] }) {
         <li key={p.id} className="group relative">
           <Link
             href={`/pedidos/${p.id}`}
-            className="flex h-full flex-col overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm transition hover:-translate-y-0.5 hover:border-brand-primary/40 hover:shadow-md"
+            className="flex h-full flex-col overflow-hidden rounded-2xl border border-transparent bg-surface shadow-sm transition hover:-translate-y-0.5 hover:border-brand-primary/40 hover:shadow-md"
           >
             <div className="relative flex aspect-[4/3] items-center justify-center bg-deep">
               {p.coverUrl ? (

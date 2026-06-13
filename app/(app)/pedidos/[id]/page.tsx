@@ -80,7 +80,7 @@ export default async function PedidoDetailPage({
       <div className="flex flex-col gap-6">
         {/* Obra contratada — quadro em destaque, largura total */}
         {obra && (
-          <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
+          <section className="rounded-2xl bg-surface p-5 shadow-sm sm:p-6">
             <h2 className="mb-4 text-xl font-bold text-charcoal">Sua obra</h2>
             <ObraBoard milestones={obra.milestones} meIsClient={obra.meIsClient} meIsCarpenter={obra.meIsCarpenter} approvedPct={obra.approvedPct} />
           </section>
@@ -88,13 +88,13 @@ export default async function PedidoDetailPage({
 
         {/* Orçamentos recebidos — destaque, no topo, com o máximo de detalhes */}
         {(project.status === 'OPEN_FOR_QUOTES' || quotes.length > 0) && (
-          <section className="rounded-2xl border-2 border-brand-secondary/25 bg-surface p-5 shadow-sm sm:p-6">
+          <section className="rounded-2xl bg-surface p-5 shadow-sm sm:p-6">
             <h2 className="mb-1 text-xl font-bold text-charcoal sm:text-2xl">
               Orçamentos recebidos {quotes.length > 0 && <span className="text-brand-secondary">({quotes.length})</span>}
             </h2>
             <p className="mb-4 text-sm text-muted">Compare as propostas. Converse antes de fechar e aceite quando estiver seguro.</p>
             {quotes.length === 0 ? (
-              <p className="rounded-xl border border-subtle p-6 text-center text-muted">
+              <p className="rounded-xl bg-base p-6 text-center text-muted">
                 Nenhum orçamento ainda. Marceneiros da sua região vão enviar propostas aqui.
               </p>
             ) : (
@@ -102,7 +102,7 @@ export default async function PedidoDetailPage({
                 {quotes.map((q) => {
                   const economiaCents = q.parceladoCents != null ? q.parceladoCents - q.avistaCents : 0;
                   return (
-                    <li key={q.id} className="flex flex-col gap-3 rounded-2xl border border-subtle bg-base p-5">
+                    <li key={q.id} className="flex flex-col gap-3 rounded-2xl bg-base p-5">
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-lg font-bold text-charcoal">{q.carpenterName}</p>
                         <span className="rounded-pill bg-brand-secondary/15 px-2.5 py-0.5 text-xs font-semibold text-brand-secondary">
@@ -168,7 +168,7 @@ export default async function PedidoDetailPage({
 
         {/* Móveis do pedido — projeto de arquiteto dispensa (o PDF já tem tudo) */}
         {isArchitectProject ? (
-          <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
+          <section className="rounded-2xl bg-surface p-5 shadow-sm sm:p-6">
             <h2 className="text-lg font-semibold text-charcoal">Projeto de arquiteto</h2>
             <p className="mt-1 text-sm text-muted">
               Este pedido usa o PDF do projeto — não precisa cadastrar os móveis. Os marceneiros vão orçar a partir do documento abaixo.
@@ -183,7 +183,7 @@ export default async function PedidoDetailPage({
           <ProjectLocation projectId={project.id} city={project.city} cep={project.cep} editable={editable} />
 
           {roomPhotos.length > 0 && (
-            <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
+            <section className="rounded-2xl bg-surface p-5 shadow-sm">
               <h2 className="mb-3 text-lg font-semibold text-charcoal">Documentos do projeto</h2>
               <div className="grid grid-cols-3 gap-2">
                 {roomPhotos.map((p) =>
