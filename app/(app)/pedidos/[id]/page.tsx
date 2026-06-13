@@ -168,8 +168,8 @@ export default async function PedidoDetailPage({
         {/* Móveis do pedido */}
         <ModulesSection projectId={project.id} modules={moduleViews} editable={editable} autoOpen={novo === '1'} />
 
-        {/* Secundário, largura total: local da obra · documentos · ações */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Secundário: local da obra · documentos */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <ProjectLocation projectId={project.id} city={project.city} cep={project.cep} editable={editable} />
 
           {roomPhotos.length > 0 && (
@@ -191,12 +191,10 @@ export default async function PedidoDetailPage({
               </div>
             </section>
           )}
-
-          <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
-            <h2 className="mb-3 text-lg font-semibold text-charcoal">Ações</h2>
-            <ProjectActions projectId={project.id} status={project.status} />
-          </section>
         </div>
+
+        {/* Ação principal do pedido — publicar / cancelar */}
+        <ProjectActions projectId={project.id} status={project.status} hasModules={moduleViews.length > 0} />
       </div>
     </main>
   );
