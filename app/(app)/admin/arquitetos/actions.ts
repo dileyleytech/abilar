@@ -6,6 +6,7 @@ import { architectProfiles, eq } from '@abilar/db';
 import { getDb } from '@/lib/db';
 import { getSessionProfile } from '@/lib/auth/session';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
+import { PROJECT_PHOTOS_BUCKET } from '@/lib/storage';
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -68,5 +69,39 @@ export async function updateArchitect(userId: string, input: unknown): Promise<A
     })
     .where(eq(architectProfiles.userId, userId));
   revalidatePath('/admin/arquitetos');
+  return { ok: true };
+}
+
+const MAX_LOGO_BYTES = 2 * 1024 * 1024; // 2 MB
+const LOGO_EXT: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/svg+xml': 'svg' };
+
+/** Admin envia/atualiza a logo do arquiteto (sobrescreve a anterior). */
+export async function setArchitectLogo(userId: string, formData: FormData): Promise<ActionResult> {
+  if (!(await requireAdmin())) return { ok: false, error: 'Apenas admin.' };
+  const file = formData.get('file');
+  if (!(file instanceof File) || file.size === 0) return { ok: false, error: 'Selecione uma imagem.' };
+  if (file.size > MAX_LOGO_BYTES) return { ok: false, error: 'Imagem muito grande (máx. 2 MB).' };
+  const ext = LOGO_EXT[file.type];
+  if (!ext) return { ok: false, error: 'Use PNG, JPG, WEBP ou SVG.' };
+
+  const path = `architects/${userId}/logo.${ext}`;
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.storage
+    .from(PROJECT_PHOTOS_BUCKET)
+    .upload(path, await file.arrayBuffer(), { contentType: file.type, upsert: true });
+  if (error) return { ok: false, error: 'Falha no upload da logo.' };
+
+  await getDb().update(architectProfiles).set({ logoPath: path }).where(eq(architectProfiles.userId, userId));
+  revalidatePath('/admin/arquitetos');
+  revalidatePath('/arquitetos');
+  return { ok: true };
+}
+
+/** Remove a logo do arquiteto. */
+export async function removeArchitectLogo(userId: string): Promise<ActionResult> {
+  if (!(await requireAdmin())) return { ok: false, error: 'Apenas admin.' };
+  await getDb().update(architectProfiles).set({ logoPath: null }).where(eq(architectProfiles.userId, userId));
+  revalidatePath('/admin/arquitetos');
+  revalidatePath('/arquitetos');
   return { ok: true };
 }

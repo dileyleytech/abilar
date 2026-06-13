@@ -108,6 +108,7 @@ export const architectProfiles = pgTable('architect_profiles', {
     .references(() => profiles.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   cau: text('cau'),
+  logoPath: text('logo_path'),
   commissionPercent: numeric('commission_percent', { precision: 5, scale: 2 }).notNull().default('0'),
   asaasWalletId: text('asaas_wallet_id'),
   active: boolean('active').notNull().default(true),

@@ -253,6 +253,13 @@
       "when": 1780694417000,
       "tag": "0035_project_planned_dates",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1780694417500,
+      "tag": "0036_architect_logo",
+      "breakpoints": true
     }
   ]
 }

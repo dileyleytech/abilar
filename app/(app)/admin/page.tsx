@@ -45,6 +45,7 @@ export default async function AdminPage() {
       </section>
 
       <div className="mt-8 flex flex-wrap gap-3">
+        <Link href="/admin/financeiro" className="rounded-xl border border-subtle bg-surface px-4 py-2 text-sm font-semibold text-charcoal hover:bg-deep">💰 Financeiro</Link>
         <Link href="/admin/arquitetos" className="rounded-xl border border-subtle bg-surface px-4 py-2 text-sm font-semibold text-charcoal hover:bg-deep">📐 Arquitetos</Link>
         <Link href="/admin/precos" className="rounded-xl border border-subtle bg-surface px-4 py-2 text-sm font-semibold text-charcoal hover:bg-deep">⚙️ Taxas e promoções</Link>
         <Link href="/admin/denuncias" className="rounded-xl border border-subtle bg-surface px-4 py-2 text-sm font-semibold text-charcoal hover:bg-deep">🚩 Denúncias</Link>

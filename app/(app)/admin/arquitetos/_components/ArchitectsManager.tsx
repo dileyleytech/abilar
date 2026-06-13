@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AdminArchitect } from '@/lib/admin/architects';
-import { createArchitect, updateArchitect } from '../actions';
+import { createArchitect, updateArchitect, setArchitectLogo, removeArchitectLogo } from '../actions';
 
 const fld = 'w-full rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none focus:border-brand focus:ring-2 focus:ring-brand/20';
 
@@ -28,9 +28,12 @@ export function ArchitectsManager({ initial }: { initial: AdminArchitect[] }) {
           {initial.map((a) => (
             <li key={a.userId} className="rounded-2xl border border-subtle bg-surface p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="font-semibold text-charcoal">{a.name}{!a.active && <span className="ml-2 rounded-pill bg-deep px-2 py-0.5 text-xs text-muted">inativo</span>}</p>
-                  {a.cau && <p className="text-sm text-muted">CAU {a.cau}</p>}
+                <div className="flex items-center gap-3">
+                  <LogoCell architect={a} onSaved={() => router.refresh()} />
+                  <div>
+                    <p className="font-semibold text-charcoal">{a.name}{!a.active && <span className="ml-2 rounded-pill bg-deep px-2 py-0.5 text-xs text-muted">inativo</span>}</p>
+                    {a.cau && <p className="text-sm text-muted">CAU {a.cau}</p>}
+                  </div>
                 </div>
                 <p className="text-sm text-muted">Comissão: <strong className="text-charcoal">{Number(a.commissionPercent)}%</strong></p>
               </div>
@@ -39,6 +42,52 @@ export function ArchitectsManager({ initial }: { initial: AdminArchitect[] }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function LogoCell({ architect, onSaved }: { architect: AdminArchitect; onSaved: () => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    start(async () => {
+      setError(null);
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await setArchitectLogo(architect.userId, fd);
+      if (!r.ok) return setError(r.error);
+      onSaved();
+    });
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={pending}
+        title="Enviar logo (PNG, JPG, WEBP ou SVG — máx. 2 MB)"
+        className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border border-subtle bg-deep text-lg text-muted transition hover:border-brand-primary/40 disabled:opacity-50"
+      >
+        {pending ? '…' : architect.logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={architect.logoUrl} alt={`Logo ${architect.name}`} className="h-full w-full object-contain" />
+        ) : (
+          '📐'
+        )}
+      </button>
+      <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={onPick} />
+      {architect.logoUrl ? (
+        <button type="button" disabled={pending} onClick={() => start(async () => { await removeArchitectLogo(architect.userId); onSaved(); })} className="text-[11px] text-muted hover:underline">remover</button>
+      ) : (
+        <span className="text-[11px] text-subtle">logo</span>
+      )}
+      {error && <span className="max-w-[6rem] text-center text-[10px] text-ochre">{error}</span>}
     </div>
   );
 }

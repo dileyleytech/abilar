@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { architectProfiles, eq, asc } from '@abilar/db';
 import { getDb } from '@/lib/db';
+import { signedProjectPhotoUrl } from '@/lib/storage';
 
 export const metadata = {
   title: 'Arquitetos parceiros — Abilar',
@@ -9,11 +10,14 @@ export const metadata = {
 
 async function listArchitects() {
   const db = getDb();
-  return db
-    .select({ userId: architectProfiles.userId, name: architectProfiles.name, cau: architectProfiles.cau })
+  const rows = await db
+    .select({ userId: architectProfiles.userId, name: architectProfiles.name, cau: architectProfiles.cau, logoPath: architectProfiles.logoPath })
     .from(architectProfiles)
     .where(eq(architectProfiles.active, true))
     .orderBy(asc(architectProfiles.name));
+  return Promise.all(
+    rows.map(async ({ logoPath, ...r }) => ({ ...r, logoUrl: logoPath ? await signedProjectPhotoUrl(logoPath, 600) : null })),
+  );
 }
 
 export default async function ArquitetosPage() {
@@ -47,7 +51,12 @@ export default async function ArquitetosPage() {
           <ul className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {architects.map((a) => (
               <li key={a.userId} className="flex items-center gap-4 rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-secondary/12 text-2xl">📐</span>
+                {a.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={a.logoUrl} alt={`Logo ${a.name}`} className="h-12 w-12 shrink-0 rounded-full object-contain" />
+                ) : (
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-secondary/12 text-2xl">📐</span>
+                )}
                 <div>
                   <p className="font-semibold text-charcoal">{a.name}</p>
                   {a.cau && <p className="text-sm text-muted">CAU {a.cau}</p>}
