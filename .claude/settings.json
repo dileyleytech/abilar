@@ -122,7 +122,8 @@
       "Bash(awk '/^## 9|^### 9|Plano de Execução/{f=1} f{print} /^## 10|^## 1[0-9]/{if\\(f && !/^## 9/\\) exit}' docs/ESPECIFICACAO-ABILAR.md)",
       "Bash(node -e \"console.log\\('expo-image', require\\('./node_modules/expo-image/package.json'\\).version\\)\")",
       "Bash(grep -n \"await \" \"app/\\(app\\)/marceneiro/pedidos/[id]/page.tsx\")",
-      "Bash(grep -n \"await \" \"app/\\(app\\)/marceneiro/page.tsx\")"
+      "Bash(grep -n \"await \" \"app/\\(app\\)/marceneiro/page.tsx\")",
+      "Bash(awk '/FUNCTION public.handle_new_user/{f=1} f{print} /\\\\$\\\\$;/{if\\(f\\)exit}' db/migrations/0001_rls_trigger_authz.sql)"
     ],
     "additionalDirectories": [
       "/Users/rodrigodiley/Documents/Projetos/Leytech/abilar/brand/svg"
