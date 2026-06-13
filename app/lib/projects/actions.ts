@@ -10,9 +10,32 @@ import {
   assertProjectTransition,
   ProjectStatusError,
 } from '@abilar/shared';
+import { cookies } from 'next/headers';
 import { projects, modules, projectPhotos, and, eq, sql } from '@abilar/db';
 import { getDb } from '@/lib/db';
 import { getUserId } from '@/lib/auth/session';
+import { activeArchitectById, activeArchitectByCode } from '@/lib/architects/queries';
+
+const REF_COOKIE = 'abilar_ref';
+
+/** Decide o arquiteto do projeto: escolha explícita (autocomplete) tem prioridade;
+ *  senão, o código de indicação guardado no cookie. Consome o cookie ao vincular. */
+async function resolveArchitectId(explicitId?: string): Promise<string | null> {
+  if (explicitId) {
+    const ok = await activeArchitectById(explicitId);
+    if (ok) return ok;
+  }
+  const jar = await cookies();
+  const code = jar.get(REF_COOKIE)?.value;
+  if (code) {
+    const byCode = await activeArchitectByCode(code);
+    if (byCode) {
+      jar.delete(REF_COOKIE); // indicação consumida — não vaza para pedidos futuros
+      return byCode;
+    }
+  }
+  return null;
+}
 
 type Result<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -49,6 +72,8 @@ export async function createProject(input: {
     if (!first.success) return { ok: false, error: 'Confira as medidas do móvel (em cm, maior que zero).' };
   }
 
+  const architectId = await resolveArchitectId(p.data.architectId);
+
   const db = getDb();
   const [created] = await db
     .insert(projects)
@@ -60,6 +85,7 @@ export async function createProject(input: {
       cep: p.data.cep ?? null,
       lat: p.data.lat != null ? String(p.data.lat) : null,
       lng: p.data.lng != null ? String(p.data.lng) : null,
+      architectId,
     })
     .returning({ id: projects.id });
 

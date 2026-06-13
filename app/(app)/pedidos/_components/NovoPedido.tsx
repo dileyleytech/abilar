@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createProject, registerProjectPhoto } from '@/lib/projects/actions';
+import { searchArchitectsAction } from '@/lib/architects/actions';
+import type { ArchitectOption } from '@/lib/architects/queries';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 type Path = 'AI' | 'ARCHITECT';
 type Step = 'path' | 'name' | 'pdf';
+type PickedArchitect = { id: string; name: string };
 
 const big = 'w-full rounded-xl px-5 py-4 text-lg font-semibold transition hover:opacity-90 disabled:opacity-50';
 const card =
@@ -14,11 +17,12 @@ const card =
 const fld =
   'w-full rounded-xl border border-subtle bg-surface px-4 py-4 text-lg text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
 
-export function NovoPedido() {
+export function NovoPedido({ referred = null }: { referred?: PickedArchitect | null }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>('path');
   const [path, setPath] = useState<Path>('AI');
   const [title, setTitle] = useState('');
+  const [architect, setArchitect] = useState<PickedArchitect | null>(referred);
   const [cep, setCep] = useState('');
   const [city, setCity] = useState('');
   const [loc, setLoc] = useState<{ lat: number; lng: number } | null>(null);
@@ -60,6 +64,7 @@ export function NovoPedido() {
           cep: cep.trim() || undefined,
           lat: loc?.lat,
           lng: loc?.lng,
+          architectId: architect?.id,
         },
       });
       if (!res.ok) {
@@ -127,6 +132,15 @@ export function NovoPedido() {
           <input className={fld} placeholder="Preenche pelo CEP" value={city} onChange={(e) => setCity(e.target.value)} />
         </label>
         <p className="text-sm text-muted">Usamos a cidade para mostrar seu pedido aos marceneiros da região.</p>
+
+        {referred ? (
+          <div className="rounded-xl bg-sage/15 px-4 py-3 text-sm text-charcoal">
+            📐 Indicado por <strong>{referred.name}</strong>. A comissão do arquiteto sai da fatia da plataforma — você não paga a mais.
+          </div>
+        ) : (
+          <ArchitectPicker value={architect} onChange={setArchitect} />
+        )}
+
         {path === 'AI' ? (
           <button type="button" className={`${big} bg-brand-primary text-white`} disabled={!nameOk || busy} onClick={submit}>
             {status === 'creating' ? 'Criando…' : 'Criar pedido'}
@@ -151,6 +165,70 @@ export function NovoPedido() {
       </button>
       {error && <Err msg={error} />}
     </Frame>
+  );
+}
+
+function ArchitectPicker({ value, onChange }: { value: PickedArchitect | null; onChange: (a: PickedArchitect | null) => void }) {
+  const [q, setQ] = useState('');
+  const [results, setResults] = useState<ArchitectOption[]>([]);
+  const [open, setOpen] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (value) return; // já escolhido — não busca
+    const term = q.trim();
+    if (timer.current) clearTimeout(timer.current);
+    if (term.length < 2) {
+      setResults([]);
+      return;
+    }
+    timer.current = setTimeout(() => {
+      searchArchitectsAction(term).then((r) => {
+        setResults(r);
+        setOpen(true);
+      });
+    }, 250);
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, [q, value]);
+
+  if (value) {
+    return (
+      <div className="flex items-center justify-between rounded-xl border border-subtle bg-deep px-4 py-3 text-sm">
+        <span className="text-charcoal">📐 Arquiteto: <strong>{value.name}</strong></span>
+        <button type="button" onClick={() => { onChange(null); setQ(''); }} className="text-muted hover:underline">trocar</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex flex-col gap-1">
+      <span className="text-base text-charcoal">Indicado por um arquiteto? <span className="text-muted">(opcional)</span></span>
+      <input
+        className={fld}
+        placeholder="Digite o nome do arquiteto"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        onFocus={() => results.length && setOpen(true)}
+      />
+      {open && results.length > 0 && (
+        <ul className="absolute left-0 right-0 top-full z-10 mt-1 max-h-56 overflow-auto rounded-xl border border-subtle bg-surface shadow-lg">
+          {results.map((a) => (
+            <li key={a.userId}>
+              <button
+                type="button"
+                onClick={() => { onChange({ id: a.userId, name: a.name }); setOpen(false); }}
+                className="flex w-full items-center gap-2 px-4 py-3 text-left text-charcoal hover:bg-deep"
+              >
+                <span aria-hidden>📐</span>
+                <span className="flex-1">{a.name}{a.cau && <span className="ml-2 text-xs text-muted">CAU {a.cau}</span>}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

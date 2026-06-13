@@ -72,8 +72,11 @@ export const api = {
   markNotificationsRead: () => postJson<{ ok: true }>('/api/mobile/notifications/read', {}),
 
   // --- Sprint: criar pedido · orçamento · contrato ---
-  createProject: (input: { title: string; sourceType?: string; city?: string; cep?: string; lat?: number; lng?: number }) =>
+  createProject: (input: { title: string; sourceType?: string; city?: string; cep?: string; lat?: number; lng?: number; architectId?: string }) =>
     postJson<{ ok: true; projectId: string }>('/api/mobile/projects', input),
+  searchArchitects: (q: string) =>
+    getJson<{ architects: ArchitectOption[] }>(`/api/mobile/architects?q=${encodeURIComponent(q)}`),
+  getArchitectDashboard: () => getJson<{ dashboard: ArchitectDashboard }>('/api/mobile/architect'),
   uploadProjectPdf: (projectId: string, file: Photo) =>
     postForm<{ ok: true }>('/api/mobile/projects/pdf', { projectId }, [file], 'file'),
   addModule: (
@@ -224,6 +227,16 @@ export type QuoteView = {
   contractStatus: string | null;
   clientSigned: boolean;
   carpenterSigned: boolean;
+};
+
+export type ArchitectOption = { userId: string; name: string; cau: string | null };
+
+export type ArchitectDashboard = {
+  referralCode: string | null;
+  commissionPercent: number;
+  earnedCents: number;
+  pendingCount: number;
+  projects: { id: string; title: string; status: string; clientName: string | null; commissionCents: number | null }[];
 };
 
 export type QuotePreview = {

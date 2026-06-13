@@ -15,6 +15,19 @@ async function requireAdmin(): Promise<boolean> {
   return p?.role === 'ADMIN';
 }
 
+/** Gera um código de indicação único e legível a partir do nome. */
+async function genReferralCode(name: string): Promise<string> {
+  const base = (name.normalize('NFD').replace(/[̀-ͯ]/g, '').match(/[a-zA-Z]+/)?.[0] ?? 'ABI').toUpperCase().slice(0, 6);
+  const db = getDb();
+  for (let i = 0; i < 8; i++) {
+    const code = `${base}${Math.floor(100 + Math.random() * 900)}`;
+    const [exists] = await db.select({ c: architectProfiles.referralCode }).from(architectProfiles).where(eq(architectProfiles.referralCode, code)).limit(1);
+    if (!exists) return code;
+  }
+  // Fallback improvável: timestamp-ish aleatório.
+  return `${base}${Math.floor(Math.random() * 1e6)}`;
+}
+
 const createSchema = z.object({
   name: z.string().trim().min(2, 'Informe o nome'),
   email: z.string().trim().email('E-mail inválido'),
@@ -38,9 +51,10 @@ export async function createArchitect(input: unknown): Promise<ActionResult> {
   if (error || !data.user) return { ok: false, error: error?.message ?? 'Não foi possível criar o usuário.' };
 
   // O trigger handle_new_user já criou o profile com papel ARCHITECT.
+  const referralCode = await genReferralCode(d.name);
   await getDb()
     .insert(architectProfiles)
-    .values({ userId: data.user.id, name: d.name, cau: d.cau ?? null, commissionPercent: String(d.commissionPercent), active: true })
+    .values({ userId: data.user.id, name: d.name, cau: d.cau ?? null, commissionPercent: String(d.commissionPercent), referralCode, active: true })
     .onConflictDoUpdate({ target: architectProfiles.userId, set: { name: d.name, cau: d.cau ?? null, commissionPercent: String(d.commissionPercent) } });
   revalidatePath('/admin/arquitetos');
   return { ok: true };

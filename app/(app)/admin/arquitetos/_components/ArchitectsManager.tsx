@@ -37,11 +37,34 @@ export function ArchitectsManager({ initial }: { initial: AdminArchitect[] }) {
                 </div>
                 <p className="text-sm text-muted">Comissão: <strong className="text-charcoal">{Number(a.commissionPercent)}%</strong></p>
               </div>
+              {a.referralCode && <ReferralLink code={a.referralCode} />}
               <EditRow architect={a} onSaved={() => router.refresh()} pending={pending} start={start} />
             </li>
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function ReferralLink({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  const link = typeof window !== 'undefined' ? `${window.location.origin}/cadastro?ref=${code}` : `/cadastro?ref=${code}`;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard indisponível */
+    }
+  };
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+      <span className="rounded-pill bg-deep px-2 py-0.5 font-mono text-charcoal">{code}</span>
+      <button type="button" onClick={copy} className="font-semibold text-brand-secondary hover:underline">
+        {copied ? '✓ Link copiado' : 'Copiar link de indicação'}
+      </button>
     </div>
   );
 }

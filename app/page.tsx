@@ -20,7 +20,7 @@ export default async function Home() {
   const profile = await getSessionProfile();
   if (profile) {
     const home =
-      profile.role === 'CLIENT' ? '/pedidos' : profile.role === 'CARPENTER' ? '/marceneiro' : profile.role === 'ADMIN' ? '/admin' : '/conta';
+      profile.role === 'CLIENT' ? '/pedidos' : profile.role === 'CARPENTER' ? '/marceneiro' : profile.role === 'ADMIN' ? '/admin' : profile.role === 'ARCHITECT' ? '/arquiteto' : '/conta';
     redirect(home);
   }
 

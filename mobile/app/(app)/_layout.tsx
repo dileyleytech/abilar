@@ -11,6 +11,7 @@ function Icon({ emoji }: { emoji: string }) {
 export default function AppLayout() {
   const { profile } = useAuth();
   const carpenter = profile?.role === 'CARPENTER';
+  const architect = profile?.role === 'ARCHITECT';
 
   // Header nativo com Conversas + Avisos no topo (padrão mobile).
   const header = {
@@ -30,7 +31,12 @@ export default function AppLayout() {
         tabBarStyle: { backgroundColor: color.bg.surface, borderTopColor: color.border.subtle },
       }}
     >
-      <Tabs.Screen name="pedidos" options={{ title: 'Pedidos', tabBarIcon: () => <Icon emoji="📋" /> }} />
+      <Tabs.Screen name="pedidos" options={{ title: 'Pedidos', tabBarIcon: () => <Icon emoji="📋" />, href: architect ? null : undefined }} />
+      {/* Arquiteto: início (projetos indicados + comissões + link) */}
+      <Tabs.Screen
+        name="arquiteto"
+        options={{ ...header, title: 'Início', tabBarIcon: () => <Icon emoji="🏠" />, href: architect ? undefined : null }}
+      />
       <Tabs.Screen
         name="novo"
         options={{

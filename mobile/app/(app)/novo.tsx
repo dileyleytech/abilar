@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
-import { api, lookupCep, type Photo } from '@/lib/api';
+import { api, lookupCep, type ArchitectOption, type Photo } from '@/lib/api';
 import { Button } from '@/components/ui';
 import { color, radius, space } from '@/theme';
 
@@ -15,7 +15,27 @@ export default function NovoPedido() {
   const [city, setCity] = useState('');
   const [coords, setCoords] = useState<{ lat?: number; lng?: number }>({});
   const [cepStatus, setCepStatus] = useState<'idle' | 'loading' | 'found' | 'error'>('idle');
+  const [architect, setArchitect] = useState<{ id: string; name: string } | null>(null);
+  const [archQuery, setArchQuery] = useState('');
+  const [archResults, setArchResults] = useState<ArchitectOption[]>([]);
+  const archTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (architect) return;
+    const term = archQuery.trim();
+    if (archTimer.current) clearTimeout(archTimer.current);
+    if (term.length < 2) {
+      setArchResults([]);
+      return;
+    }
+    archTimer.current = setTimeout(() => {
+      api.searchArchitects(term).then((r) => setArchResults(r.architects)).catch(() => setArchResults([]));
+    }, 300);
+    return () => {
+      if (archTimer.current) clearTimeout(archTimer.current);
+    };
+  }, [archQuery, architect]);
 
   const onCep = async (raw: string) => {
     setCep(raw);
@@ -52,6 +72,7 @@ export default function NovoPedido() {
         cep: cep.trim() || undefined,
         lat: coords.lat,
         lng: coords.lng,
+        architectId: architect?.id,
       });
       if (source === 'ARCHITECT_PROJECT' && pdf) {
         await api.uploadProjectPdf(r.projectId, pdf);
@@ -62,6 +83,9 @@ export default function NovoPedido() {
       setCoords({});
       setPdf(null);
       setSource('AI_GENERATED');
+      setArchitect(null);
+      setArchQuery('');
+      setArchResults([]);
       setCepStatus('idle');
       setLoading(false);
       router.replace(`/(app)/pedidos/${r.projectId}`);
@@ -117,6 +141,23 @@ export default function NovoPedido() {
       <TextInput style={styles.input} placeholder="Preenche pelo CEP" placeholderTextColor={color.text.subtle} value={city} onChangeText={setCity} />
       <Text style={styles.help}>Usamos a cidade para mostrar seu pedido aos marceneiros da região.</Text>
 
+      <Text style={styles.label}>Indicado por um arquiteto? (opcional)</Text>
+      {architect ? (
+        <View style={styles.pdfRow}>
+          <Text style={styles.pdfName} numberOfLines={1}>📐 {architect.name}</Text>
+          <Text style={styles.pdfRemove} onPress={() => { setArchitect(null); setArchQuery(''); }}>Trocar</Text>
+        </View>
+      ) : (
+        <>
+          <TextInput style={styles.input} placeholder="Digite o nome do arquiteto" placeholderTextColor={color.text.subtle} value={archQuery} onChangeText={setArchQuery} />
+          {archResults.map((a) => (
+            <Pressable key={a.userId} onPress={() => { setArchitect({ id: a.userId, name: a.name }); setArchResults([]); }} style={styles.archItem}>
+              <Text style={styles.archName}>📐 {a.name}{a.cau ? `  ·  CAU ${a.cau}` : ''}</Text>
+            </Pressable>
+          ))}
+        </>
+      )}
+
       <Button title="Criar pedido" onPress={submit} loading={loading} />
     </ScrollView>
     </KeyboardAvoidingView>
@@ -140,4 +181,6 @@ const styles = StyleSheet.create({
   input: { backgroundColor: color.bg.surface, borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 12, fontSize: 16, color: color.text.primary },
   cepMuted: { color: color.text.muted, fontSize: 13 },
   cepErr: { color: color.accent.ochre, fontSize: 13 },
+  archItem: { backgroundColor: color.bg.surface, borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 12 },
+  archName: { color: color.text.primary, fontSize: 15 },
 });
