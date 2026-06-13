@@ -670,6 +670,30 @@ O marceneiro acessa o mesmo motor: pode (a) **editar** o estado estruturado e ge
 - [ ] Páginas do blog: índice, post, por cluster; CTAs para `/cadastro/cliente` e `/cadastro/marceneiro`; bloco de parceria com arquitetos.
 - [ ] Google Search Console: submeter sitemap; verificar indexação.
 
+### Fase 11 — Pendências acumuladas (não esquecer)
+> Itens adiados durante as fases anteriores, em geral **por dependência externa** (chaves/contas/deploy) ou por serem **nativos** (dev build EAS). Reunidos aqui para não se perderem. Quando o acesso existir, puxar daqui.
+
+**Dependem de chave/conta/deploy externo:**
+- [ ] **Asaas/escrow (Fase 5):** `PaymentProvider`+`AsaasProvider`, checkout (Pix/cartão/boleto), split + escrow, `releaseEscrow`, `transferToPix`, carteira/saque, disputa/reembolso, webhooks idempotentes. **Requer chaves Asaas + deploy p/ webhooks.**
+- [ ] **Repasse da comissão do arquiteto no split** (depende do Asaas). A comissão já é **configurável** no `/admin/arquitetos`.
+- [ ] **IA do chat de design (Fase 6):** NLU (Gemini Flash-Lite) + edição de imagem (Nano Banana) + Queue/R2. **Requer `GEMINI_API_KEY` + deploy.**
+- [ ] **Completude por IA (4.3d):** hoje é heurística (`@abilar/shared/completeness`). Versão Gemini quando houver chave.
+- [ ] **PDF real via Browser Rendering → R2:** hoje web usa `window.print` e o app usa `expo-print` (PDF on-device). **Depende de deploy Cloudflare.**
+- [ ] **Notificações por e-mail/push:** in-app pronto. **E-mail** precisa de provedor; **push** precisa de dev build (abaixo).
+- [ ] **Observabilidade + produção:** Workers Analytics/Logpush, deploy Cloudflare (Git integration) + Hyperdrive + R2 + Supabase.
+- [ ] **Blog automático + keep-alive + SEO avançado (Fase 10):** content-engine (Gemini), Cron, JSON-LD/OG por página, IndexNow. **Requer Gemini + Cron/deploy.**
+
+**Nativo mobile — precisa de dev build (EAS), não roda no Expo Go:**
+- [ ] **Push** (Expo Notifications + `PushToken`/`NotificationPref`) com deep links.
+- [ ] **Câmera com coach de foto** (giroscópio/luz/enquadramento) + checagem pós-captura.
+- [ ] **Áudio → orçamento/brief** (Gemini multimodal).
+- [ ] **EAS Build/Submit** + checklist das lojas (`ABILAR-MOBILE-EXPO.md`).
+
+**Dependem de ação humana (sem código):**
+- [ ] Painel Supabase: ligar o **hook de JWT** (0020) + **chaves assimétricas** (para `getClaims` ler o papel do token).
+- [ ] **Revisão jurídica** do contrato padrão (§6.5).
+- [ ] Decidir **migração de região** (sa-east-1) se necessário.
+
 ---
 
 ## 10. Notificações & eventos (push em toda a jornada)
