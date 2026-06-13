@@ -265,7 +265,7 @@ export function MarceneiroFeed({ open, quoted }: { open: OpenCard[]; quoted: Quo
 
 function Empty({ icon, title, hint, action }: { icon: string; title: string; hint: string; action?: React.ReactNode }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-subtle bg-surface p-12 text-center">
+    <div className="flex flex-col items-center gap-3 rounded-2xl border border-subtle bg-surface p-12 text-center">
       <span className="text-4xl" aria-hidden>{icon}</span>
       <p className="text-lg font-semibold text-charcoal">{title}</p>
       <p className="max-w-md text-muted">{hint}</p>

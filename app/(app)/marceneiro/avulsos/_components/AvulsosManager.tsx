@@ -42,7 +42,7 @@ export function AvulsosManager({ initialQuotes, catalog }: { initialQuotes: Exte
           onClose={() => setEditing(null)}
         />
       ) : initialQuotes.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-subtle bg-surface p-10 text-center text-muted">
+        <p className="rounded-2xl border border-subtle bg-surface p-10 text-center text-muted">
           Nenhum orçamento avulso ainda.
         </p>
       ) : (

@@ -37,7 +37,7 @@ export default async function PedidosPage() {
       </div>
 
       {projects.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-subtle bg-surface p-12 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-subtle bg-surface p-12 text-center">
           <span className="text-5xl" aria-hidden>🪵</span>
           <p className="text-lg font-medium text-charcoal">Você ainda não tem pedidos</p>
           <p className="max-w-sm text-muted">

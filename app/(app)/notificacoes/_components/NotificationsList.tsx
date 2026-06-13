@@ -28,7 +28,7 @@ export function NotificationsList({ items }: { items: NotificationItem[] }) {
 
   if (items.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-subtle bg-surface p-10 text-center text-muted">
+      <div className="rounded-2xl border border-subtle bg-surface p-10 text-center text-muted">
         <span className="text-3xl" aria-hidden>🔔</span>
         <p className="mt-2 font-medium text-charcoal">Nenhum aviso ainda</p>
         <p>Mudanças nos seus pedidos, orçamentos e obras aparecem aqui.</p>

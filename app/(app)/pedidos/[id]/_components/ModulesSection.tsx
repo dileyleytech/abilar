@@ -193,9 +193,11 @@ export function ModulesSection({
       </div>
 
       {optimisticModules.length === 0 && !open ? (
-        <p className="rounded-xl border border-dashed border-subtle p-6 text-center text-muted">
-          Nenhum móvel ainda. Adicione o primeiro móvel deste pedido.
-        </p>
+        <div className="rounded-xl bg-base p-8 text-center">
+          <p className="text-3xl" aria-hidden>🪵</p>
+          <p className="mt-2 font-medium text-charcoal">Nenhum móvel ainda</p>
+          <p className="text-sm text-muted">Adicione o primeiro móvel deste pedido — com medidas e foto.</p>
+        </div>
       ) : (
         <div className="flex flex-col gap-6">
           {[...groups.entries()].map(([room, mods]) => (
@@ -209,10 +211,10 @@ export function ModulesSection({
                 {mods.map((m) => (
                   <div
                     key={m.id}
-                    className={`flex gap-3 rounded-xl border border-subtle p-3 ${m.id.startsWith('temp-') ? 'opacity-60' : ''}`}
+                    className={`flex gap-3 rounded-xl bg-base p-3 transition ${m.id.startsWith('temp-') ? 'opacity-60' : ''}`}
                   >
                     {/* Miniatura / upload da foto do móvel */}
-                    <label className="relative flex h-20 w-20 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-deep text-2xl">
+                    <label className="relative flex h-20 w-20 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-surface text-2xl">
                       {m.photoUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={m.photoUrl} alt={m.label ?? m.type} className="h-full w-full object-cover" />
@@ -284,7 +286,7 @@ export function ModulesSection({
 
       {/* Form de adicionar móvel */}
       {editable && open && (
-        <div className="mt-4 flex flex-col gap-3 rounded-xl border border-subtle bg-base p-4">
+        <div className="mt-4 flex flex-col gap-3 rounded-xl bg-deep p-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1">
               <span className="text-sm font-medium text-charcoal">Cômodo</span>

@@ -242,7 +242,7 @@ export function MaterialsManager({ initial }: { initial: MaterialView[] }) {
       )}
 
       {items.length === 0 && !showForm ? (
-        <div className="rounded-2xl border border-dashed border-subtle bg-surface p-10 text-center text-muted">
+        <div className="rounded-2xl border border-subtle bg-surface p-10 text-center text-muted">
           <span className="text-3xl" aria-hidden>📦</span>
           <p className="mt-2 font-medium text-charcoal">Seu catálogo está vazio</p>
           <p>Cadastre o que você usa (chapa, espelho, ferragem, serviço) pra montar orçamentos rápido.</p>

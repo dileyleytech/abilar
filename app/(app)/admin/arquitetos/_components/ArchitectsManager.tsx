@@ -22,7 +22,7 @@ export function ArchitectsManager({ initial }: { initial: AdminArchitect[] }) {
       {adding && <CreateForm onClose={() => setAdding(false)} onSaved={() => { setAdding(false); router.refresh(); }} />}
 
       {initial.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-subtle bg-surface p-10 text-center text-muted">Nenhum arquiteto cadastrado.</p>
+        <p className="rounded-2xl border border-subtle bg-surface p-10 text-center text-muted">Nenhum arquiteto cadastrado.</p>
       ) : (
         <ul className="flex flex-col gap-3">
           {initial.map((a) => (

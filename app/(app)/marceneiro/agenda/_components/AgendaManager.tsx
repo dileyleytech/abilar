@@ -43,7 +43,7 @@ export function AgendaManager({ maxParallel, activeCount, overloaded, obras, job
       <section>
         <h2 className="mb-2 text-lg font-semibold text-charcoal">Obras da plataforma</h2>
         {obras.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-subtle p-6 text-center text-muted">Nenhuma obra contratada no momento.</p>
+          <p className="rounded-xl border border-subtle p-6 text-center text-muted">Nenhuma obra contratada no momento.</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {obras.map((o) => (
@@ -67,7 +67,7 @@ export function AgendaManager({ maxParallel, activeCount, overloaded, obras, job
         </div>
         {adding && <JobForm onClose={() => setAdding(false)} onSaved={() => { setAdding(false); refresh(); }} />}
         {jobs.length === 0 && !adding ? (
-          <p className="rounded-xl border border-dashed border-subtle p-6 text-center text-muted">Cadastre obras fora da plataforma para vê-las na agenda.</p>
+          <p className="rounded-xl border border-subtle p-6 text-center text-muted">Cadastre obras fora da plataforma para vê-las na agenda.</p>
         ) : (
           <ul className="mt-2 flex flex-col gap-2">
             {jobs.map((j) => (

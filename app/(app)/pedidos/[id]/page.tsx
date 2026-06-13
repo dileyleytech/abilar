@@ -94,7 +94,7 @@ export default async function PedidoDetailPage({
             </h2>
             <p className="mb-4 text-sm text-muted">Compare as propostas. Converse antes de fechar e aceite quando estiver seguro.</p>
             {quotes.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-subtle p-6 text-center text-muted">
+              <p className="rounded-xl border border-subtle p-6 text-center text-muted">
                 Nenhum orçamento ainda. Marceneiros da sua região vão enviar propostas aqui.
               </p>
             ) : (

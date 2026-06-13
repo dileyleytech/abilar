@@ -39,7 +39,7 @@ export default async function MarceneiroPage() {
       </div>
 
       {!carpenter ? (
-        <div className="flex flex-col items-start gap-3 rounded-2xl border border-dashed border-subtle bg-surface p-8">
+        <div className="flex flex-col items-start gap-3 rounded-2xl border border-subtle bg-surface p-8">
           <span className="text-4xl" aria-hidden>🪚</span>
           <h2 className="text-xl font-semibold text-charcoal">Complete seu cadastro</h2>
           <p className="text-muted">Pra receber pedidos da sua região, conte onde você atende e o que você faz.</p>

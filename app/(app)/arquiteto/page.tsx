@@ -23,13 +23,13 @@ export default async function ArquitetoPage() {
       </div>
 
       <div className="mt-6">
-        {d.referralCode ? <ShareReferral code={d.referralCode} /> : <p className="rounded-2xl border border-dashed border-subtle bg-surface p-5 text-sm text-muted">Seu código de indicação ainda não foi gerado. Fale com o suporte.</p>}
+        {d.referralCode ? <ShareReferral code={d.referralCode} /> : <p className="rounded-2xl border border-subtle bg-surface p-5 text-sm text-muted">Seu código de indicação ainda não foi gerado. Fale com o suporte.</p>}
       </div>
 
       <section className="mt-8">
         <h2 className="mb-3 text-lg font-semibold text-charcoal">Meus projetos</h2>
         {d.projects.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-subtle bg-surface p-10 text-center text-muted">
+          <p className="rounded-2xl border border-subtle bg-surface p-10 text-center text-muted">
             Nenhum projeto ainda. Compartilhe seu link de indicação com seus clientes.
           </p>
         ) : (

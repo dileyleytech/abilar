@@ -80,7 +80,7 @@ export function PedidosList({ projects }: { projects: ProjectCard[] }) {
 
 function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <p className="rounded-2xl border border-dashed border-subtle bg-surface p-10 text-center text-muted">{children}</p>
+    <p className="rounded-2xl border border-subtle bg-surface p-10 text-center text-muted">{children}</p>
   );
 }
 

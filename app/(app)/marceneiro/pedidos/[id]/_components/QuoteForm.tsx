@@ -213,7 +213,7 @@ export function QuoteForm({
             + Adicionar item
           </button>
         ) : (
-          <div className="rounded-2xl border border-dashed border-subtle bg-base p-4">
+          <div className="rounded-2xl border border-subtle bg-base p-4">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-sm font-semibold text-charcoal">Adicionar item</p>
               <button type="button" onClick={() => setShowComposer(false)} className="text-sm text-muted hover:text-charcoal">Fechar</button>
@@ -372,7 +372,7 @@ export function QuoteForm({
             )}
           </div>
         ) : (
-          <p className="rounded-2xl border border-dashed border-subtle p-6 text-center text-muted">
+          <p className="rounded-2xl border border-subtle p-6 text-center text-muted">
             Adicione itens ou informe um valor para ver quanto você recebe.
           </p>
         )}
