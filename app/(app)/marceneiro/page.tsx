@@ -3,6 +3,8 @@ import { requireRole } from '@/lib/auth/session';
 import { getCarpenterProfile } from '@/lib/carpenter/profile';
 import { getCarpenterFeed, getCarpenterQuotedProjects } from '@/lib/carpenter/feed';
 import { signedProjectPhotoUrl } from '@/lib/storage';
+import { Page, PageHeader, EmptyState, buttonVariants } from '@/components/ui';
+import { IconCustos } from '@/components/ui/icons';
 import { MarceneiroFeed } from './_components/MarceneiroFeed';
 import { ServiceAreaBar } from './_components/ServiceAreaBar';
 
@@ -23,30 +25,29 @@ export default async function MarceneiroPage() {
   ]);
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-charcoal sm:text-3xl">
-          Olá, {carpenter?.name ?? profile.name ?? 'marceneiro'} 👋
-        </h1>
-        {carpenter && (
-          <Link
-            href="/marceneiro/catalogo"
-            className="rounded-xl border border-subtle bg-surface px-4 py-2.5 text-sm font-semibold text-charcoal shadow-sm transition hover:border-brand-primary/40"
-          >
-            📦 Meu catálogo
-          </Link>
-        )}
-      </div>
+    <Page width="full">
+      <PageHeader
+        title={`Olá, ${carpenter?.name ?? profile.name ?? 'marceneiro'} 👋`}
+        action={
+          carpenter && (
+            <Link href="/marceneiro/catalogo" className={`${buttonVariants({ variant: 'outline' })} inline-flex items-center gap-2`}>
+              <IconCustos size={18} aria-hidden /> Meu catálogo
+            </Link>
+          )
+        }
+      />
 
       {!carpenter ? (
-        <div className="flex flex-col items-start gap-3 rounded-2xl border border-dashed border-subtle bg-surface p-8">
-          <span className="text-4xl" aria-hidden>🪚</span>
-          <h2 className="text-xl font-semibold text-charcoal">Complete seu cadastro</h2>
-          <p className="text-muted">Pra receber pedidos da sua região, conte onde você atende e o que você faz.</p>
-          <Link href="/marceneiro/perfil" className="mt-2 rounded-xl bg-brand-primary px-5 py-3 font-semibold text-white">
-            Completar cadastro
-          </Link>
-        </div>
+        <EmptyState
+          icon={<span className="text-4xl" aria-hidden>🪚</span>}
+          title="Complete seu cadastro"
+          hint="Pra receber pedidos da sua região, conte onde você atende e o que você faz."
+          action={
+            <Link href="/marceneiro/perfil" className={buttonVariants({ variant: 'primary', size: 'lg' })}>
+              Completar cadastro
+            </Link>
+          }
+        />
       ) : (
         <div className="flex flex-col gap-5">
           {/* Faixa fina de atendimento (resumo + ajustar) */}
@@ -59,6 +60,6 @@ export default async function MarceneiroPage() {
           <MarceneiroFeed open={openCards} quoted={quotedCards} />
         </div>
       )}
-    </main>
+    </Page>
   );
 }

@@ -1,0 +1,234 @@
+import { useCallback, useState } from 'react';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
+import { useAuth } from '@/lib/auth';
+import { api, type Pipeline } from '@/lib/api';
+import { listJobs, saveJob, setJobDone, setJobDates, deleteJob, type JobRow } from '@/lib/data';
+import { Badge, Button, Card, Loading } from '@/components/ui';
+import { IconAdicionar, IconAgenda, IconAtencao, IconFechar } from '@/components/icons';
+import { AgendaCalendar, type CalEvent } from '@/components/AgendaCalendar';
+import { color, radius, space } from '@/theme';
+
+const fmtDate = (d: string | null) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : null);
+
+export default function AgendaScreen() {
+  const { profile } = useAuth();
+  const router = useRouter();
+  const [pipe, setPipe] = useState<Pipeline | null>(null);
+  const [jobs, setJobs] = useState<JobRow[]>([]);
+  const [editing, setEditing] = useState<JobRow | 'new' | null>(null);
+  const [dateTarget, setDateTarget] = useState<{ kind: 'obra' | 'job'; id: string } | null>(null);
+  const [dStart, setDStart] = useState('');
+  const [dEnd, setDEnd] = useState('');
+
+  const openDates = (kind: 'obra' | 'job', id: string, s: string | null, e: string | null) => {
+    setDateTarget({ kind, id });
+    setDStart(s ?? '');
+    setDEnd(e ?? '');
+  };
+  const saveDates = () =>
+    act(async () => {
+      if (!dateTarget) return;
+      if (dateTarget.kind === 'obra') await api.setProjectDates(dateTarget.id, dStart || undefined, dEnd || undefined);
+      else await setJobDates(dateTarget.id, dStart || undefined, dEnd || undefined);
+      setDateTarget(null);
+    });
+
+  const load = useCallback(async () => {
+    try {
+      const [p, j] = await Promise.all([api.getPipeline(), listJobs()]);
+      setPipe(p);
+      setJobs(j);
+    } catch {
+      setPipe({ maxParallel: 0, activeCount: 0, overloaded: false, obras: [] });
+    }
+  }, []);
+
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
+
+  const act = async (fn: () => Promise<void>) => {
+    try { await fn(); await load(); } catch (e) { Alert.alert('Ops', e instanceof Error ? e.message : 'Falha.'); }
+  };
+
+  const datesBlock = (kind: 'obra' | 'job', id: string, s: string | null, e: string | null) =>
+    dateTarget?.kind === kind && dateTarget.id === id ? (
+      <View style={{ gap: space.sm }}>
+        <TextInput style={styles.dateInput} value={dStart} onChangeText={setDStart} placeholder="Início (AAAA-MM-DD)" placeholderTextColor={color.text.subtle} />
+        <TextInput style={styles.dateInput} value={dEnd} onChangeText={setDEnd} placeholder="Término (AAAA-MM-DD)" placeholderTextColor={color.text.subtle} />
+        <View style={{ flexDirection: 'row', gap: space.sm }}>
+          <Text style={styles.link} onPress={saveDates}>Salvar</Text>
+          <Text style={styles.muted} onPress={() => setDateTarget(null)}>Cancelar</Text>
+        </View>
+      </View>
+    ) : (
+      <View style={styles.datesRow}>
+        {s || e ? (
+          <View style={styles.dateLabel}>
+            <IconAgenda size={16} color={color.text.muted} strokeWidth={2} />
+            <Text style={styles.muted}>{`${fmtDate(s) ?? '—'} → ${fmtDate(e) ?? '—'}`}</Text>
+          </View>
+        ) : (
+          <Text style={styles.muted}>Sem prazos definidos</Text>
+        )}
+        <Text style={styles.editLink} onPress={() => openDates(kind, id, s, e)}>{s || e ? 'editar prazos' : 'definir prazos'}</Text>
+      </View>
+    );
+
+  if (!pipe) return <Loading label="Carregando agenda…" />;
+
+  const calEvents: CalEvent[] = [
+    ...pipe.obras
+      .filter((o) => o.startDate || o.endDate)
+      .map((o) => ({ id: `p-${o.projectId}`, title: o.title, kind: 'platform' as const, start: (o.startDate ?? o.endDate)!, end: (o.endDate ?? o.startDate)!, projectId: o.projectId })),
+    ...jobs
+      .filter((j) => j.start_date || j.end_date)
+      .map((j) => ({ id: `e-${j.id}`, title: j.title, kind: 'external' as const, start: (j.start_date ?? j.end_date)!, end: (j.end_date ?? j.start_date)! })),
+  ];
+  const undatedCount = pipe.obras.length + jobs.length - calEvents.length;
+
+  return (
+    <>
+      <Stack.Screen options={{ title: 'Agenda' }} />
+      <ScrollView style={{ backgroundColor: color.bg.base }} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
+        <Card style={pipe.overloaded ? styles.over : undefined}>
+          <Text style={styles.capacity}>{pipe.activeCount} obra(s) ativa(s) · capacidade {pipe.maxParallel}</Text>
+          {pipe.overloaded && (
+            <View style={styles.warnRow}>
+              <IconAtencao size={16} color={color.accent.ochre} strokeWidth={2} />
+              <Text style={styles.warn}>Acima da capacidade — atenção aos prazos antes de aceitar novas obras.</Text>
+            </View>
+          )}
+          <Text style={styles.hint}>Ajuste a capacidade no seu Perfil profissional.</Text>
+        </Card>
+
+        <Card>
+          <AgendaCalendar events={calEvents} onEventPress={(e) => { if (e.projectId) router.push(`/(app)/pedidos/${e.projectId}`); }} />
+          {undatedCount > 0 && (
+            <View style={styles.warnRow}>
+              <IconAgenda size={15} color={color.text.muted} strokeWidth={2} />
+              <Text style={styles.hint}>{undatedCount} obra(s) sem prazo não aparecem no calendário — defina datas abaixo.</Text>
+            </View>
+          )}
+        </Card>
+
+        <Text style={styles.section}>Obras da plataforma</Text>
+        {pipe.obras.length === 0 ? (
+          <Card><Text style={styles.muted}>Nenhuma obra contratada agora.</Text></Card>
+        ) : (
+          pipe.obras.map((o) => (
+            <Card key={o.projectId} style={{ gap: 6 }}>
+              <Pressable style={styles.rowCard} onPress={() => router.push(`/(app)/pedidos/${o.projectId}`)}>
+                <Text style={styles.obraTitle}>{o.title}</Text>
+                <Text style={styles.pct}>{o.approvedPct}%</Text>
+              </Pressable>
+              {datesBlock('obra', o.projectId, o.startDate, o.endDate)}
+            </Card>
+          ))
+        )}
+
+        <View style={styles.sectionRow}>
+          <Text style={styles.section}>Obras externas</Text>
+          <Pressable style={styles.addRow} onPress={() => setEditing('new')}>
+            <IconAdicionar size={18} color={color.brand.primary} strokeWidth={2} />
+            <Text style={styles.add}>Adicionar</Text>
+          </Pressable>
+        </View>
+        {jobs.length === 0 ? (
+          <Card><Text style={styles.muted}>Cadastre obras fora da plataforma para vê-las na agenda.</Text></Card>
+        ) : (
+          jobs.map((j) => (
+            <Card key={j.id} style={{ gap: 6 }}>
+              <Text style={styles.obraTitle}>{j.title}</Text>
+              {j.client_name ? <Text style={styles.muted}>{j.client_name}</Text> : null}
+              {datesBlock('job', j.id, j.start_date, j.end_date)}
+              <View style={styles.actions}>
+                <Text style={styles.editLink} onPress={() => setEditing(j)}>Editar tudo</Text>
+                <Text style={styles.link} onPress={() => act(() => setJobDone(j.id))}>Concluir</Text>
+                <Text style={styles.danger} onPress={() => Alert.alert('Excluir', 'Excluir esta obra?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Excluir', style: 'destructive', onPress: () => act(() => deleteJob(j.id)) }])}>Excluir</Text>
+              </View>
+            </Card>
+          ))
+        )}
+      </ScrollView>
+
+      {editing && profile && (
+        <JobForm job={editing === 'new' ? null : editing} carpenterId={profile.id} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void load(); }} />
+      )}
+    </>
+  );
+}
+
+function JobForm({ job, carpenterId, onClose, onSaved }: { job: JobRow | null; carpenterId: string; onClose: () => void; onSaved: () => void }) {
+  const [title, setTitle] = useState(job?.title ?? '');
+  const [clientName, setClientName] = useState(job?.client_name ?? '');
+  const [startDate, setStartDate] = useState(job?.start_date ?? '');
+  const [endDate, setEndDate] = useState(job?.end_date ?? '');
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (title.trim().length < 1) return Alert.alert('Obra', 'Dê um título.');
+    if (startDate && !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return Alert.alert('Data', 'Use o formato AAAA-MM-DD.');
+    if (endDate && !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) return Alert.alert('Data', 'Use o formato AAAA-MM-DD.');
+    setSaving(true);
+    try {
+      await saveJob(carpenterId, { title: title.trim(), clientName: clientName.trim() || undefined, startDate: startDate || undefined, endDate: endDate || undefined }, job?.id);
+      onSaved();
+    } catch (e) {
+      Alert.alert('Ops', e instanceof Error ? e.message : 'Não foi possível salvar.');
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <KeyboardAvoidingView style={styles.modal} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={styles.header}>
+          <Text style={styles.hTitle}>{job ? 'Editar obra' : 'Nova obra externa'}</Text>
+          <Pressable onPress={onClose}><IconFechar size={22} color={color.text.muted} strokeWidth={2} /></Pressable>
+        </View>
+        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
+          <Text style={styles.fLabel}>Título</Text>
+          <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Ex.: Cozinha do João" placeholderTextColor={color.text.subtle} />
+          <Text style={styles.fLabel}>Cliente (opcional)</Text>
+          <TextInput style={styles.input} value={clientName} onChangeText={setClientName} placeholderTextColor={color.text.subtle} />
+          <Text style={styles.fLabel}>Início (AAAA-MM-DD)</Text>
+          <TextInput style={styles.input} value={startDate} onChangeText={setStartDate} placeholder="2026-07-01" placeholderTextColor={color.text.subtle} />
+          <Text style={styles.fLabel}>Término (AAAA-MM-DD)</Text>
+          <TextInput style={styles.input} value={endDate} onChangeText={setEndDate} placeholder="2026-07-20" placeholderTextColor={color.text.subtle} />
+          <Button title="Salvar" onPress={save} loading={saving} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { padding: space.lg, gap: space.md },
+  over: { borderColor: color.accent.ochre, borderWidth: 2 },
+  capacity: { fontSize: 16, fontWeight: '700', color: color.text.primary },
+  warnRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  warn: { color: color.text.primary, flex: 1 },
+  hint: { color: color.text.subtle, fontSize: 12, marginTop: 4 },
+  section: { fontSize: 18, fontWeight: '700', color: color.text.primary, marginTop: space.sm },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: space.sm },
+  addRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  add: { color: color.brand.primary, fontWeight: '700' },
+  dateLabel: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
+  muted: { color: color.text.muted, fontSize: 13 },
+  rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  datesRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
+  dateInput: { backgroundColor: color.bg.base, borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 10, fontSize: 15, color: color.text.primary },
+  obraTitle: { fontSize: 16, fontWeight: '600', color: color.text.primary, flex: 1 },
+  pct: { fontSize: 16, fontWeight: '700', color: color.brand.primary },
+  actions: { flexDirection: 'row', gap: space.lg, marginTop: 4 },
+  editLink: { color: color.brand.secondary, fontWeight: '600' },
+  link: { color: color.brand.primary, fontWeight: '600' },
+  danger: { color: color.state.danger, fontWeight: '700' },
+  modal: { flex: 1, backgroundColor: color.bg.base },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: space.lg, borderBottomWidth: 1, borderBottomColor: color.border.subtle },
+  hTitle: { fontSize: 18, fontWeight: '700', color: color.text.primary },
+  close: { fontSize: 22, color: color.text.muted },
+  body: { padding: space.lg, gap: space.sm },
+  fLabel: { fontSize: 14, fontWeight: '600', color: color.text.primary, marginTop: space.sm },
+  input: { backgroundColor: color.bg.surface, borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 12, fontSize: 16, color: color.text.primary },
+});

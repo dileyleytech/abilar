@@ -9,6 +9,8 @@ import {
   QUOTE_STATUS_LABEL,
   QUOTE_STATUS_BADGE_SOLID,
 } from '@/lib/labels';
+import { IconAvisos, IconPedidos, IconConstrucao, IconFoto, IconLocal, IconConversas } from '@/components/ui/icons';
+import { Button } from '@/components/ui';
 
 export type OpenCard = {
   id: string;
@@ -101,14 +103,14 @@ export function MarceneiroFeed({ open, quoted }: { open: OpenCard[]; quoted: Quo
     <div className="flex flex-col gap-4">
       {/* Abas grandes */}
       <div className="flex gap-2 rounded-2xl border border-subtle bg-base p-1.5">
-        <button type="button" onClick={() => setTab('open')} className={tabBtn(tab === 'open')}>
-          🛎️ Novos pedidos <span className={tab === 'open' ? 'text-white/80' : 'text-muted'}>({open.length})</span>
+        <button type="button" onClick={() => setTab('open')} className={`${tabBtn(tab === 'open')} inline-flex items-center justify-center gap-1.5`}>
+          <IconAvisos size={18} aria-hidden /> Novos pedidos <span className={tab === 'open' ? 'text-white/80' : 'text-muted'}>({open.length})</span>
         </button>
-        <button type="button" onClick={() => setTab('quoted')} className={tabBtn(tab === 'quoted')}>
-          📋 Orçamentos <span className={tab === 'quoted' ? 'text-white/80' : 'text-muted'}>({orcamentos.length})</span>
+        <button type="button" onClick={() => setTab('quoted')} className={`${tabBtn(tab === 'quoted')} inline-flex items-center justify-center gap-1.5`}>
+          <IconPedidos size={18} aria-hidden /> Orçamentos <span className={tab === 'quoted' ? 'text-white/80' : 'text-muted'}>({orcamentos.length})</span>
         </button>
-        <button type="button" onClick={() => setTab('obras')} className={tabBtn(tab === 'obras')}>
-          🏗️ Obras <span className={tab === 'obras' ? 'text-white/80' : 'text-muted'}>({obras.length})</span>
+        <button type="button" onClick={() => setTab('obras')} className={`${tabBtn(tab === 'obras')} inline-flex items-center justify-center gap-1.5`}>
+          <IconConstrucao size={18} aria-hidden /> Obras <span className={tab === 'obras' ? 'text-white/80' : 'text-muted'}>({obras.length})</span>
         </button>
       </div>
 
@@ -134,15 +136,15 @@ export function MarceneiroFeed({ open, quoted }: { open: OpenCard[]; quoted: Quo
                 <Link href={`/marceneiro/pedidos/${c.id}`} className={card}>
                   <Cover urls={c.photoUrls}>
                     {c.photoUrls.length > 1 && (
-                      <span className="absolute bottom-2 right-2 rounded-pill bg-charcoal/70 px-2 py-0.5 text-xs font-medium text-white">
-                        📷 {c.photoUrls.length}
+                      <span className="inline-flex items-center gap-1 absolute bottom-2 right-2 rounded-pill bg-charcoal/70 px-2 py-0.5 text-xs font-medium text-white">
+                        <IconFoto size={14} aria-hidden /> {c.photoUrls.length}
                       </span>
                     )}
                   </Cover>
                   <div className="flex flex-1 flex-col gap-1 p-4">
                     <h3 className="text-lg font-semibold text-charcoal">{c.title}</h3>
-                    <p className="text-sm text-muted">
-                      📍 {c.city ?? '—'} · {c.moduleCount} {c.moduleCount === 1 ? 'móvel' : 'móveis'}
+                    <p className="inline-flex items-center gap-1 text-sm text-muted">
+                      <IconLocal size={14} aria-hidden /> {c.city ?? '—'} · {c.moduleCount} {c.moduleCount === 1 ? 'móvel' : 'móveis'}
                     </p>
                     <CatTags cats={c.categories} />
                   </div>
@@ -160,9 +162,9 @@ export function MarceneiroFeed({ open, quoted }: { open: OpenCard[]; quoted: Quo
             title="Você ainda não enviou orçamentos"
             hint="Quando você orçar um pedido, ele aparece aqui — com o status e o chat com o cliente."
             action={
-              <button type="button" onClick={() => setTab('open')} className="rounded-xl bg-brand-primary px-5 py-3 text-sm font-semibold text-white">
+              <Button variant="primary" size="sm" onClick={() => setTab('open')}>
                 Ver novos pedidos
-              </button>
+              </Button>
             }
           />
         ) : (
@@ -189,15 +191,15 @@ export function MarceneiroFeed({ open, quoted }: { open: OpenCard[]; quoted: Quo
                           {QUOTE_STATUS_LABEL[q.quoteStatus]}
                         </span>
                         {q.conversationId && (
-                          <span className="absolute bottom-2 right-2 rounded-pill bg-brand-secondary px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm">
-                            💬 Chat
+                          <span className="inline-flex items-center gap-1 absolute bottom-2 right-2 rounded-pill bg-brand-secondary px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm">
+                            <IconConversas size={14} aria-hidden /> Chat
                           </span>
                         )}
                       </Cover>
                       <div className="flex flex-1 flex-col gap-1 p-4">
                         <h3 className="text-lg font-semibold text-charcoal">{q.title}</h3>
-                        <p className="text-sm text-muted">
-                          📍 {q.city ?? '—'} · {q.moduleCount} {q.moduleCount === 1 ? 'móvel' : 'móveis'}
+                        <p className="inline-flex items-center gap-1 text-sm text-muted">
+                          <IconLocal size={14} aria-hidden /> {q.city ?? '—'} · {q.moduleCount} {q.moduleCount === 1 ? 'móvel' : 'móveis'}
                         </p>
                         <p className="text-xs text-muted">Pedido: {PROJECT_STATUS_LABEL[q.projectStatus]}</p>
                         <CatTags cats={q.categories} />
@@ -241,8 +243,8 @@ export function MarceneiroFeed({ open, quoted }: { open: OpenCard[]; quoted: Quo
                   </Cover>
                   <div className="flex flex-1 flex-col gap-1 p-4">
                     <h3 className="text-lg font-semibold text-charcoal">{o.title}</h3>
-                    <p className="text-sm text-muted">
-                      📍 {o.city ?? '—'} · {o.moduleCount} {o.moduleCount === 1 ? 'móvel' : 'móveis'}
+                    <p className="inline-flex items-center gap-1 text-sm text-muted">
+                      <IconLocal size={14} aria-hidden /> {o.city ?? '—'} · {o.moduleCount} {o.moduleCount === 1 ? 'móvel' : 'móveis'}
                     </p>
                     <div className="mt-1">
                       <div className="flex items-center justify-between text-xs font-semibold text-brand-primary">
@@ -265,7 +267,7 @@ export function MarceneiroFeed({ open, quoted }: { open: OpenCard[]; quoted: Quo
 
 function Empty({ icon, title, hint, action }: { icon: string; title: string; hint: string; action?: React.ReactNode }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-subtle bg-surface p-12 text-center">
+    <div className="flex flex-col items-center gap-3 rounded-2xl border border-subtle bg-surface p-12 text-center">
       <span className="text-4xl" aria-hidden>{icon}</span>
       <p className="text-lg font-semibold text-charcoal">{title}</p>
       <p className="max-w-md text-muted">{hint}</p>

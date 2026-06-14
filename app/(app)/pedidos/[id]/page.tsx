@@ -7,9 +7,12 @@ import { getReceivedQuotes } from '@/lib/quotes/queries';
 import { signedProjectPhotoUrl } from '@/lib/storage';
 import { StatusBadge } from '@/components/StatusBadge';
 import { ObraBoard } from '@/components/ObraBoard';
+import { Page, buttonVariants } from '@/components/ui';
 import { getProjectMilestones } from '@/lib/obra/queries';
 import { backFrom } from '@/lib/nav';
+import { IconVoltar, IconDinheiro, IconContrato, IconImprimir } from '@/components/ui/icons';
 import { ProjectActions } from './_components/ProjectActions';
+import { ProjectTitle } from './_components/ProjectTitle';
 import { ModulesSection, type ModuleView } from './_components/ModulesSection';
 import { ProjectLocation } from './_components/ProjectLocation';
 import { PreApproveButton } from './_components/PreApproveButton';
@@ -20,27 +23,28 @@ export default async function PedidoDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; novo?: string }>;
 }) {
   const { id } = await params;
-  const { from } = await searchParams;
+  const { from, novo } = await searchParams;
   const back = backFrom(from, '/pedidos');
   const userId = await requireUserId();
   const detail = await getProjectDetail(id, userId);
   if (!detail) notFound();
   const { project, modules, photos } = detail;
 
-  // URLs assinadas curtas; separa fotos do ambiente (sem módulo) das fotos por móvel.
-  const signed = await Promise.all(
-    photos.map(async (p) => ({ ...p, url: await signedProjectPhotoUrl(p.path) })),
-  );
+  // Tudo que não depende um do outro carrega EM PARALELO (assinatura de fotos,
+  // orçamentos e obra) — evita encadear as esperas.
+  const [signed, quotes, obra] = await Promise.all([
+    Promise.all(photos.map(async (p) => ({ ...p, url: await signedProjectPhotoUrl(p.path) }))),
+    getReceivedQuotes(id),
+    getProjectMilestones(id, userId),
+  ]);
   const roomPhotos = signed.filter((p) => !p.moduleId);
   const modulePhoto = new Map<string, string | null>();
   for (const p of signed) if (p.moduleId) modulePhoto.set(p.moduleId, p.url);
-
-  const quotes = await getReceivedQuotes(id);
-  const obra = await getProjectMilestones(id, userId);
   const editable = ['DRAFT', 'OPEN_FOR_QUOTES', 'IN_NEGOTIATION'].includes(project.status);
+  const isArchitectProject = project.sourceType === 'ARCHITECT_PROJECT';
   const moduleViews: ModuleView[] = modules.map((m) => ({
     id: m.id,
     ambiente: m.ambiente,
@@ -54,18 +58,18 @@ export default async function PedidoDetailPage({
   }));
 
   return (
-    <main className="mx-auto w-full max-w-screen-2xl px-4 py-8 sm:px-6 lg:px-8">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <Page width="xl">
+      <header className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <Link
             href={back.href}
             aria-label={from ? 'Voltar à conversa' : 'Voltar'}
-            className="shrink-0 rounded-lg px-2 py-1.5 text-lg text-muted transition hover:bg-deep hover:text-charcoal"
+            className="flex shrink-0 items-center rounded-lg px-2 py-1.5 text-muted transition hover:bg-deep hover:text-charcoal"
           >
-            ←
+            <IconVoltar size={20} aria-hidden />
           </Link>
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-bold text-charcoal sm:text-3xl">{project.title}</h1>
+            <ProjectTitle projectId={project.id} title={project.title} editable={editable} />
             <p className="text-sm text-muted">
               {moduleViews.length} {moduleViews.length === 1 ? 'móvel' : 'móveis'}
               {project.sourceType === 'ARCHITECT_PROJECT' ? ' · Projeto de arquiteto' : ''}
@@ -75,101 +79,156 @@ export default async function PedidoDetailPage({
         <StatusBadge status={project.status} />
       </header>
 
-      <div className="flex flex-col gap-6">
-        {/* Obra contratada — quadro em destaque, largura total */}
+      <div className="flex flex-col divide-y divide-subtle">
+        {/* Obra contratada — quadro em destaque */}
         {obra && (
-          <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
-            <h2 className="mb-4 text-xl font-bold text-charcoal">Sua obra</h2>
+          <section className="py-6 first:pt-2">
+            <SectionHead title="Sua obra" />
             <ObraBoard milestones={obra.milestones} meIsClient={obra.meIsClient} meIsCarpenter={obra.meIsCarpenter} approvedPct={obra.approvedPct} />
           </section>
         )}
 
-        {/* Orçamentos recebidos — grade em largura total */}
+        {/* Orçamentos recebidos — destaque, com o máximo de detalhes */}
         {(project.status === 'OPEN_FOR_QUOTES' || quotes.length > 0) && (
-          <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
-            <h2 className="mb-4 text-lg font-semibold text-charcoal">
-              Orçamentos recebidos {quotes.length > 0 && <span className="text-muted">({quotes.length})</span>}
-            </h2>
+          <section className="py-6 first:pt-2">
+            <SectionHead
+              title="Orçamentos recebidos"
+              count={quotes.length}
+              subtitle="Compare as propostas. Converse antes de fechar e aceite quando estiver seguro."
+            />
             {quotes.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-subtle p-6 text-center text-muted">
+              <p className="rounded-2xl bg-surface p-6 text-center text-muted shadow-sm">
                 Nenhum orçamento ainda. Marceneiros da sua região vão enviar propostas aqui.
               </p>
             ) : (
-              <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {quotes.map((q) => (
-                  <li key={q.id} className="flex flex-col rounded-xl border border-subtle p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-semibold text-charcoal">{q.carpenterName}</p>
-                      <span className="rounded-pill bg-brand-secondary/15 px-2.5 py-0.5 text-xs font-semibold text-brand-secondary">
-                        {q.status === 'SENT' ? 'Recebido' : q.status}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex flex-col gap-0.5">
-                      <span className="text-sm text-muted">
-                        À vista: <strong className="text-charcoal">{formatBRL(q.avistaCents)}</strong>
-                      </span>
-                      {q.parceladoCents != null && q.installmentValueCents != null && (
-                        <span className="text-sm text-muted">
-                          ou em até {q.clientInstallments}x de{' '}
-                          <strong className="text-charcoal">{formatBRL(q.installmentValueCents)}</strong>
+              <ul className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {quotes.map((q) => {
+                  const economiaCents = q.parceladoCents != null ? q.parceladoCents - q.avistaCents : 0;
+                  return (
+                    <li key={q.id} className="flex flex-col gap-3 rounded-2xl bg-surface p-5 shadow-sm">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-lg font-bold text-charcoal">{q.carpenterName}</p>
+                        <span className="rounded-pill bg-brand-secondary/15 px-2.5 py-0.5 text-xs font-semibold text-brand-secondary">
+                          {q.contractId ? 'Contrato gerado' : q.status === 'PRE_APPROVED' ? 'Em negociação' : q.status === 'SENT' ? 'Recebido' : q.status}
                         </span>
+                      </div>
+
+                      {/* Preço em destaque */}
+                      <div className="rounded-xl border border-brand-primary/20 bg-brand-primary/5 p-4">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted">À vista no Pix</p>
+                        <p className="text-3xl font-bold text-charcoal">{formatBRL(q.avistaCents)}</p>
+                        {q.parceladoCents != null && q.installmentValueCents != null && (
+                          <p className="mt-1 text-sm text-muted">
+                            ou <strong className="text-charcoal">{q.clientInstallments}x de {formatBRL(q.installmentValueCents)}</strong> no cartão
+                            <span className="text-subtle"> (total {formatBRL(q.parceladoCents)})</span>
+                          </p>
+                        )}
+                        {economiaCents > 0 && (
+                          <p className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-brand-secondary"><IconDinheiro size={16} aria-hidden /> Economize {formatBRL(economiaCents)} pagando à vista</p>
+                        )}
+                      </div>
+
+                      {/* O que está incluído (sem custos do marceneiro) */}
+                      {q.items.length > 0 && (
+                        <div>
+                          <p className="mb-1 text-sm font-semibold text-charcoal">O que está incluído</p>
+                          <ul className="flex flex-col gap-0.5">
+                            {q.items.map((it, i) => (
+                              <li key={i} className="text-sm text-muted">• {it.qty} {it.unit} · {it.name}</li>
+                            ))}
+                          </ul>
+                        </div>
                       )}
-                    </div>
-                    {q.note && <p className="mt-2 text-sm text-charcoal/80">“{q.note}”</p>}
-                    <div className="mt-auto flex flex-wrap items-center gap-3 pt-3">
-                      {q.contractId ? (
-                        <Link href={`/contratos/${q.contractId}`} className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
-                          📄 Ver contrato
+
+                      {q.note && (
+                        <div className="rounded-xl bg-deep/40 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Mensagem do marceneiro</p>
+                          <p className="text-sm text-charcoal/90">“{q.note}”</p>
+                        </div>
+                      )}
+
+                      <div className="mt-auto flex flex-wrap items-center gap-3 pt-1">
+                        {q.contractId ? (
+                          <Link href={`/contratos/${q.contractId}`} className={buttonVariants({ variant: 'primary', size: 'sm' })}>
+                            <IconContrato size={18} aria-hidden /> Ver contrato
+                          </Link>
+                        ) : q.status === 'PRE_APPROVED' ? (
+                          <AcceptQuoteButton quoteId={q.id} />
+                        ) : (
+                          <PreApproveButton quoteId={q.id} approved={q.status !== 'SENT'} />
+                        )}
+                        <Link href={`/orcamentos/${q.id}/imprimir`} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-primary hover:underline">
+                          <IconImprimir size={16} aria-hidden /> PDF
                         </Link>
-                      ) : q.status === 'PRE_APPROVED' ? (
-                        <AcceptQuoteButton quoteId={q.id} />
-                      ) : (
-                        <PreApproveButton quoteId={q.id} approved={q.status !== 'SENT'} />
-                      )}
-                      <Link href={`/orcamentos/${q.id}/imprimir`} className="text-sm font-semibold text-brand-primary hover:underline">
-                        🖨️ PDF
-                      </Link>
-                    </div>
-                  </li>
-                ))}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </section>
         )}
 
-        {/* Móveis do pedido */}
-        <ModulesSection projectId={project.id} modules={moduleViews} editable={editable} />
-
-        {/* Secundário, largura total: local da obra · documentos · ações */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <ProjectLocation projectId={project.id} city={project.city} cep={project.cep} editable={editable} />
-
-          {roomPhotos.length > 0 && (
-            <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
-              <h2 className="mb-3 text-lg font-semibold text-charcoal">Documentos do projeto</h2>
-              <div className="grid grid-cols-3 gap-2">
-                {roomPhotos.map((p) =>
-                  p.url ? (
-                    p.kind === 'ARCHITECT_PDF' ? (
-                      <a key={p.id} href={p.url} target="_blank" rel="noreferrer" className="flex aspect-square items-center justify-center rounded-xl border border-subtle bg-deep text-center text-xs font-medium text-brand-primary">
-                        📄 PDF
-                      </a>
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img key={p.id} src={p.url} alt="Documento do projeto" className="aspect-square w-full rounded-xl border border-subtle object-cover" />
-                    )
-                  ) : null,
-                )}
-              </div>
-            </section>
-          )}
-
-          <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
-            <h2 className="mb-3 text-lg font-semibold text-charcoal">Ações</h2>
-            <ProjectActions projectId={project.id} status={project.status} />
+        {/* Móveis do pedido — projeto de arquiteto dispensa (o PDF já tem tudo) */}
+        {isArchitectProject ? (
+          <section className="py-6 first:pt-2">
+            <SectionHead title="Projeto de arquiteto" />
+            <p className="text-sm text-muted">
+              Este pedido usa o PDF do projeto — não precisa cadastrar os móveis. Os marceneiros vão orçar a partir do documento abaixo.
+            </p>
           </section>
-        </div>
+        ) : (
+          <section className="py-6 first:pt-2">
+            <ModulesSection projectId={project.id} modules={moduleViews} editable={editable} autoOpen={novo === '1'} />
+          </section>
+        )}
+
+        {/* Local da obra */}
+        <section className="py-6">
+          <ProjectLocation projectId={project.id} city={project.city} cep={project.cep} editable={editable} />
+        </section>
+
+        {/* Documentos */}
+        {roomPhotos.length > 0 && (
+          <section className="py-6">
+            <SectionHead title="Documentos do projeto" />
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {roomPhotos.map((p) =>
+                p.url ? (
+                  p.kind === 'ARCHITECT_PDF' ? (
+                    <a key={p.id} href={p.url} target="_blank" rel="noreferrer" className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl bg-surface text-center text-xs font-medium text-brand-primary shadow-sm">
+                      <IconContrato size={22} aria-hidden /> PDF
+                    </a>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={p.id} src={p.url} alt="Documento do projeto" className="aspect-square w-full rounded-xl object-cover shadow-sm" />
+                  )
+                ) : null,
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Ação principal do pedido — publicar / cancelar */}
+        <section className="py-6">
+          <ProjectActions projectId={project.id} status={project.status} hasModules={isArchitectProject || moduleViews.length > 0} />
+        </section>
       </div>
-    </main>
+    </Page>
+  );
+}
+
+function SectionHead({ title, count, subtitle, action }: { title: string; count?: number; subtitle?: string; action?: React.ReactNode }) {
+  return (
+    <div className="mb-4 flex items-start justify-between gap-3">
+      <div>
+        <h2 className="text-lg font-bold text-charcoal sm:text-xl">
+          {title}
+          {count != null && count > 0 && <span className="ml-2 text-brand-secondary">({count})</span>}
+        </h2>
+        {subtitle && <p className="mt-0.5 text-sm text-muted">{subtitle}</p>}
+      </div>
+      {action}
+    </div>
   );
 }

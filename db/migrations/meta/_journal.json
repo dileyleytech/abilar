@@ -211,6 +211,62 @@
       "when": 1780694414000,
       "tag": "0029_message_attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1780694414500,
+      "tag": "0030_carpenter_read_engaged",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1780694415000,
+      "tag": "0031_external_quotes",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1780694415500,
+      "tag": "0032_carpenter_pipeline",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1780694416000,
+      "tag": "0033_job_from_external_quote",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1780694416500,
+      "tag": "0034_backfill_accepted_external_quotes",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1780694417000,
+      "tag": "0035_project_planned_dates",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1780694417500,
+      "tag": "0036_architect_logo",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1780694418000,
+      "tag": "0037_architect_referral",
+      "breakpoints": true
     }
   ]
 }

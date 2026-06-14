@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { CATEGORIES, type Category } from '@abilar/shared';
 import { CATEGORY_LABELS } from '@/lib/labels';
 import { updateCarpenterServiceArea } from '@/lib/carpenter/actions';
+import { Button } from '@/components/ui';
 
 /** Faixa fina de "atendimento": resumo em linguagem simples + "Ajustar" que abre
  *  a edição inline (raio + categorias). Ao salvar, o feed é recalculado. */
@@ -64,13 +65,9 @@ export function ServiceAreaBar({
         </p>
         <div className="flex items-center gap-2">
           {pending && <span className="text-xs text-muted">salvando…</span>}
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="rounded-xl border border-subtle px-4 py-2 text-sm font-semibold text-brand-primary hover:bg-deep"
-          >
+          <Button variant="outline" size="sm" onClick={() => setOpen((v) => !v)}>
             {open ? 'Pronto' : 'Ajustar'}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -115,7 +112,7 @@ export function ServiceAreaBar({
             </div>
           </div>
 
-          {error && <p className="text-sm text-ochre">{error}</p>}
+          {error && <p className="text-sm text-danger">{error}</p>}
           <Link href="/marceneiro/perfil" className="text-sm font-medium text-brand-primary hover:underline">
             Mudar cidade/endereço →
           </Link>

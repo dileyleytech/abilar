@@ -6,6 +6,8 @@ import dynamic from 'next/dynamic';
 import { CATEGORIES, PERSON_TYPES, type Category, type PersonType } from '@abilar/shared';
 import { saveCarpenterProfile } from '@/lib/carpenter/actions';
 import { CATEGORY_LABELS } from '@/lib/labels';
+import { IconLocal } from '@/components/ui/icons';
+import { Button } from '@/components/ui';
 
 // Mapa só no client (Leaflet usa window).
 const ServiceAreaMap = dynamic(() => import('./ServiceAreaMap'), {
@@ -147,7 +149,7 @@ export function CarpenterProfileForm({ initial }: { initial?: CarpenterFormIniti
           />
         </Label>
         {cepStatus === 'loading' && <p className="text-sm text-muted">Buscando endereço…</p>}
-        {cepStatus === 'error' && <p className="text-sm text-ochre">CEP não encontrado — confira o número.</p>}
+        {cepStatus === 'error' && <p className="text-sm text-danger">CEP não encontrado — confira o número.</p>}
 
         <Label text="Cidade">
           <input className={fld} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Preenche pelo CEP" />
@@ -173,8 +175,8 @@ export function CarpenterProfileForm({ initial }: { initial?: CarpenterFormIniti
         {lat != null && lng != null ? (
           <div className="mt-1">
             <ServiceAreaMap lat={lat} lng={lng} radiusKm={radiusKm} />
-            <p className="mt-2 text-sm text-muted">
-              🟠 Você atende dentro do círculo (a partir do seu CEP). Ajuste o raio acima.
+            <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-muted">
+              <IconLocal size={16} className="text-brand-primary" aria-hidden /> Você atende dentro do círculo (a partir do seu CEP). Ajuste o raio acima.
             </p>
           </div>
         ) : (
@@ -206,16 +208,11 @@ export function CarpenterProfileForm({ initial }: { initial?: CarpenterFormIniti
         <textarea className={`${fld} min-h-24`} value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Conte um pouco da sua experiência" />
       </Block>
 
-      <button
-        type="button"
-        onClick={save}
-        disabled={pending}
-        className="rounded-xl bg-brand-primary px-6 py-4 text-lg font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
-      >
+      <Button variant="primary" size="lg" onClick={save} disabled={pending}>
         {pending ? 'Salvando…' : 'Salvar perfil'}
-      </button>
+      </Button>
       {error && (
-        <p className="rounded-xl bg-ochre/20 px-4 py-3 text-base text-charcoal" role="alert">
+        <p className="rounded-xl bg-danger/10 px-4 py-3 text-base text-danger" role="alert">
           {error}
         </p>
       )}

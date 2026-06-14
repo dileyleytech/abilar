@@ -17,6 +17,8 @@ export async function getCarpenterQuote(projectId: string, carpenterId: string):
   return row ?? null;
 }
 
+export type QuoteItemSummary = { name: string; qty: number; unit: string };
+
 export type ReceivedQuote = {
   id: string;
   carpenterName: string;
@@ -28,6 +30,8 @@ export type ReceivedQuote = {
   parceladoCents: number | null;
   installmentValueCents: number | null;
   contractId: string | null;
+  // Itens inclusos (sem custo/margem — só o que está incluído).
+  items: QuoteItemSummary[];
 };
 
 /** Orçamentos recebidos num pedido (visão do cliente), com o preço já calculado. */
@@ -42,6 +46,7 @@ export async function getReceivedQuotes(projectId: string): Promise<ReceivedQuot
       dilutionSharePct: quotes.dilutionSharePct,
       note: quotes.note,
       status: quotes.status,
+      lineItems: quotes.lineItems,
       carpenterName: carpenterProfiles.name,
       contractId: contracts.id,
     })
@@ -82,6 +87,7 @@ export async function getReceivedQuotes(projectId: string): Promise<ReceivedQuot
       parceladoCents = parc.displayedAmountCents;
       installmentValueCents = Math.round(parc.displayedAmountCents / nClient);
     }
+    const items = ((r.lineItems as QuoteLineItem[]) ?? []).map((it) => ({ name: it.name, qty: it.qty, unit: it.unit }));
     return {
       id: r.id,
       carpenterName: r.carpenterName ?? 'Marceneiro',
@@ -92,6 +98,7 @@ export async function getReceivedQuotes(projectId: string): Promise<ReceivedQuot
       parceladoCents,
       installmentValueCents,
       contractId: r.contractId,
+      items,
     };
   });
 }

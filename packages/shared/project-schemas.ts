@@ -18,6 +18,7 @@ export const createProjectSchema = z.object({
   cep: z.string().trim().optional(),
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),
+  architectId: z.string().uuid().optional(), // arquiteto indicado (autocomplete)
 });
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 
@@ -42,6 +43,18 @@ export const quoteInputSchema = z.object({
   marginPct: z.number().min(0).max(1000).optional(),
 });
 export type QuoteInput = z.infer<typeof quoteInputSchema>;
+
+/** Orçamento avulso do marceneiro (§4.3d) — cliente fora da plataforma.
+ *  V = custo + margem (sem taxas da plataforma); servidor recalcula. */
+export const externalQuoteInputSchema = z.object({
+  clientName: z.string().trim().min(1, 'Informe o nome do cliente').max(120),
+  title: z.string().trim().min(1, 'Dê um título ao orçamento').max(120),
+  lineItems: z.array(quoteLineItemSchema).min(1, 'Adicione ao menos um item').max(200),
+  marginPct: z.number().min(0).max(1000),
+  note: z.string().trim().max(600).optional(),
+  status: z.enum(['SENT', 'ACCEPTED', 'REJECTED']).optional(),
+});
+export type ExternalQuoteInput = z.infer<typeof externalQuoteInputSchema>;
 
 /** Módulo (móvel): a UI envia cm; o schema entrega *Mm prontos para o banco. */
 export const moduleInputSchema = z.object({

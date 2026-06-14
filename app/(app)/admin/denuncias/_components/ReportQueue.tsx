@@ -9,6 +9,7 @@ import {
   REPORT_STATUS_BADGE,
 } from '@/lib/labels';
 import { setReportStatus } from '@/lib/moderation/actions';
+import { Button, buttonVariants } from '@/components/ui';
 
 export type ReportItem = {
   id: string;
@@ -61,40 +62,37 @@ export function ReportQueue({ items }: { items: ReportItem[] }) {
             <p className="mt-2 whitespace-pre-wrap rounded-xl bg-deep/40 p-3 text-sm text-charcoal">{r.detail}</p>
           ) : null}
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Link
-              href={`/conversas/${r.conversationId}`}
-              className="rounded-lg border border-subtle px-3 py-1.5 text-sm font-medium text-charcoal hover:bg-deep/40"
-            >
+            <Link href={`/conversas/${r.conversationId}`} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
               Abrir conversa
             </Link>
             {r.status === 'OPEN' ? (
               <>
-                <button
-                  type="button"
+                <Button
+                  variant="primary"
+                  size="sm"
                   disabled={pending && busyId === r.id}
                   onClick={() => update(r.id, 'ACTIONED')}
-                  className="rounded-lg bg-brand-primary px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
                 >
                   Tomar ação
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   disabled={pending && busyId === r.id}
                   onClick={() => update(r.id, 'DISMISSED')}
-                  className="rounded-lg border border-subtle px-3 py-1.5 text-sm font-medium text-muted hover:bg-deep/40 disabled:opacity-50"
                 >
                   Dispensar
-                </button>
+                </Button>
               </>
             ) : (
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="sm"
                 disabled={pending && busyId === r.id}
                 onClick={() => update(r.id, 'OPEN')}
-                className="rounded-lg border border-subtle px-3 py-1.5 text-sm font-medium text-muted hover:bg-deep/40 disabled:opacity-50"
               >
                 Reabrir
-              </button>
+              </Button>
             )}
           </div>
         </li>

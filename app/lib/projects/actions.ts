@@ -10,9 +10,32 @@ import {
   assertProjectTransition,
   ProjectStatusError,
 } from '@abilar/shared';
+import { cookies } from 'next/headers';
 import { projects, modules, projectPhotos, and, eq, sql } from '@abilar/db';
 import { getDb } from '@/lib/db';
 import { getUserId } from '@/lib/auth/session';
+import { activeArchitectById, activeArchitectByCode } from '@/lib/architects/queries';
+
+const REF_COOKIE = 'abilar_ref';
+
+/** Decide o arquiteto do projeto: escolha explícita (autocomplete) tem prioridade;
+ *  senão, o código de indicação guardado no cookie. Consome o cookie ao vincular. */
+async function resolveArchitectId(explicitId?: string): Promise<string | null> {
+  if (explicitId) {
+    const ok = await activeArchitectById(explicitId);
+    if (ok) return ok;
+  }
+  const jar = await cookies();
+  const code = jar.get(REF_COOKIE)?.value;
+  if (code) {
+    const byCode = await activeArchitectByCode(code);
+    if (byCode) {
+      jar.delete(REF_COOKIE); // indicação consumida — não vaza para pedidos futuros
+      return byCode;
+    }
+  }
+  return null;
+}
 
 type Result<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -49,6 +72,8 @@ export async function createProject(input: {
     if (!first.success) return { ok: false, error: 'Confira as medidas do móvel (em cm, maior que zero).' };
   }
 
+  const architectId = await resolveArchitectId(p.data.architectId);
+
   const db = getDb();
   const [created] = await db
     .insert(projects)
@@ -60,6 +85,7 @@ export async function createProject(input: {
       cep: p.data.cep ?? null,
       lat: p.data.lat != null ? String(p.data.lat) : null,
       lng: p.data.lng != null ? String(p.data.lng) : null,
+      architectId,
     })
     .returning({ id: projects.id });
 
@@ -125,6 +151,48 @@ export async function addModule(
   if (!created) return { ok: false, error: 'Não foi possível salvar o móvel.' };
   revalidatePath(`/pedidos/${projectId}`);
   return { ok: true, data: { moduleId: created.id } };
+}
+
+/** Renomeia o pedido (dono). */
+export async function renameProject(projectId: string, title: unknown): Promise<Result> {
+  const userId = await uid();
+  if (!userId) return { ok: false, error: 'Faça login.' };
+  if (!(await ownProject(projectId, userId))) return { ok: false, error: 'Pedido não encontrado.' };
+
+  const parsed = createProjectSchema.shape.title.safeParse(title);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Nome inválido.' };
+
+  const db = getDb();
+  await db.update(projects).set({ title: parsed.data, updatedAt: sql`now()` }).where(eq(projects.id, projectId));
+  revalidatePath(`/pedidos/${projectId}`);
+  revalidatePath('/pedidos');
+  return { ok: true, data: undefined };
+}
+
+/** Edita um móvel do pedido (dono). Medidas cm → mm via schema. */
+export async function updateModule(projectId: string, moduleId: string, input: unknown): Promise<Result> {
+  const userId = await uid();
+  if (!userId) return { ok: false, error: 'Faça login.' };
+  if (!(await ownProject(projectId, userId))) return { ok: false, error: 'Pedido não encontrado.' };
+
+  const m = moduleInputSchema.safeParse(input);
+  if (!m.success) return { ok: false, error: 'Confira as medidas do móvel (em cm, maior que zero).' };
+
+  const db = getDb();
+  await db
+    .update(modules)
+    .set({
+      ambiente: m.data.ambiente ?? null,
+      type: m.data.type,
+      workType: m.data.workType ?? null,
+      label: m.data.label ?? null,
+      widthMm: m.data.widthMm,
+      heightMm: m.data.heightMm,
+      depthMm: m.data.depthMm,
+    })
+    .where(and(eq(modules.id, moduleId), eq(modules.projectId, projectId)));
+  revalidatePath(`/pedidos/${projectId}`);
+  return { ok: true, data: undefined };
 }
 
 /** Atualiza o local da obra (cidade/CEP/coords) do pedido — alimenta o matching. */

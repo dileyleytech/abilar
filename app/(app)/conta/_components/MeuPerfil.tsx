@@ -9,6 +9,7 @@ import {
   requestPhoneChange,
   confirmPhoneChange,
 } from '@/lib/auth/actions';
+import { Button } from '@/components/ui';
 
 const fld =
   'w-full rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
@@ -106,22 +107,17 @@ function EditableField({
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
           <input className={fld} type={type} placeholder={placeholder} value={val} onChange={(e) => setVal(e.target.value)} />
           <div className="flex gap-2">
-            <button
-              type="button"
-              className="rounded-xl bg-brand-primary px-4 py-3 text-base font-semibold text-white disabled:opacity-50"
-              disabled={pending}
-              onClick={save}
-            >
+            <Button variant="primary" disabled={pending} onClick={save}>
               {pending ? 'Salvando…' : 'Salvar'}
-            </button>
-            <button type="button" className="rounded-xl border border-subtle px-4 py-3 text-base text-charcoal" onClick={() => setEditing(false)}>
+            </Button>
+            <Button variant="outline" onClick={() => setEditing(false)}>
               Cancelar
-            </button>
+            </Button>
           </div>
         </div>
       )}
       {msg && (
-        <p className={`mt-2 rounded-lg px-3 py-2 text-sm text-charcoal ${msg.ok ? 'bg-sage/25' : 'bg-ochre/20'}`} role="status">
+        <p className={`mt-2 rounded-lg px-3 py-2 text-sm ${msg.ok ? 'bg-sage/25 text-charcoal' : 'bg-danger/10 text-danger'}`} role="status">
           {msg.text}
         </p>
       )}
@@ -186,12 +182,12 @@ function PhoneField({ phone }: { phone: string | null }) {
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
           <input className={fld} type="tel" inputMode="tel" placeholder="(11) 98765-4321" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} />
           <div className="flex gap-2">
-            <button type="button" className="rounded-xl bg-brand-primary px-4 py-3 text-base font-semibold text-white disabled:opacity-50" disabled={pending} onClick={send}>
+            <Button variant="primary" disabled={pending} onClick={send}>
               {pending ? 'Enviando…' : 'Enviar código'}
-            </button>
-            <button type="button" className="rounded-xl border border-subtle px-4 py-3 text-base text-charcoal" onClick={() => setStep('idle')}>
+            </Button>
+            <Button variant="outline" onClick={() => setStep('idle')}>
               Cancelar
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -207,18 +203,18 @@ function PhoneField({ phone }: { phone: string | null }) {
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
           />
           <div className="flex gap-2">
-            <button type="button" className="rounded-xl bg-brand-primary px-4 py-3 text-base font-semibold text-white disabled:opacity-50" disabled={pending} onClick={confirm}>
+            <Button variant="primary" disabled={pending} onClick={confirm}>
               {pending ? 'Confirmando…' : 'Confirmar'}
-            </button>
-            <button type="button" className="rounded-xl border border-subtle px-4 py-3 text-base text-charcoal" onClick={() => setStep('enter')}>
+            </Button>
+            <Button variant="outline" onClick={() => setStep('enter')}>
               Voltar
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {msg && (
-        <p className={`mt-2 rounded-lg px-3 py-2 text-sm text-charcoal ${msg.ok ? 'bg-sage/25' : 'bg-ochre/20'}`} role="status">
+        <p className={`mt-2 rounded-lg px-3 py-2 text-sm ${msg.ok ? 'bg-sage/25 text-charcoal' : 'bg-danger/10 text-danger'}`} role="status">
           {msg.text}
         </p>
       )}

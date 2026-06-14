@@ -3,10 +3,12 @@
 import { useOptimistic, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { CATEGORIES, cmToMm, formatCm, dimensionCmError, type Category, type WorkType } from '@abilar/shared';
-import { addModule, deleteModule, registerProjectPhoto } from '@/lib/projects/actions';
+import { addModule, updateModule, deleteModule, registerProjectPhoto } from '@/lib/projects/actions';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { downscaleImage } from '@/lib/image';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
+import { Button } from '@/components/ui';
+import { IconAdicionar, IconEditar, IconExcluir, IconFoto, IconNovo, IconAtualizar } from '@/components/ui/icons';
 
 export type ModuleView = {
   id: string;
@@ -43,24 +45,28 @@ export function ModulesSection({
   projectId,
   modules,
   editable,
+  autoOpen = false,
 }: {
   projectId: string;
   modules: ModuleView[];
   editable: boolean;
+  autoOpen?: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(autoOpen && editable);
   const [pending, start] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [ambiente, setAmbiente] = useState('');
   const [type, setType] = useState<Category>('GUARDA_ROUPA');
+  const [label, setLabel] = useState('');
   const [wt, setWt] = useState<WorkType>('NEW_INSTALL');
   const [w, setW] = useState('');
   const [h, setH] = useState('');
   const [d, setD] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
 
   // UI otimista: o móvel aparece na hora (sem flash de "lista vazia") e some o
   // erro percebido; quando o router.refresh sincroniza, os dados reais assumem.
@@ -81,35 +87,62 @@ export function ModulesSection({
   const ready = w !== '' && h !== '' && d !== '' && !eW && !eH && !eD;
   const fld =
     'w-full rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
-  const fldErr = 'border-ochre ring-2 ring-ochre/30';
+  const fldErr = 'border-danger ring-2 ring-danger/30';
+
+  const resetForm = () => {
+    setAmbiente('');
+    setType('GUARDA_ROUPA');
+    setLabel('');
+    setWt('NEW_INSTALL');
+    setW('');
+    setH('');
+    setD('');
+    setFile(null);
+    setEditId(null);
+    setOpen(false);
+  };
+
+  const startEdit = (m: ModuleView) => {
+    setEditId(m.id);
+    setAmbiente(m.ambiente ?? '');
+    setType(m.type as Category);
+    setLabel(m.label ?? '');
+    setWt((m.workType as WorkType) ?? 'NEW_INSTALL');
+    setW(String(m.widthMm / 10));
+    setH(String(m.heightMm / 10));
+    setD(String(m.depthMm / 10));
+    setFile(null);
+    setOpen(true);
+  };
 
   const submit = () => {
     const payload = {
       ambiente: ambiente.trim() || undefined,
       type,
+      label: type === 'OUTRO' ? label.trim() || undefined : undefined,
       workType: wt,
       widthMm: Number(w),
       heightMm: Number(h),
       depthMm: Number(d),
     };
     const localFile = file;
-    // Limpa e fecha o form já; o móvel aparece otimista logo abaixo.
-    setAmbiente('');
-    setWt('NEW_INSTALL');
-    setW('');
-    setH('');
-    setD('');
-    setFile(null);
-    setOpen(false);
+    const isEdit = editId;
+    resetForm();
 
     start(async () => {
       setError(null);
+      if (isEdit) {
+        const r = await updateModule(projectId, isEdit, payload);
+        if (!r.ok) return setError(r.error);
+        if (localFile) await uploadModulePhoto(projectId, isEdit, localFile);
+        return router.refresh();
+      }
       addOptimistic({
         id: `temp-${Date.now()}`,
         ambiente: payload.ambiente ?? null,
         type: payload.type,
         workType: payload.workType,
-        label: null,
+        label: payload.label ?? null,
         widthMm: cmToMm(payload.widthMm),
         heightMm: cmToMm(payload.heightMm),
         depthMm: cmToMm(payload.depthMm),
@@ -140,9 +173,9 @@ export function ModulesSection({
   };
 
   return (
-    <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6">
+    <div>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-charcoal">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-charcoal sm:text-xl">
           Móveis do pedido
           {pending && (
             <span className="inline-flex items-center gap-1 text-sm font-normal text-muted">
@@ -151,20 +184,22 @@ export function ModulesSection({
           )}
         </h2>
         {editable && !open && (
-          <button
-            type="button"
-            className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
-            onClick={() => setOpen(true)}
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => { resetForm(); setOpen(true); }}
           >
-            + Adicionar móvel
-          </button>
+            <IconAdicionar size={20} aria-hidden /> Adicionar móvel
+          </Button>
         )}
       </div>
 
       {optimisticModules.length === 0 && !open ? (
-        <p className="rounded-xl border border-dashed border-subtle p-6 text-center text-muted">
-          Nenhum móvel ainda. Adicione o primeiro móvel deste pedido.
-        </p>
+        <div className="rounded-2xl bg-surface p-8 text-center shadow-sm">
+          <p className="text-3xl" aria-hidden>🪵</p>
+          <p className="mt-2 font-medium text-charcoal">Nenhum móvel ainda</p>
+          <p className="text-sm text-muted">Adicione o primeiro móvel deste pedido — com medidas e foto.</p>
+        </div>
       ) : (
         <div className="flex flex-col gap-6">
           {[...groups.entries()].map(([room, mods]) => (
@@ -178,7 +213,7 @@ export function ModulesSection({
                 {mods.map((m) => (
                   <div
                     key={m.id}
-                    className={`flex gap-3 rounded-xl border border-subtle p-3 ${m.id.startsWith('temp-') ? 'opacity-60' : ''}`}
+                    className={`flex gap-3 rounded-xl bg-surface p-3 shadow-sm transition ${m.id.startsWith('temp-') ? 'opacity-60' : ''}`}
                   >
                     {/* Miniatura / upload da foto do móvel */}
                     <label className="relative flex h-20 w-20 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-deep text-2xl">
@@ -190,8 +225,8 @@ export function ModulesSection({
                       )}
                       {editable && (
                         <>
-                          <span className="absolute bottom-0 w-full bg-charcoal/60 py-0.5 text-center text-[10px] font-medium text-white">
-                            {busyId === m.id ? '...' : m.photoUrl ? 'trocar' : '📷 foto'}
+                          <span className="absolute bottom-0 flex w-full items-center justify-center gap-1 bg-charcoal/60 py-0.5 text-center text-[10px] font-medium text-white">
+                            {busyId === m.id ? '...' : m.photoUrl ? 'trocar' : <><IconFoto size={12} aria-hidden /> foto</>}
                           </span>
                           <input
                             type="file"
@@ -208,16 +243,27 @@ export function ModulesSection({
                         <p className="truncate font-semibold text-charcoal">
                           {m.label ?? CATEGORY_LABELS[m.type as Category] ?? m.type}
                         </p>
-                        {editable && (
-                          <button
-                            type="button"
-                            aria-label="Remover móvel"
-                            disabled={pending}
-                            onClick={() => remove(m.id)}
-                            className="shrink-0 rounded-md px-2 py-0.5 text-muted hover:bg-deep hover:text-charcoal disabled:opacity-50"
-                          >
-                            ✕
-                          </button>
+                        {editable && !m.id.startsWith('temp-') && (
+                          <div className="flex shrink-0 items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              aria-label="Editar móvel"
+                              disabled={pending}
+                              onClick={() => startEdit(m)}
+                            >
+                              <IconEditar size={16} aria-hidden />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              aria-label="Remover móvel"
+                              disabled={pending}
+                              onClick={() => remove(m.id)}
+                            >
+                              <IconExcluir size={16} aria-hidden />
+                            </Button>
+                          </div>
                         )}
                       </div>
                       <p className="mt-1 font-mono text-sm text-muted">
@@ -242,7 +288,7 @@ export function ModulesSection({
 
       {/* Form de adicionar móvel */}
       {editable && open && (
-        <div className="mt-4 flex flex-col gap-3 rounded-xl border border-subtle bg-base p-4">
+        <div className="mt-4 flex flex-col gap-3 rounded-xl bg-deep p-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1">
               <span className="text-sm font-medium text-charcoal">Cômodo</span>
@@ -259,62 +305,71 @@ export function ModulesSection({
               </select>
             </label>
           </div>
+          {type === 'OUTRO' && (
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-charcoal">Qual é o móvel?</span>
+              <input className={fld} placeholder="Ex.: Adega, sapateira…" value={label} onChange={(e) => setLabel(e.target.value)} />
+            </label>
+          )}
           <div className="flex gap-2">
             {([
-              { v: 'NEW_INSTALL', t: '🆕 Móvel novo' },
-              { v: 'REPLACE_EXISTING', t: '🔁 Substituição' },
+              { v: 'NEW_INSTALL', t: 'Móvel novo', Icon: IconNovo },
+              { v: 'REPLACE_EXISTING', t: 'Substituição', Icon: IconAtualizar },
             ] as const).map((o) => (
               <button
                 key={o.v}
                 type="button"
                 onClick={() => setWt(o.v)}
-                className={`flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium transition ${
                   wt === o.v ? 'border-brand-primary bg-brand-primary/10 text-charcoal' : 'border-subtle text-muted'
                 }`}
               >
-                {o.t}
+                <o.Icon size={16} aria-hidden /> {o.t}
               </button>
             ))}
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div>
               <input className={`${fld} ${eW ? fldErr : ''}`} type="number" inputMode="numeric" min={1} placeholder="Larg. cm" value={w} onChange={(e) => setW(e.target.value)} />
-              {eW && <span className="text-xs text-ochre">{eW}</span>}
+              {eW && <span className="text-xs text-danger">{eW}</span>}
             </div>
             <div>
               <input className={`${fld} ${eH ? fldErr : ''}`} type="number" inputMode="numeric" min={1} placeholder="Alt. cm" value={h} onChange={(e) => setH(e.target.value)} />
-              {eH && <span className="text-xs text-ochre">{eH}</span>}
+              {eH && <span className="text-xs text-danger">{eH}</span>}
             </div>
             <div>
               <input className={`${fld} ${eD ? fldErr : ''}`} type="number" inputMode="numeric" min={1} placeholder="Prof. cm" value={d} onChange={(e) => setD(e.target.value)} />
-              {eD && <span className="text-xs text-ochre">{eD}</span>}
+              {eD && <span className="text-xs text-danger">{eD}</span>}
             </div>
           </div>
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-charcoal">Foto do móvel (opcional)</span>
+            <span className="text-sm font-medium text-charcoal">
+              {editId ? 'Trocar a foto (opcional)' : 'Foto do móvel (opcional)'}
+            </span>
             <input type="file" accept="image/*" className={fld} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           </label>
           <div className="flex gap-2">
-            <button
-              type="button"
-              className="flex-1 rounded-xl bg-brand-primary px-4 py-3 text-base font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+            <Button
+              variant="primary"
+              size="lg"
+              className="flex-1"
               disabled={!ready || pending}
               onClick={submit}
             >
-              {pending ? 'Salvando…' : 'Adicionar móvel'}
-            </button>
-            <button type="button" className="rounded-xl border border-subtle px-4 py-3 text-base text-charcoal hover:bg-deep" onClick={() => setOpen(false)}>
+              {pending ? 'Salvando…' : editId ? 'Salvar alterações' : 'Adicionar móvel'}
+            </Button>
+            <Button variant="outline" size="lg" onClick={resetForm}>
               Cancelar
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {error && (
-        <p className="mt-3 rounded-xl bg-ochre/20 px-4 py-3 text-base text-charcoal" role="alert">
+        <p className="mt-3 rounded-xl bg-danger/10 px-4 py-3 text-base text-danger" role="alert">
           {error}
         </p>
       )}
-    </section>
+    </div>
   );
 }

@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { maskContact } from '@abilar/shared';
 import { sendMessage, markConversationRead, signMyChatAttachments } from '@/lib/chat/actions';
 import { createAuthedChannel } from '@/lib/supabase/client';
+import { Button } from '@/components/ui';
+import { IconVer, IconFechar, IconImagem, IconEnviar, IconBloqueado } from '@/components/ui/icons';
 
 type Msg = { id: string; senderId: string; text: string; attachments: string[] };
 
@@ -176,7 +178,7 @@ export function ChatRoom({
 
       <div className="border-t border-subtle p-3">
         {readOnly ? (
-          <p className="text-center text-sm text-muted">👁️ Somente leitura (moderação).</p>
+          <p className="flex items-center justify-center gap-1.5 text-center text-sm text-muted"><IconVer size={16} aria-hidden /> Somente leitura (moderação).</p>
         ) : active ? (
           <>
             {previews.length > 0 && (
@@ -188,10 +190,10 @@ export function ChatRoom({
                     <button
                       type="button"
                       onClick={() => removeFile(i)}
-                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-charcoal text-xs text-white"
+                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-charcoal text-white"
                       aria-label="Remover foto"
                     >
-                      ✕
+                      <IconFechar size={14} />
                     </button>
                   </div>
                 ))}
@@ -207,15 +209,16 @@ export function ChatRoom({
                 className="hidden"
                 onChange={(e) => pickFiles(e.target.files)}
               />
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="md"
                 onClick={() => fileRef.current?.click()}
-                className="shrink-0 rounded-xl border border-subtle px-3 py-3 text-xl leading-none text-charcoal transition hover:bg-deep/40"
+                className="shrink-0"
                 aria-label="Anexar foto"
                 title="Anexar foto"
               >
-                📎
-              </button>
+                <IconImagem size={20} />
+              </Button>
               <textarea
                 rows={1}
                 className="max-h-40 min-h-[3rem] flex-1 resize-none rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
@@ -229,17 +232,17 @@ export function ChatRoom({
                   }
                 }}
               />
-              <button type="button" onClick={send} className="shrink-0 rounded-xl bg-brand-primary px-5 py-3 font-semibold text-white transition hover:opacity-90">
-                Enviar
-              </button>
+              <Button variant="primary" size="md" onClick={send} className="shrink-0">
+                <IconEnviar size={20} aria-hidden /> Enviar
+              </Button>
             </div>
           </>
         ) : (
           <p className="text-center text-sm text-muted">Esta conversa está fechada.</p>
         )}
         {!readOnly && (
-          <p className="mt-2 text-center text-xs text-subtle">
-            🔒 Para sua segurança, telefone, e-mail e links são ocultados. Feche o negócio pela plataforma (garantia do escrow).
+          <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-xs text-subtle">
+            <IconBloqueado size={14} aria-hidden /> Para sua segurança, telefone, e-mail e links são ocultados. Feche o negócio pela plataforma (garantia do escrow).
           </p>
         )}
       </div>

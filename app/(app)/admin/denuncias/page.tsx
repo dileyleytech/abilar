@@ -1,5 +1,6 @@
 import { requireRole } from '@/lib/auth/session';
 import { getReports } from '@/lib/moderation/queries';
+import { Page, PageHeader } from '@/components/ui';
 import { ReportQueue } from './_components/ReportQueue';
 
 export const metadata = { title: 'Denúncias — Admin Abilar' };
@@ -12,11 +13,11 @@ export default async function AdminDenunciasPage() {
   const open = reports.filter((r) => r.status === 'OPEN').length;
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-      <h1 className="text-2xl font-bold text-charcoal sm:text-3xl">Denúncias</h1>
-      <p className="mb-6 text-sm text-muted">
-        Fila de moderação do chat (§7.8). {open > 0 ? `${open} aberta(s).` : 'Nenhuma aberta.'}
-      </p>
+    <Page width="lg">
+      <PageHeader
+        title="Denúncias"
+        description={`Fila de moderação do chat (§7.8). ${open > 0 ? `${open} aberta(s).` : 'Nenhuma aberta.'}`}
+      />
       <ReportQueue
         items={reports.map((r) => ({
           id: r.id,
@@ -29,6 +30,6 @@ export default async function AdminDenunciasPage() {
           dateLabel: fmt.format(r.createdAt),
         }))}
       />
-    </main>
+    </Page>
   );
 }

@@ -9,6 +9,7 @@ import { sql } from 'drizzle-orm';
 import {
   bigint,
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -87,6 +88,7 @@ export const carpenterProfiles = pgTable(
     serviceCity: text('service_city').notNull(),
     serviceCep: text('service_cep').notNull(),
     serviceRadiusKm: integer('service_radius_km').notNull().default(20),
+    maxParallelProjects: integer('max_parallel_projects').notNull().default(3), // capacidade (§7.7)
     serviceLat: numeric('service_lat', { precision: 9, scale: 6 }), // base p/ matching por raio
     serviceLng: numeric('service_lng', { precision: 9, scale: 6 }),
     categories: categoryEnum('categories').array().notNull().default(sql`'{}'`),
@@ -106,6 +108,8 @@ export const architectProfiles = pgTable('architect_profiles', {
     .references(() => profiles.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   cau: text('cau'),
+  logoPath: text('logo_path'),
+  referralCode: text('referral_code').unique(),
   commissionPercent: numeric('commission_percent', { precision: 5, scale: 2 }).notNull().default('0'),
   asaasWalletId: text('asaas_wallet_id'),
   active: boolean('active').notNull().default(true),
@@ -153,6 +157,8 @@ export const projects = pgTable(
     lat: numeric('lat', { precision: 9, scale: 6 }),
     lng: numeric('lng', { precision: 9, scale: 6 }),
     architectId: uuid('architect_id').references(() => profiles.id, { onDelete: 'set null' }),
+    plannedStartDate: date('planned_start_date'), // prazos da obra (§7.7) — definidos pelo marceneiro
+    plannedEndDate: date('planned_end_date'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -384,6 +390,56 @@ export const carpenterMaterials = pgTable(
 
 export type CarpenterMaterial = typeof carpenterMaterials.$inferSelect;
 export type NewCarpenterMaterial = typeof carpenterMaterials.$inferInsert;
+
+/** Orçamentos avulsos do marceneiro (§4.3d) — clientes fora da plataforma.
+ *  V = custo + margem (sem taxas da plataforma). Centavos. RLS: só o dono. */
+export const externalQuotes = pgTable(
+  'external_quotes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    carpenterId: uuid('carpenter_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    clientName: text('client_name').notNull(),
+    title: text('title').notNull(),
+    lineItems: jsonb('line_items').notNull().default(sql`'[]'::jsonb`),
+    marginPct: integer('margin_pct').notNull().default(0),
+    subtotalCostCents: bigint('subtotal_cost_cents', { mode: 'number' }).notNull().default(0),
+    valueCents: bigint('value_cents', { mode: 'number' }).notNull().default(0),
+    status: quoteStatusEnum('status').notNull().default('SENT'),
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('external_quotes_carpenter_idx').on(t.carpenterId, t.createdAt)],
+);
+
+export type ExternalQuote = typeof externalQuotes.$inferSelect;
+export type NewExternalQuote = typeof externalQuotes.$inferInsert;
+
+/** Obras manuais do marceneiro (fora da plataforma) — alimentam a agenda (§7). */
+export const carpenterJobs = pgTable(
+  'carpenter_jobs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    carpenterId: uuid('carpenter_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    clientName: text('client_name'),
+    startDate: date('start_date'),
+    endDate: date('end_date'),
+    status: text('status').notNull().default('ACTIVE'), // ACTIVE | DONE
+    sourceExternalQuoteId: uuid('source_external_quote_id').references(() => externalQuotes.id, { onDelete: 'set null' }),
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('carpenter_jobs_owner_idx').on(t.carpenterId, t.status, t.startDate)],
+);
+
+export type CarpenterJob = typeof carpenterJobs.$inferSelect;
+export type NewCarpenterJob = typeof carpenterJobs.$inferInsert;
 
 /** Contrato padrão por projeto aprovado (§6.5). Aceite eletrônico das 2 partes
  *  (timestamp + hash de IP). `terms` é um snapshot do acordo no momento do aceite. */

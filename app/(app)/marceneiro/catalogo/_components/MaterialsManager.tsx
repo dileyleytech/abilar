@@ -12,6 +12,8 @@ import {
 } from '@abilar/shared';
 import { MATERIAL_CATEGORY_LABEL, MATERIAL_UNIT_LABEL } from '@/lib/labels';
 import { createMaterial, updateMaterial, setMaterialActive } from '@/lib/carpenter/actions';
+import { IconInfo, IconAdicionar, IconDinheiro } from '@/components/ui/icons';
+import { Button } from '@/components/ui';
 
 export type MaterialView = {
   id: string;
@@ -158,19 +160,16 @@ export function MaterialsManager({ initial }: { initial: MaterialView[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="rounded-xl bg-sage/20 px-4 py-3 text-sm text-charcoal">
-        💡 Coloque o preço que você paga <strong>hoje</strong>. Sempre que comprar e o preço mudar, é só tocar em
-        <strong> Atualizar preço</strong>. No orçamento você ainda pode ajustar item a item.
+      <p className="flex gap-2 rounded-xl bg-sage/20 px-4 py-3 text-sm text-charcoal">
+        <IconInfo size={16} className="mt-0.5 shrink-0 text-brand-secondary" aria-hidden />
+        <span>Coloque o preço que você paga <strong>hoje</strong>. Sempre que comprar e o preço mudar, é só tocar em
+        <strong> Atualizar preço</strong>. No orçamento você ainda pode ajustar item a item.</span>
       </p>
 
       {!showForm && (
-        <button
-          type="button"
-          onClick={openNew}
-          className="w-fit rounded-xl bg-brand-primary px-5 py-3 text-base font-semibold text-white transition hover:opacity-90"
-        >
-          + Adicionar material
-        </button>
+        <Button variant="primary" onClick={openNew} className="w-fit">
+          <IconAdicionar size={20} aria-hidden /> Adicionar material
+        </Button>
       )}
 
       {showForm && (
@@ -229,20 +228,20 @@ export function MaterialsManager({ initial }: { initial: MaterialView[] }) {
               <input className={fld} value={draft.supplier} onChange={(e) => setDraft({ ...draft, supplier: e.target.value })} placeholder="Ex.: Leo Madeiras" />
             </label>
           </div>
-          {error && <p className="mt-2 text-sm text-ochre">{error}</p>}
+          {error && <p className="mt-2 text-sm text-danger">{error}</p>}
           <div className="mt-3 flex gap-2">
-            <button type="button" onClick={save} disabled={pending} className="rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+            <Button variant="primary" size="sm" onClick={save} disabled={pending}>
               {pending ? 'Salvando…' : 'Salvar'}
-            </button>
-            <button type="button" onClick={() => setShowForm(false)} className="rounded-xl border border-subtle px-4 py-2.5 text-sm text-charcoal">
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowForm(false)}>
               Cancelar
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {items.length === 0 && !showForm ? (
-        <div className="rounded-2xl border border-dashed border-subtle bg-surface p-10 text-center text-muted">
+        <div className="rounded-2xl border border-subtle bg-surface p-10 text-center text-muted">
           <span className="text-3xl" aria-hidden>📦</span>
           <p className="mt-2 font-medium text-charcoal">Seu catálogo está vazio</p>
           <p>Cadastre o que você usa (chapa, espelho, ferragem, serviço) pra montar orçamentos rápido.</p>
@@ -268,16 +267,17 @@ export function MaterialsManager({ initial }: { initial: MaterialView[] }) {
                           <span className="text-subtle"> · atualizado em {dateLabel(m.updatedAt)}</span>
                         </p>
                       </div>
-                      <button
-                        type="button"
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => {
                           setPriceId(priceId === m.id ? null : m.id);
                           setPriceVal(String(m.unitCostCents / 100));
                         }}
-                        className="shrink-0 rounded-lg bg-deep px-3 py-1.5 text-sm font-semibold text-charcoal hover:bg-sand-deep"
+                        className="shrink-0"
                       >
-                        💲 Atualizar preço
-                      </button>
+                        <IconDinheiro size={16} aria-hidden /> Atualizar preço
+                      </Button>
                     </div>
 
                     {priceId === m.id && (
@@ -296,9 +296,9 @@ export function MaterialsManager({ initial }: { initial: MaterialView[] }) {
                             onKeyDown={(e) => e.key === 'Enter' && saveQuickPrice(m)}
                           />
                         </label>
-                        <button type="button" onClick={() => saveQuickPrice(m)} disabled={pending} className="rounded-xl bg-brand-primary px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">
+                        <Button variant="primary" size="sm" onClick={() => saveQuickPrice(m)} disabled={pending}>
                           Salvar
-                        </button>
+                        </Button>
                       </div>
                     )}
 

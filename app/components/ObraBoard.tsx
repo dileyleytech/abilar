@@ -5,13 +5,15 @@ import { useRouter } from 'next/navigation';
 import { formatBRL, type MilestoneStatus } from '@abilar/shared';
 import { advanceMilestone, approveMilestone, concludeMilestone, addMilestoneEvidence } from '@/lib/obra/actions';
 import { MILESTONE_STATUS_LABEL, MILESTONE_STATUS_BADGE } from '@/lib/labels';
+import { Button } from '@/components/ui';
+import { IconOk, IconFechar, IconFoto, IconConversas, IconAvancar } from '@/components/ui/icons';
 import type { ObraMilestone } from '@/lib/obra/queries';
 
 const COLUMNS: { status: MilestoneStatus; title: string; tint: string }[] = [
   { status: 'PENDING', title: 'A fazer', tint: 'bg-deep' },
   { status: 'IN_PROGRESS', title: 'Em andamento', tint: 'bg-ochre/20' },
   { status: 'DONE', title: 'Aguardando cliente', tint: 'bg-brand-secondary/15' },
-  { status: 'APPROVED', title: 'Aprovada ✓', tint: 'bg-sage/25' },
+  { status: 'APPROVED', title: 'Aprovada', tint: 'bg-sage/25' },
 ];
 
 const dateLabel = (d: Date) =>
@@ -50,7 +52,10 @@ export function ObraBoard({
           return (
             <div key={col.status} className="flex w-60 shrink-0 flex-col rounded-2xl border border-subtle bg-base p-3">
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-semibold text-charcoal">{col.title}</span>
+                <span className="inline-flex items-center gap-1 text-sm font-semibold text-charcoal">
+                  {col.status === 'APPROVED' && <IconOk size={16} aria-hidden />}
+                  {col.title}
+                </span>
                 <span className="rounded-pill bg-surface px-2 py-0.5 text-xs font-medium text-muted">{cards.length}</span>
               </div>
               <div className="flex flex-col gap-2">
@@ -72,13 +77,17 @@ export function ObraBoard({
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-semibold text-charcoal">{m.label}</p>
-                        <p className="text-xs text-muted">
-                          {m.pct}% · {formatBRL(m.amountCents)}
-                          {photos > 0 && ` · 📷 ${photos}`}
-                          {comments > 0 && ` · 💬 ${comments}`}
+                        <p className="flex items-center gap-1 text-xs text-muted">
+                          <span>{m.pct}% · {formatBRL(m.amountCents)}</span>
+                          {photos > 0 && (
+                            <span className="inline-flex items-center gap-0.5">· <IconFoto size={12} aria-hidden /> {photos}</span>
+                          )}
+                          {comments > 0 && (
+                            <span className="inline-flex items-center gap-0.5">· <IconConversas size={12} aria-hidden /> {comments}</span>
+                          )}
                         </p>
                       </div>
-                      <span className="shrink-0 text-muted" aria-hidden>›</span>
+                      <IconAvancar size={16} className="shrink-0 text-muted" aria-hidden />
                     </button>
                   );
                 })}
@@ -137,7 +146,7 @@ function MilestoneModal({
               {MILESTONE_STATUS_LABEL[m.status]}
             </span>
           </div>
-          <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-lg px-2 py-1 text-muted hover:bg-deep">✕</button>
+          <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-lg px-2 py-1 text-muted hover:bg-deep"><IconFechar size={20} aria-hidden /></button>
         </header>
 
         <div className="flex-1 overflow-y-auto p-4">
@@ -174,20 +183,20 @@ function MilestoneModal({
         {/* Ações por papel */}
         <footer className="border-t border-subtle p-4">
           {meIsCarpenter && m.status === 'PENDING' && (
-            <button type="button" onClick={() => run(() => advanceMilestone(m.id))} disabled={pending} className="w-full rounded-xl bg-brand-secondary px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">
+            <Button variant="secondary" onClick={() => run(() => advanceMilestone(m.id))} disabled={pending} className="w-full">
               Iniciar etapa →
-            </button>
+            </Button>
           )}
           {meIsCarpenter && m.status === 'IN_PROGRESS' && <EvidenceForm milestoneId={m.id} />}
           {meIsClient && m.status === 'DONE' && (
-            <button type="button" onClick={() => run(() => approveMilestone(m.id))} disabled={pending} className="w-full rounded-xl bg-brand-primary px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">
-              ✓ Aprovar etapa
-            </button>
+            <Button variant="primary" onClick={() => run(() => approveMilestone(m.id))} disabled={pending} className="w-full">
+              <IconOk size={18} aria-hidden /> Aprovar etapa
+            </Button>
           )}
           {meIsClient && m.status === 'IN_PROGRESS' && <p className="text-center text-sm text-muted">Em execução pelo marceneiro…</p>}
           {meIsCarpenter && m.status === 'DONE' && <p className="text-center text-sm text-muted">Aguardando o cliente aprovar.</p>}
-          {m.status === 'APPROVED' && <p className="text-center text-sm font-semibold text-charcoal">✓ Etapa aprovada e liberada.</p>}
-          {error && <p className="mt-2 text-sm text-ochre">{error}</p>}
+          {m.status === 'APPROVED' && <p className="inline-flex w-full items-center justify-center gap-1.5 text-center text-sm font-semibold text-charcoal"><IconOk size={16} aria-hidden /> Etapa aprovada e liberada.</p>}
+          {error && <p className="mt-2 text-sm text-danger">{error}</p>}
         </footer>
       </div>
     </div>
@@ -221,8 +230,9 @@ function EvidenceForm({ milestoneId }: { milestoneId: string }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="cursor-pointer rounded-xl border border-dashed border-subtle px-3 py-2.5 text-center text-sm text-muted hover:bg-deep">
-        {files && files.length ? `📷 ${files.length} foto(s) selecionada(s)` : '📷 Adicionar fotos (pode escolher várias)'}
+      <label className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-subtle px-3 py-2.5 text-center text-sm text-muted hover:bg-deep">
+        <IconFoto size={16} aria-hidden />
+        {files && files.length ? `${files.length} foto(s) selecionada(s)` : 'Adicionar fotos (pode escolher várias)'}
         <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => setFiles(e.target.files)} />
       </label>
       <textarea
@@ -232,14 +242,14 @@ function EvidenceForm({ milestoneId }: { milestoneId: string }) {
         className="min-h-16 rounded-xl border border-subtle bg-surface px-3 py-2 text-sm outline-none focus:border-brand"
       />
       <div className="flex gap-2">
-        <button type="button" onClick={() => exec(addMilestoneEvidence)} disabled={pending} className="flex-1 rounded-xl border border-subtle px-4 py-2.5 text-sm font-semibold text-charcoal disabled:opacity-50">
+        <Button variant="outline" onClick={() => exec(addMilestoneEvidence)} disabled={pending} className="flex-1">
           Adicionar
-        </button>
-        <button type="button" onClick={() => exec(concludeMilestone)} disabled={pending} className="flex-1 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+        </Button>
+        <Button variant="primary" onClick={() => exec(concludeMilestone)} disabled={pending} className="flex-1">
           Concluir →
-        </button>
+        </Button>
       </div>
-      {error && <p className="text-sm text-ochre">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
     </div>
   );
 }

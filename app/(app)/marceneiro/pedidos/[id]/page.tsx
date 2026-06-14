@@ -13,6 +13,7 @@ import { getContractForQuote } from '@/lib/contracts/queries';
 import { getProjectMilestones } from '@/lib/obra/queries';
 import { ObraBoard } from '@/components/ObraBoard';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
+import { IconVoltar, IconLocal, IconConversas, IconContrato, IconImprimir, IconAvulsos } from '@/components/ui/icons';
 import { StatusBadge } from '@/components/StatusBadge';
 import { backFrom } from '@/lib/nav';
 import { QuoteForm, type QuoteInitial, type MaterialOption } from './_components/QuoteForm';
@@ -39,11 +40,14 @@ export default async function CarpenterPedidoPage({
   if (!carpenter) notFound();
 
   // Já orçou → pode abrir/editar em qualquer status; senão, vale a elegibilidade (pedido aberto).
-  const detail = existing ? await getProjectDetailById(id) : await getProjectForCarpenter(id, carpenter);
+  // detail, contract e obra são independentes → em paralelo.
+  const [detail, contract, obra] = await Promise.all([
+    existing ? getProjectDetailById(id) : getProjectForCarpenter(id, carpenter),
+    existing ? getContractForQuote(existing.id) : Promise.resolve(null),
+    getProjectMilestones(id, profile.id),
+  ]);
   if (!detail) notFound();
-  const contract = existing ? await getContractForQuote(existing.id) : null;
   const contractNeedsSign = contract != null && contract.status === 'DRAFT' && !contract.carpenterSigned;
-  const obra = await getProjectMilestones(id, profile.id);
   const { project, modules, photos } = detail;
 
   const materials: MaterialOption[] = catalog.map((m) => ({
@@ -89,14 +93,14 @@ export default async function CarpenterPedidoPage({
           <Link
             href={back.href}
             aria-label="Voltar"
-            className="shrink-0 rounded-lg px-2 py-1.5 text-lg text-muted transition hover:bg-deep hover:text-charcoal"
+            className="inline-flex shrink-0 items-center rounded-lg px-2 py-1.5 text-muted transition hover:bg-deep hover:text-charcoal"
           >
-            ←
+            <IconVoltar size={22} aria-hidden />
           </Link>
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-bold text-charcoal sm:text-3xl">{project.title}</h1>
-            <p className="text-sm text-muted">
-              📍 {project.city ?? '—'} · {modules.length} {modules.length === 1 ? 'móvel' : 'móveis'}
+            <p className="inline-flex items-center gap-1 text-sm text-muted">
+              <IconLocal size={14} aria-hidden /> {project.city ?? '—'} · {modules.length} {modules.length === 1 ? 'móvel' : 'móveis'}
             </p>
           </div>
         </div>
@@ -111,7 +115,7 @@ export default async function CarpenterPedidoPage({
               href={`/conversas/${conversationId}`}
               className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-brand-secondary px-5 py-4 text-lg font-semibold text-white shadow-sm transition hover:opacity-90"
             >
-              💬 Conversar com o cliente
+              <IconConversas size={22} aria-hidden /> Conversar com o cliente
             </Link>
           )}
           {contract && (
@@ -121,7 +125,7 @@ export default async function CarpenterPedidoPage({
                 contractNeedsSign ? 'bg-brand-primary text-white' : 'border-2 border-subtle text-charcoal'
               }`}
             >
-              {contractNeedsSign ? '✍️ Assinar contrato' : '📄 Ver contrato'}
+              <IconContrato size={22} aria-hidden /> {contractNeedsSign ? 'Assinar contrato' : 'Ver contrato'}
             </Link>
           )}
           {existing && (
@@ -129,7 +133,7 @@ export default async function CarpenterPedidoPage({
               href={`/orcamentos/${existing.id}/imprimir`}
               className="flex flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-brand-primary px-5 py-4 text-lg font-semibold text-brand-primary transition hover:bg-deep"
             >
-              🖨️ Baixar orçamento (PDF)
+              <IconImprimir size={22} aria-hidden /> Baixar orçamento (PDF)
             </Link>
           )}
         </div>
@@ -154,8 +158,8 @@ export default async function CarpenterPedidoPage({
               {roomPhotos.map((p) =>
                 p.url ? (
                   p.kind === 'ARCHITECT_PDF' ? (
-                    <a key={p.id} href={p.url} target="_blank" rel="noreferrer" className="flex aspect-square items-center justify-center rounded-xl border border-subtle bg-deep text-center text-xs font-medium text-brand-primary">
-                      📄 PDF
+                    <a key={p.id} href={p.url} target="_blank" rel="noreferrer" className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-subtle bg-deep text-center text-xs font-medium text-brand-primary">
+                      <IconAvulsos size={20} aria-hidden /> PDF
                     </a>
                   ) : (
                     // eslint-disable-next-line @next/next/no-img-element

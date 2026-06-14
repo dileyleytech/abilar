@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { acceptContract } from '@/lib/contracts/actions';
+import { Button } from '@/components/ui';
+import { IconImprimir, IconOk } from '@/components/ui/icons';
 
 /** Botão de aceite eletrônico do contrato + imprimir. Some na impressão. */
 export function ContractActions({ contractId, canSign }: { contractId: string; canSign: boolean }) {
@@ -21,25 +23,16 @@ export function ContractActions({ contractId, canSign }: { contractId: string; c
   return (
     <div className="flex flex-col items-end gap-2 print:hidden">
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="rounded-xl border border-subtle px-4 py-3 text-sm font-semibold text-charcoal hover:bg-deep"
-        >
-          🖨️ Imprimir / PDF
-        </button>
+        <Button variant="outline" onClick={() => window.print()}>
+          <IconImprimir size={20} aria-hidden /> Imprimir / PDF
+        </Button>
         {canSign && (
-          <button
-            type="button"
-            onClick={sign}
-            disabled={pending}
-            className="rounded-xl bg-brand-primary px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
-          >
-            {pending ? 'Registrando…' : '✓ Aceitar contrato'}
-          </button>
+          <Button variant="primary" onClick={sign} disabled={pending}>
+            {pending ? 'Registrando…' : <><IconOk size={20} aria-hidden /> Aceitar contrato</>}
+          </Button>
         )}
       </div>
-      {error && <p className="text-sm text-ochre">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
     </div>
   );
 }
