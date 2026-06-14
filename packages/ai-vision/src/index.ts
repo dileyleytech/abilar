@@ -2,6 +2,13 @@
 // Regra de ouro #6: todo LLM é Gemini (NLU + imagem), atrás de interface trocável.
 // Regra de ouro (§8.3): DIMENSÕES NUNCA saem da imagem — estado estruturado manda.
 
+// Núcleo puro (Fase 6): DSL, estado estruturado, prompt de imagem, guardrails e NLU.
+export * from './dsl';
+export * from './state';
+export * from './prompt';
+export * from './guardrails';
+export * from './nlu';
+
 /** Provider de edição de imagem (trocável: Gemini Nano Banana 2 default, Flux fallback). */
 export interface ImageEditProvider {
   readonly name: string;
