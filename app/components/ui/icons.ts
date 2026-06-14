@@ -1,0 +1,73 @@
+// Ícones do Abilar — mapa semântico único sobre lucide-react.
+// Use SEMPRE estes nomes (não importe de 'lucide-react' direto nas telas),
+// para manter consistência e espelhar no mobile (lucide-react-native).
+export {
+  // Navegação por papel
+  ClipboardList as IconPedidos,
+  Plus as IconNovo,
+  MessageCircle as IconConversas,
+  Bell as IconAvisos,
+  User as IconConta,
+  Users as IconClientes,
+  Home as IconInicio,
+  CalendarDays as IconAgenda,
+  FileText as IconAvulsos,
+  BarChart3 as IconRelatorios,
+  Package as IconCustos,
+  Wallet as IconFinanceiro,
+  DraftingCompass as IconArquitetos,
+  SlidersHorizontal as IconTaxas,
+  Flag as IconDenuncias,
+  Menu as IconMais,
+
+  // Ações
+  ChevronLeft as IconVoltar,
+  ChevronRight as IconAvancar,
+  ChevronDown as IconExpandir,
+  Check as IconOk,
+  CheckCircle2 as IconConcluido,
+  X as IconFechar,
+  Search as IconBuscar,
+  Camera as IconFoto,
+  ImageIcon as IconImagem,
+  Mic as IconVoz,
+  Pencil as IconEditar,
+  Trash2 as IconExcluir,
+  Plus as IconAdicionar,
+  Send as IconEnviar,
+  LogOut as IconSair,
+  Copy as IconCopiar,
+  Share2 as IconCompartilhar,
+  Eye as IconVer,
+  Download as IconBaixar,
+  Printer as IconImprimir,
+  RefreshCw as IconAtualizar,
+  ExternalLink as IconAbrir,
+
+  // Estados / semântica
+  ShieldCheck as IconSeguro,
+  CircleAlert as IconAlerta,
+  TriangleAlert as IconAtencao,
+  Info as IconInfo,
+  Clock as IconAguardando,
+  Hourglass as IconPendente,
+  Lock as IconBloqueado,
+  Ban as IconCancelado,
+  Star as IconDestaque,
+  Sparkles as IconAbi,
+
+  // Domínio (obra / marcenaria / dinheiro / lugar)
+  MapPin as IconLocal,
+  Hammer as IconObra,
+  Ruler as IconMedidas,
+  HardHat as IconConstrucao,
+  Banknote as IconDinheiro,
+  Receipt as IconOrcamento,
+  FileSignature as IconContrato,
+  Calendar as IconCalendario,
+  Truck as IconEntrega,
+  Phone as IconTelefone,
+  Mail as IconEmail,
+} from 'lucide-react';
+
+export type { LucideIcon } from 'lucide-react';

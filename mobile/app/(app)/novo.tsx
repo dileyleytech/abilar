@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import { api, lookupCep, type ArchitectOption, type Photo } from '@/lib/api';
 import { Button } from '@/components/ui';
+import { IconConversas, IconArquitetos, IconAvulsos } from '@/components/icons';
 import { color, radius, space } from '@/theme';
 
 export default function NovoPedido() {
@@ -108,11 +109,11 @@ export default function NovoPedido() {
       <Text style={styles.label}>Como você quer começar?</Text>
       <View style={styles.srcRow}>
         <Pressable onPress={() => setSource('AI_GENERATED')} style={[styles.src, source === 'AI_GENERATED' && styles.srcOn]}>
-          <Text style={styles.srcEmoji}>💬</Text>
+          <IconConversas size={24} color={source === 'AI_GENERATED' ? color.brand.primary : color.text.muted} strokeWidth={2} />
           <Text style={[styles.srcText, source === 'AI_GENERATED' && styles.srcTextOn]}>Montar com a ABI</Text>
         </Pressable>
         <Pressable onPress={() => setSource('ARCHITECT_PROJECT')} style={[styles.src, source === 'ARCHITECT_PROJECT' && styles.srcOn]}>
-          <Text style={styles.srcEmoji}>📐</Text>
+          <IconArquitetos size={24} color={source === 'ARCHITECT_PROJECT' ? color.brand.primary : color.text.muted} strokeWidth={2} />
           <Text style={[styles.srcText, source === 'ARCHITECT_PROJECT' && styles.srcTextOn]}>Tenho projeto de arquiteto</Text>
         </Pressable>
       </View>
@@ -121,11 +122,12 @@ export default function NovoPedido() {
         <>
           {pdf ? (
             <View style={styles.pdfRow}>
-              <Text style={styles.pdfName} numberOfLines={1}>📄 {pdf.name}</Text>
+              <IconAvulsos size={18} color={color.text.muted} strokeWidth={2} />
+              <Text style={styles.pdfName} numberOfLines={1}>{pdf.name}</Text>
               <Text style={styles.pdfRemove} onPress={() => setPdf(null)}>Remover</Text>
             </View>
           ) : (
-            <Button title="📎 Selecionar PDF do projeto" variant="outline" onPress={pickPdf} />
+            <Button title="Selecionar PDF do projeto" variant="outline" onPress={pickPdf} />
           )}
         </>
       )}
@@ -145,7 +147,8 @@ export default function NovoPedido() {
       <Text style={styles.label}>Indicado por um arquiteto? (opcional)</Text>
       {architect ? (
         <View style={styles.pdfRow}>
-          <Text style={styles.pdfName} numberOfLines={1}>📐 {architect.name}</Text>
+          <IconArquitetos size={18} color={color.text.muted} strokeWidth={2} />
+          <Text style={styles.pdfName} numberOfLines={1}>{architect.name}</Text>
           <Text style={styles.pdfRemove} onPress={() => { setArchitect(null); setArchQuery(''); }}>Trocar</Text>
         </View>
       ) : (
@@ -153,7 +156,10 @@ export default function NovoPedido() {
           <TextInput style={styles.input} placeholder="Digite o nome do arquiteto" placeholderTextColor={color.text.subtle} value={archQuery} onChangeText={setArchQuery} />
           {archResults.map((a) => (
             <Pressable key={a.userId} onPress={() => { setArchitect({ id: a.userId, name: a.name }); setArchResults([]); }} style={styles.archItem}>
-              <Text style={styles.archName}>📐 {a.name}{a.cau ? `  ·  CAU ${a.cau}` : ''}</Text>
+              <View style={styles.archRow}>
+                <IconArquitetos size={16} color={color.text.muted} strokeWidth={2} />
+                <Text style={styles.archName}>{a.name}{a.cau ? `  ·  CAU ${a.cau}` : ''}</Text>
+              </View>
             </Pressable>
           ))}
         </>
@@ -173,7 +179,6 @@ const styles = StyleSheet.create({
   srcRow: { flexDirection: 'row', gap: space.sm },
   src: { flex: 1, borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.md, padding: space.md, gap: 4, alignItems: 'center', backgroundColor: color.bg.surface },
   srcOn: { borderColor: color.brand.primary, backgroundColor: 'rgba(197,106,51,0.08)' },
-  srcEmoji: { fontSize: 24 },
   srcText: { fontSize: 13, color: color.text.muted, textAlign: 'center' },
   srcTextOn: { color: color.text.primary, fontWeight: '600' },
   pdfRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, backgroundColor: color.bg.surface, borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.md, padding: space.md },
@@ -183,5 +188,6 @@ const styles = StyleSheet.create({
   cepMuted: { color: color.text.muted, fontSize: 13 },
   cepErr: { color: color.accent.ochre, fontSize: 13 },
   archItem: { backgroundColor: color.bg.surface, borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 12 },
+  archRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   archName: { color: color.text.primary, fontSize: 15 },
 });

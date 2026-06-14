@@ -3,6 +3,7 @@ import { Alert, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollV
 import { api, type Photo } from '@/lib/api';
 import { chooseAndPick } from '@/lib/pickImages';
 import { Button } from '@/components/ui';
+import { IconFechar, IconFoto } from '@/components/icons';
 import { color, radius, space } from '@/theme';
 
 // Concluir etapa EXIGE foto(s) + comentário (§6.4).
@@ -53,8 +54,8 @@ export function EvidenceForm({
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <Text style={styles.title}>Concluir: {milestoneLabel}</Text>
-          <Pressable onPress={onClose}>
-            <Text style={styles.close}>✕</Text>
+          <Pressable onPress={onClose} style={styles.close}>
+            <IconFechar size={22} color={color.text.muted} strokeWidth={2} />
           </Pressable>
         </View>
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
@@ -65,13 +66,14 @@ export function EvidenceForm({
               <View key={i} style={styles.thumbWrap}>
                 <Image source={{ uri: p.uri }} style={styles.thumb} />
                 <Pressable style={styles.remove} onPress={() => setPhotos((arr) => arr.filter((_, idx) => idx !== i))}>
-                  <Text style={styles.removeText}>✕</Text>
+                  <IconFechar size={14} color="#fff" strokeWidth={2.5} />
                 </Pressable>
               </View>
             ))}
             {photos.length < 8 && (
               <Pressable style={styles.addPhoto} onPress={add}>
-                <Text style={styles.addPhotoText}>＋{'\n'}foto</Text>
+                <IconFoto size={24} color={color.brand.primary} strokeWidth={2} />
+                <Text style={styles.addPhotoText}>foto</Text>
               </Pressable>
             )}
           </View>
@@ -96,7 +98,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: color.bg.base },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: space.lg, borderBottomWidth: 1, borderBottomColor: color.border.subtle },
   title: { fontSize: 18, fontWeight: '700', color: color.text.primary, flex: 1 },
-  close: { fontSize: 22, color: color.text.muted, paddingHorizontal: space.sm },
+  close: { paddingHorizontal: space.sm },
   body: { padding: space.lg, gap: space.lg },
   help: { color: color.text.muted },
   thumbs: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
@@ -104,7 +106,7 @@ const styles = StyleSheet.create({
   thumb: { width: 84, height: 84, borderRadius: radius.md },
   remove: { position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: 11, backgroundColor: color.text.primary, alignItems: 'center', justifyContent: 'center' },
   removeText: { color: '#fff', fontSize: 12 },
-  addPhoto: { width: 84, height: 84, borderRadius: radius.md, borderWidth: 1, borderColor: color.border.subtle, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  addPhoto: { width: 84, height: 84, borderRadius: radius.md, borderWidth: 1, borderColor: color.border.subtle, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 4 },
   addPhotoText: { color: color.brand.primary, textAlign: 'center', fontWeight: '600' },
   input: {
     minHeight: 90,

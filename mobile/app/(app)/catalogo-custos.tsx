@@ -18,6 +18,7 @@ import { api } from '@/lib/api';
 import { MATERIAL_CATEGORIES, MATERIAL_CATEGORY_LABEL, MATERIAL_UNITS, MATERIAL_UNIT_LABEL } from '@/lib/types';
 import { formatCents } from '@/lib/format';
 import { Badge, Button, Card, EmptyState, Loading } from '@/components/ui';
+import { IconEditar, IconFechar } from '@/components/icons';
 import { color, radius, space } from '@/theme';
 
 export default function CatalogoCustosScreen() {
@@ -77,7 +78,10 @@ export default function CatalogoCustosScreen() {
             <View style={styles.row}>
               <Badge label={`${MATERIAL_CATEGORY_LABEL[item.category] ?? item.category} · ${MATERIAL_UNIT_LABEL[item.unit] ?? item.unit}`} tone="neutral" />
               <View style={styles.actions}>
-                <Text style={styles.editLink} onPress={() => setEditing(item)}>✏️ Editar</Text>
+                <Pressable style={styles.editRow} hitSlop={6} onPress={() => setEditing(item)}>
+                  <IconEditar size={16} color={color.brand.secondary} strokeWidth={2} />
+                  <Text style={styles.editLink}>Editar</Text>
+                </Pressable>
                 <Text style={styles.toggle} onPress={() => toggleActive(item)}>{item.active ? 'Inativar' : 'Ativar'}</Text>
               </View>
             </View>
@@ -117,7 +121,7 @@ function MaterialForm({ initial, onClose, onSaved }: { initial: MaterialRow | nu
       <KeyboardAvoidingView style={styles.modal} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <Text style={styles.title}>{initial ? 'Editar item' : 'Novo item'}</Text>
-          <Pressable onPress={onClose}><Text style={styles.close}>✕</Text></Pressable>
+          <Pressable onPress={onClose}><IconFechar size={22} color={color.text.muted} strokeWidth={2} /></Pressable>
         </View>
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
           <Text style={styles.fLabel}>Nome</Text>
@@ -158,7 +162,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
   name: { flex: 1, fontSize: 16, fontWeight: '600', color: color.text.primary },
   cost: { fontSize: 16, fontWeight: '700', color: color.brand.secondary },
-  actions: { flexDirection: 'row', gap: space.md },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  editRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   editLink: { color: color.brand.secondary, fontWeight: '600' },
   toggle: { color: color.text.muted, fontWeight: '600' },
   modal: { flex: 1, backgroundColor: color.bg.base },

@@ -4,6 +4,8 @@ import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AdminArchitect } from '@/lib/admin/architects';
 import { createArchitect, updateArchitect, setArchitectLogo, removeArchitectLogo } from '../actions';
+import { IconAdicionar, IconConcluido, IconArquitetos } from '@/components/ui/icons';
+import { Button } from '@/components/ui';
 
 const fld = 'w-full rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none focus:border-brand focus:ring-2 focus:ring-brand/20';
 
@@ -15,9 +17,9 @@ export function ArchitectsManager({ initial }: { initial: AdminArchitect[] }) {
   return (
     <div className="flex flex-col gap-4">
       {!adding && (
-        <button type="button" onClick={() => setAdding(true)} className="self-start rounded-xl bg-brand-primary px-5 py-3 text-sm font-semibold text-white hover:opacity-90">
-          + Cadastrar arquiteto
-        </button>
+        <Button variant="primary" size="sm" onClick={() => setAdding(true)} className="self-start">
+          <IconAdicionar size={20} aria-hidden /> Cadastrar arquiteto
+        </Button>
       )}
       {adding && <CreateForm onClose={() => setAdding(false)} onSaved={() => { setAdding(false); router.refresh(); }} />}
 
@@ -62,8 +64,8 @@ function ReferralLink({ code }: { code: string }) {
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
       <span className="rounded-pill bg-deep px-2 py-0.5 font-mono text-charcoal">{code}</span>
-      <button type="button" onClick={copy} className="font-semibold text-brand-secondary hover:underline">
-        {copied ? '✓ Link copiado' : 'Copiar link de indicação'}
+      <button type="button" onClick={copy} className="inline-flex items-center gap-1 font-semibold text-brand-secondary hover:underline">
+        {copied ? <><IconConcluido size={14} aria-hidden /> Link copiado</> : 'Copiar link de indicação'}
       </button>
     </div>
   );
@@ -95,13 +97,13 @@ function LogoCell({ architect, onSaved }: { architect: AdminArchitect; onSaved: 
         onClick={() => inputRef.current?.click()}
         disabled={pending}
         title="Enviar logo (PNG, JPG, WEBP ou SVG — máx. 2 MB)"
-        className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border border-subtle bg-deep text-lg text-muted transition hover:border-brand-primary/40 disabled:opacity-50"
+        className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border border-subtle bg-deep text-muted transition hover:border-brand-primary/40 disabled:opacity-50"
       >
         {pending ? '…' : architect.logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={architect.logoUrl} alt={`Logo ${architect.name}`} className="h-full w-full object-contain" />
         ) : (
-          '📐'
+          <IconArquitetos size={22} aria-hidden />
         )}
       </button>
       <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" onChange={onPick} />
@@ -110,7 +112,7 @@ function LogoCell({ architect, onSaved }: { architect: AdminArchitect; onSaved: 
       ) : (
         <span className="text-[11px] text-subtle">logo</span>
       )}
-      {error && <span className="max-w-[6rem] text-center text-[10px] text-ochre">{error}</span>}
+      {error && <span className="max-w-[6rem] text-center text-[10px] text-danger">{error}</span>}
     </div>
   );
 }
@@ -132,8 +134,8 @@ function EditRow({ architect, onSaved, pending, start }: { architect: AdminArchi
   return (
     <div className="mt-2 flex flex-wrap items-end gap-2">
       <label className="text-xs text-muted">Comissão (%)<input type="number" min={0} max={100} value={commission} onChange={(e) => setCommission(e.target.value)} className="block w-24 rounded-lg border border-subtle px-2 py-1" /></label>
-      <button type="button" disabled={pending} onClick={() => start(async () => { await updateArchitect(architect.userId, { commissionPercent: Number(commission) }); setEditing(false); onSaved(); })} className="rounded-lg bg-brand-primary px-3 py-1.5 text-sm font-semibold text-white">Salvar</button>
-      <button type="button" onClick={() => setEditing(false)} className="text-sm text-muted">Cancelar</button>
+      <Button variant="primary" size="sm" disabled={pending} onClick={() => start(async () => { await updateArchitect(architect.userId, { commissionPercent: Number(commission) }); setEditing(false); onSaved(); })}>Salvar</Button>
+      <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>Cancelar</Button>
     </div>
   );
 }
@@ -161,10 +163,10 @@ function CreateForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => 
       <input className={fld} type="email" placeholder="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} />
       <input className={fld} placeholder="CAU (opcional)" value={cau} onChange={(e) => setCau(e.target.value)} />
       <label className="flex items-center gap-2 text-sm text-charcoal">Comissão (%)<input type="number" min={0} max={100} value={commission} onChange={(e) => setCommission(e.target.value)} className="w-24 rounded-lg border border-subtle px-2 py-1" /></label>
-      {error && <p className="rounded-xl bg-ochre/20 px-4 py-2 text-sm text-charcoal">{error}</p>}
+      {error && <p className="rounded-xl bg-danger/10 px-4 py-2 text-sm text-danger">{error}</p>}
       <div className="flex gap-2">
-        <button type="button" disabled={pending || !name.trim() || !email.trim()} onClick={save} className="flex-1 rounded-xl bg-brand-primary px-4 py-3 font-semibold text-white disabled:opacity-50">{pending ? 'Cadastrando…' : 'Cadastrar'}</button>
-        <button type="button" onClick={onClose} className="rounded-xl border border-subtle px-4 py-3 text-charcoal hover:bg-deep">Cancelar</button>
+        <Button variant="primary" disabled={pending || !name.trim() || !email.trim()} onClick={save} className="flex-1">{pending ? 'Cadastrando…' : 'Cadastrar'}</Button>
+        <Button variant="outline" onClick={onClose}>Cancelar</Button>
       </div>
       <p className="text-xs text-subtle">O arquiteto entra com o e-mail (código/senha). A comissão sai da fatia da plataforma.</p>
     </div>

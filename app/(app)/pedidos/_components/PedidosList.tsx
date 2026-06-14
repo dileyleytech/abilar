@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { type ProjectStatus } from '@abilar/shared';
 import { StatusBadge } from '@/components/StatusBadge';
+import { IconPedidos, IconConstrucao, IconConversas } from '@/components/ui/icons';
 import { CancelButton } from './CancelButton';
 
 export type ProjectCard = {
@@ -35,11 +36,11 @@ export function PedidosList({ projects }: { projects: ProjectCard[] }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex gap-2 rounded-2xl border border-subtle bg-base p-1.5 sm:max-w-md">
-        <button type="button" onClick={() => setTab('pedidos')} className={tabBtn(tab === 'pedidos')}>
-          📋 Pedidos <span className={tab === 'pedidos' ? 'text-white/80' : 'text-muted'}>({pedidos.length})</span>
+        <button type="button" onClick={() => setTab('pedidos')} className={`${tabBtn(tab === 'pedidos')} inline-flex items-center justify-center gap-1.5`}>
+          <IconPedidos size={18} aria-hidden /> Pedidos <span className={tab === 'pedidos' ? 'text-white/80' : 'text-muted'}>({pedidos.length})</span>
         </button>
-        <button type="button" onClick={() => setTab('obras')} className={tabBtn(tab === 'obras')}>
-          🏗️ Obras <span className={tab === 'obras' ? 'text-white/80' : 'text-muted'}>({obras.length})</span>
+        <button type="button" onClick={() => setTab('obras')} className={`${tabBtn(tab === 'obras')} inline-flex items-center justify-center gap-1.5`}>
+          <IconConstrucao size={18} aria-hidden /> Obras <span className={tab === 'obras' ? 'text-white/80' : 'text-muted'}>({obras.length})</span>
         </button>
       </div>
 
@@ -56,7 +57,7 @@ export function PedidosList({ projects }: { projects: ProjectCard[] }) {
           {comOrcamento.length > 0 && (
             <section>
               <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-charcoal">
-                💬 Com orçamentos
+                <IconConversas size={20} aria-hidden /> Com orçamentos
                 <span className="rounded-pill bg-brand-secondary/15 px-2 py-0.5 text-sm font-semibold text-brand-secondary">
                   {comOrcamento.length}
                 </span>
@@ -112,7 +113,7 @@ function Grid({ projects }: { projects: ProjectCard[] }) {
               {p.obraPct != null ? (
                 <div className="mt-2">
                   <div className="flex items-center justify-between text-xs font-semibold text-brand-primary">
-                    <span>🏗️ {p.obraPct === 100 ? 'Obra concluída' : 'Em obra'}</span>
+                    <span className="inline-flex items-center gap-1"><IconConstrucao size={16} aria-hidden /> {p.obraPct === 100 ? 'Obra concluída' : 'Em obra'}</span>
                     <span>{p.obraPct}%</span>
                   </div>
                   <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-deep">
@@ -122,7 +123,7 @@ function Grid({ projects }: { projects: ProjectCard[] }) {
               ) : (
                 p.quoteCount > 0 && (
                   <span className="mt-2 inline-flex items-center gap-1 rounded-pill bg-brand-secondary/15 px-2.5 py-1 text-xs font-semibold text-brand-secondary">
-                    💬 {p.quoteCount} {p.quoteCount === 1 ? 'orçamento' : 'orçamentos'}
+                    <IconConversas size={14} aria-hidden /> {p.quoteCount} {p.quoteCount === 1 ? 'orçamento' : 'orçamentos'}
                   </span>
                 )
               )}

@@ -5,6 +5,7 @@ import { listMaterials, type MaterialRow } from '@/lib/data';
 import { MATERIAL_CATEGORY_LABEL } from '@/lib/types';
 import { formatCents } from '@/lib/format';
 import { Button } from '@/components/ui';
+import { IconFechar } from '@/components/icons';
 import { color, radius, space } from '@/theme';
 
 type Line = QuoteLineItem & { id: string };
@@ -108,7 +109,7 @@ export function QuoteForm({ visible, projectId, onClose, onDone }: { visible: bo
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <Text style={styles.title}>Enviar orçamento</Text>
-          <Pressable onPress={onClose}><Text style={styles.close}>✕</Text></Pressable>
+          <Pressable onPress={onClose}><IconFechar size={22} color={color.text.muted} strokeWidth={2} /></Pressable>
         </View>
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
           <View style={styles.tabs}>
@@ -135,7 +136,9 @@ export function QuoteForm({ visible, projectId, onClose, onDone }: { visible: bo
                     <Text style={styles.lineName}>{i.name}</Text>
                     <Text style={styles.muted}>{i.qty} {i.unit} × {formatCents(i.unitCostCents)} = {formatCents(Math.round(i.qty * i.unitCostCents))}</Text>
                   </View>
-                  <Text style={styles.removeX} onPress={() => removeItem(i.id)}>✕</Text>
+                  <Pressable hitSlop={6} onPress={() => removeItem(i.id)} style={styles.removeX}>
+                    <IconFechar size={18} color={color.state.danger} strokeWidth={2} />
+                  </Pressable>
                 </View>
               ))}
               <Text style={styles.label}>Margem (%)</Text>

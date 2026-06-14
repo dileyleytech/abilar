@@ -8,6 +8,7 @@ import { CONTRACT_CLAUSES, CONTRACT_LEGAL_NOTE } from '@/lib/contract';
 import { shareContractPdf } from '@/lib/pdf';
 import { formatCents } from '@/lib/format';
 import { Badge, Button, Card, Loading } from '@/components/ui';
+import { IconConcluido, IconAguardando } from '@/components/icons';
 import { color, space } from '@/theme';
 
 export default function ContratoScreen() {
@@ -94,16 +95,29 @@ export default function ContratoScreen() {
         </Card>
 
         <Card style={{ gap: 6 }}>
-          <Text style={styles.sigLine}>{c.accepted_by_client_at ? '✓' : '○'} Cliente {c.accepted_by_client_at ? 'assinou' : 'pendente'}</Text>
-          <Text style={styles.sigLine}>{c.accepted_by_carpenter_at ? '✓' : '○'} Marceneiro {c.accepted_by_carpenter_at ? 'assinou' : 'pendente'}</Text>
+          <View style={styles.sigRow}>
+            {c.accepted_by_client_at
+              ? <IconConcluido size={16} color={color.brand.secondary} strokeWidth={2} />
+              : <IconAguardando size={16} color={color.text.subtle} strokeWidth={2} />}
+            <Text style={styles.sigLine}>Cliente {c.accepted_by_client_at ? 'assinou' : 'pendente'}</Text>
+          </View>
+          <View style={styles.sigRow}>
+            {c.accepted_by_carpenter_at
+              ? <IconConcluido size={16} color={color.brand.secondary} strokeWidth={2} />
+              : <IconAguardando size={16} color={color.text.subtle} strokeWidth={2} />}
+            <Text style={styles.sigLine}>Marceneiro {c.accepted_by_carpenter_at ? 'assinou' : 'pendente'}</Text>
+          </View>
         </Card>
 
-        <Button title="📄 Compartilhar em PDF" variant="outline" onPress={() => shareContractPdf(c).catch(() => {})} />
+        <Button title="Compartilhar em PDF" variant="outline" onPress={() => shareContractPdf(c).catch(() => {})} />
 
         {signed ? (
           <Button title="Ver a obra" variant="secondary" onPress={() => router.replace(`/(app)/pedidos/${c.project_id}`)} />
         ) : mySigned ? (
-          <Text style={styles.waiting}>✓ Você já assinou. Aguardando a outra parte.</Text>
+          <View style={styles.waitingRow}>
+            <IconConcluido size={16} color={color.text.muted} strokeWidth={2} />
+            <Text style={styles.waiting}>Você já assinou. Aguardando a outra parte.</Text>
+          </View>
         ) : (
           <Button title="Li e aceito — assinar contrato" onPress={sign} loading={signing} />
         )}
@@ -125,5 +139,7 @@ const styles = StyleSheet.create({
   clBody: { color: color.text.muted, fontSize: 14, lineHeight: 20 },
   legal: { color: color.text.subtle, fontSize: 12, fontStyle: 'italic', marginTop: space.sm },
   sigLine: { color: color.text.primary },
-  waiting: { color: color.text.muted, textAlign: 'center' },
+  sigRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  waiting: { color: color.text.muted },
+  waitingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
 });

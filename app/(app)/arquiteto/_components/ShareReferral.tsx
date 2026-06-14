@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { IconCopiar, IconCompartilhar, IconConcluido } from '@/components/ui/icons';
 
 /** Mostra o link de indicação do arquiteto com botão copiar/compartilhar. */
 export function ShareReferral({ code }: { code: string }) {
@@ -36,8 +37,8 @@ export function ShareReferral({ code }: { code: string }) {
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <input readOnly value={link} className="flex-1 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-sand outline-none" onFocus={(e) => e.currentTarget.select()} />
         <div className="flex gap-2">
-          <button type="button" onClick={copy} className="rounded-xl bg-white px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:opacity-90">{copied ? '✓ Copiado' : 'Copiar'}</button>
-          <button type="button" onClick={share} className="rounded-xl border border-white/40 px-4 py-3 text-sm font-semibold text-sand transition hover:bg-white/10">Compartilhar</button>
+          <button type="button" onClick={copy} className="flex items-center justify-center gap-1.5 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-brand-secondary transition hover:opacity-90">{copied ? <><IconConcluido size={18} aria-hidden /> Copiado</> : <><IconCopiar size={18} aria-hidden /> Copiar</>}</button>
+          <button type="button" onClick={share} className="flex items-center justify-center gap-1.5 rounded-xl border border-white/40 px-4 py-3 text-sm font-semibold text-sand transition hover:bg-white/10"><IconCompartilhar size={18} aria-hidden /> Compartilhar</button>
         </div>
       </div>
       <p className="mt-2 text-xs text-sand/80">Código: <span className="font-mono">{code}</span></p>

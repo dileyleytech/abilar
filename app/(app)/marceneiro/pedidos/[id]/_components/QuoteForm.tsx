@@ -15,6 +15,8 @@ import {
 import { quotePricing, maxClientInstallments, computeItemsBase, type PricingConfig } from '@abilar/pricing';
 import { MATERIAL_CATEGORY_LABEL, MATERIAL_UNIT_LABEL } from '@/lib/labels';
 import { sendQuote, withdrawQuote } from '@/lib/quotes/actions';
+import { IconAdicionar, IconCustos, IconOk, IconTaxas, IconExpandir } from '@/components/ui/icons';
+import { Button, buttonVariants } from '@/components/ui';
 
 const fld =
   'w-full rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
@@ -205,18 +207,14 @@ export function QuoteForm({
 
         {/* Adicionar item — no topo, minimizado por padrão */}
         {!showComposer ? (
-          <button
-            type="button"
-            onClick={() => setShowComposer(true)}
-            className="rounded-xl bg-brand-secondary px-4 py-3 text-base font-semibold text-white transition hover:opacity-90"
-          >
-            + Adicionar item
-          </button>
+          <Button variant="secondary" onClick={() => setShowComposer(true)} className="self-start">
+            <IconAdicionar size={20} aria-hidden /> Adicionar item
+          </Button>
         ) : (
           <div className="rounded-2xl border border-subtle bg-base p-4">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-sm font-semibold text-charcoal">Adicionar item</p>
-              <button type="button" onClick={() => setShowComposer(false)} className="text-sm text-muted hover:text-charcoal">Fechar</button>
+              <Button variant="ghost" size="sm" onClick={() => setShowComposer(false)}>Fechar</Button>
             </div>
             {materials.length > 0 && (
               <select className={`${fld} mb-2`} value={draft.materialId ?? ''} onChange={(e) => onPickDraftMaterial(e.target.value)}>
@@ -259,11 +257,11 @@ export function QuoteForm({
               </div>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
-              <button type="button" onClick={addDraft} disabled={!draftValid} className="rounded-xl bg-brand-secondary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-                + Adicionar ao orçamento
-              </button>
+              <Button variant="secondary" size="sm" onClick={addDraft} disabled={!draftValid}>
+                <IconAdicionar size={18} aria-hidden /> Adicionar ao orçamento
+              </Button>
               {materials.length === 0 && (
-                <a href="/marceneiro/catalogo" className="rounded-xl border border-subtle px-4 py-2 text-sm text-charcoal">📦 Cadastrar no catálogo</a>
+                <a href="/marceneiro/catalogo" className={buttonVariants({ variant: 'outline', size: 'sm' })}><IconCustos size={16} aria-hidden /> Cadastrar no catálogo</a>
               )}
             </div>
           </div>
@@ -289,12 +287,12 @@ export function QuoteForm({
                         <strong className="text-charcoal">{formatBRL(lineTotal)}</strong>
                       </p>
                     </div>
-                    <button type="button" onClick={() => editLine(l)} className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-brand-primary hover:bg-deep">
+                    <Button variant="ghost" size="sm" onClick={() => editLine(l)} className="shrink-0">
                       Editar
-                    </button>
-                    <button type="button" onClick={() => removeLine(l.key)} className="shrink-0 rounded-lg px-2 py-1 text-sm text-muted hover:text-ochre">
+                    </Button>
+                    <Button variant="danger" size="sm" onClick={() => removeLine(l.key)} className="shrink-0">
                       Remover
-                    </button>
+                    </Button>
                   </li>
                 );
               })}
@@ -337,8 +335,8 @@ export function QuoteForm({
         )}
 
         {initial && (
-          <p className="mt-auto rounded-lg bg-sage/25 px-3 py-2 text-sm text-charcoal">
-            ✓ Você já enviou. Editar e salvar atualiza o que o cliente vê.
+          <p className="mt-auto inline-flex items-center gap-1.5 rounded-lg bg-sage/25 px-3 py-2 text-sm text-charcoal">
+            <IconOk size={16} className="text-brand-primary" aria-hidden /> Você já enviou. Editar e salvar atualiza o que o cliente vê.
           </p>
         )}
       </section>
@@ -380,8 +378,8 @@ export function QuoteForm({
         {/* Parcelamento — opcional, recolhido */}
         <div className="rounded-2xl border border-subtle p-4">
           <button type="button" onClick={() => setShowInst((v) => !v)} className="flex w-full items-center justify-between text-sm font-semibold text-charcoal">
-            <span>⚙️ Baratear o parcelamento do cliente (opcional)</span>
-            <span className="text-muted">{showInst ? '▲' : '▼'}</span>
+            <span className="inline-flex items-center gap-1.5"><IconTaxas size={16} aria-hidden /> Baratear o parcelamento do cliente (opcional)</span>
+            <IconExpandir size={18} className={`text-muted transition-transform ${showInst ? 'rotate-180' : ''}`} aria-hidden />
           </button>
           {showInst && (
             <div className="mt-3 flex flex-col gap-3">
@@ -412,15 +410,15 @@ export function QuoteForm({
           <textarea className={`${fld} min-h-20`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Prazo, detalhes do material…" />
         </label>
 
-        <button type="button" onClick={submit} disabled={pending || cents <= 0} className="rounded-xl bg-brand-primary px-5 py-4 text-lg font-semibold text-white transition hover:opacity-90 disabled:opacity-50">
+        <Button variant="primary" size="lg" onClick={submit} disabled={pending || cents <= 0}>
           {pending ? 'Enviando…' : initial ? 'Atualizar orçamento' : 'Enviar orçamento'}
-        </button>
+        </Button>
         {initial && (
-          <button type="button" onClick={remove} disabled={pending} className="rounded-xl border border-subtle px-4 py-3 text-base text-charcoal hover:bg-deep">
+          <Button variant="outline" onClick={remove} disabled={pending}>
             Retirar orçamento
-          </button>
+          </Button>
         )}
-        {error && <p className="rounded-xl bg-ochre/20 px-4 py-3 text-base text-charcoal" role="alert">{error}</p>}
+        {error && <p className="rounded-xl bg-danger/10 px-4 py-3 text-base text-danger" role="alert">{error}</p>}
       </section>
     </>
   );

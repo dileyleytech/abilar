@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { setPassword } from '@/lib/auth/actions';
+import { Button } from '@/components/ui';
 
 export function SetPasswordForm() {
   const [open, setOpen] = useState(false);
@@ -28,13 +29,9 @@ export function SetPasswordForm() {
       <p className="mt-1 text-sm text-muted">Defina uma senha para entrar sem precisar de SMS toda vez.</p>
 
       {!open ? (
-        <button
-          type="button"
-          className="mt-4 w-full rounded-xl border border-subtle px-5 py-3 text-base font-medium text-charcoal transition hover:bg-deep"
-          onClick={() => setOpen(true)}
-        >
+        <Button variant="outline" className="mt-4 w-full" onClick={() => setOpen(true)}>
           Definir senha
-        </button>
+        </Button>
       ) : (
         <div className="mt-4 flex flex-col gap-3">
           <input
@@ -46,28 +43,19 @@ export function SetPasswordForm() {
             onChange={(e) => setPwd(e.target.value)}
           />
           <div className="flex gap-2">
-            <button
-              type="button"
-              className="flex-1 rounded-xl bg-brand px-4 py-3 text-base font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
-              disabled={pending || pwd.length < 8}
-              onClick={save}
-            >
+            <Button variant="primary" className="flex-1" disabled={pending || pwd.length < 8} onClick={save}>
               {pending ? 'Salvando…' : 'Salvar senha'}
-            </button>
-            <button
-              type="button"
-              className="rounded-xl border border-subtle px-4 py-3 text-base text-charcoal transition hover:bg-deep"
-              onClick={() => setOpen(false)}
-            >
+            </Button>
+            <Button variant="outline" onClick={() => setOpen(false)}>
               Cancelar
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {msg && (
         <p
-          className={`mt-3 rounded-xl px-4 py-3 text-base text-charcoal ${msg.ok ? 'bg-sage/25' : 'bg-ochre/20'}`}
+          className={`mt-3 rounded-xl px-4 py-3 text-base ${msg.ok ? 'bg-sage/25 text-charcoal' : 'bg-danger/10 text-danger'}`}
           role="status"
         >
           {msg.text}

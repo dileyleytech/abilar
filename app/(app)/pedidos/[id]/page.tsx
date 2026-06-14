@@ -7,8 +7,10 @@ import { getReceivedQuotes } from '@/lib/quotes/queries';
 import { signedProjectPhotoUrl } from '@/lib/storage';
 import { StatusBadge } from '@/components/StatusBadge';
 import { ObraBoard } from '@/components/ObraBoard';
+import { Page, buttonVariants } from '@/components/ui';
 import { getProjectMilestones } from '@/lib/obra/queries';
 import { backFrom } from '@/lib/nav';
+import { IconVoltar, IconDinheiro, IconContrato, IconImprimir } from '@/components/ui/icons';
 import { ProjectActions } from './_components/ProjectActions';
 import { ProjectTitle } from './_components/ProjectTitle';
 import { ModulesSection, type ModuleView } from './_components/ModulesSection';
@@ -56,15 +58,15 @@ export default async function PedidoDetailPage({
   }));
 
   return (
-    <main className="mx-auto w-full max-w-screen-lg px-4 py-8 sm:px-6 lg:px-8">
+    <Page width="xl">
       <header className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <Link
             href={back.href}
             aria-label={from ? 'Voltar à conversa' : 'Voltar'}
-            className="shrink-0 rounded-lg px-2 py-1.5 text-lg text-muted transition hover:bg-deep hover:text-charcoal"
+            className="flex shrink-0 items-center rounded-lg px-2 py-1.5 text-muted transition hover:bg-deep hover:text-charcoal"
           >
-            ←
+            <IconVoltar size={20} aria-hidden />
           </Link>
           <div className="min-w-0">
             <ProjectTitle projectId={project.id} title={project.title} editable={editable} />
@@ -122,7 +124,7 @@ export default async function PedidoDetailPage({
                           </p>
                         )}
                         {economiaCents > 0 && (
-                          <p className="mt-1 text-sm font-semibold text-brand-secondary">💰 Economize {formatBRL(economiaCents)} pagando à vista</p>
+                          <p className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-brand-secondary"><IconDinheiro size={16} aria-hidden /> Economize {formatBRL(economiaCents)} pagando à vista</p>
                         )}
                       </div>
 
@@ -147,16 +149,16 @@ export default async function PedidoDetailPage({
 
                       <div className="mt-auto flex flex-wrap items-center gap-3 pt-1">
                         {q.contractId ? (
-                          <Link href={`/contratos/${q.contractId}`} className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
-                            📄 Ver contrato
+                          <Link href={`/contratos/${q.contractId}`} className={buttonVariants({ variant: 'primary', size: 'sm' })}>
+                            <IconContrato size={18} aria-hidden /> Ver contrato
                           </Link>
                         ) : q.status === 'PRE_APPROVED' ? (
                           <AcceptQuoteButton quoteId={q.id} />
                         ) : (
                           <PreApproveButton quoteId={q.id} approved={q.status !== 'SENT'} />
                         )}
-                        <Link href={`/orcamentos/${q.id}/imprimir`} className="text-sm font-semibold text-brand-primary hover:underline">
-                          🖨️ PDF
+                        <Link href={`/orcamentos/${q.id}/imprimir`} className="inline-flex items-center gap-1 text-sm font-semibold text-brand-primary hover:underline">
+                          <IconImprimir size={16} aria-hidden /> PDF
                         </Link>
                       </div>
                     </li>
@@ -194,8 +196,8 @@ export default async function PedidoDetailPage({
               {roomPhotos.map((p) =>
                 p.url ? (
                   p.kind === 'ARCHITECT_PDF' ? (
-                    <a key={p.id} href={p.url} target="_blank" rel="noreferrer" className="flex aspect-square items-center justify-center rounded-xl bg-surface text-center text-xs font-medium text-brand-primary shadow-sm">
-                      📄 PDF
+                    <a key={p.id} href={p.url} target="_blank" rel="noreferrer" className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl bg-surface text-center text-xs font-medium text-brand-primary shadow-sm">
+                      <IconContrato size={22} aria-hidden /> PDF
                     </a>
                   ) : (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -212,7 +214,7 @@ export default async function PedidoDetailPage({
           <ProjectActions projectId={project.id} status={project.status} hasModules={isArchitectProject || moduleViews.length > 0} />
         </section>
       </div>
-    </main>
+    </Page>
   );
 }
 

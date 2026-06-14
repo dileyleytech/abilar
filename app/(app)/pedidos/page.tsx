@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { requireUserId } from '@/lib/auth/session';
 import { listMyProjectsWithCover } from '@/lib/projects/queries';
 import { signedProjectPhotoUrl } from '@/lib/storage';
+import { Page, PageHeader, EmptyState, buttonVariants } from '@/components/ui';
 import { PedidosList, type ProjectCard } from './_components/PedidosList';
 
 export const metadata = { title: 'Meus pedidos — Abilar' };
@@ -22,34 +23,31 @@ export default async function PedidosPage() {
   );
 
   return (
-    <main className="mx-auto w-full max-w-screen-2xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-charcoal sm:text-3xl">Meus pedidos</h1>
-          <p className="text-sm text-muted">Acompanhe e gerencie seus projetos de marcenaria.</p>
-        </div>
-        <Link
-          href="/pedidos/novo"
-          className="shrink-0 rounded-xl bg-brand-primary px-5 py-3 text-base font-semibold text-white shadow-sm transition hover:opacity-90"
-        >
-          + Novo pedido
-        </Link>
-      </div>
+    <Page width="full">
+      <PageHeader
+        title="Meus pedidos"
+        description="Acompanhe e gerencie seus projetos de marcenaria."
+        action={
+          <Link href="/pedidos/novo" className={buttonVariants({ variant: 'primary' })}>
+            Novo pedido
+          </Link>
+        }
+      />
 
       {projects.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl bg-surface p-12 text-center shadow-sm">
-          <span className="text-5xl" aria-hidden>🪵</span>
-          <p className="text-lg font-medium text-charcoal">Você ainda não tem pedidos</p>
-          <p className="max-w-sm text-muted">
-            Crie um pedido com foto e medidas e receba orçamentos de marceneiros da sua região.
-          </p>
-          <Link href="/pedidos/novo" className="mt-2 rounded-xl bg-brand-primary px-5 py-3 font-semibold text-white">
-            Criar meu primeiro pedido
-          </Link>
-        </div>
+        <EmptyState
+          icon={<span className="text-3xl" aria-hidden>🪵</span>}
+          title="Você ainda não tem pedidos"
+          hint="Crie um pedido com foto e medidas e receba orçamentos de marceneiros da sua região."
+          action={
+            <Link href="/pedidos/novo" className={buttonVariants({ variant: 'primary', size: 'lg' })}>
+              Criar meu primeiro pedido
+            </Link>
+          }
+        />
       ) : (
         <PedidosList projects={projects} />
       )}
-    </main>
+    </Page>
   );
 }

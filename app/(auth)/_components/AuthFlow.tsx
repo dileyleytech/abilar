@@ -3,15 +3,17 @@
 import { useState } from 'react';
 import type { SignupRole } from '@abilar/shared';
 import { requestPhoneOtp, verifyPhoneOtp, requestEmailLink, signInWithPassword } from '@/lib/auth/actions';
+import { Button } from '@/components/ui';
+import { IconInicio, IconObra, IconArquitetos, IconTelefone, IconEmail, IconBloqueado, type LucideIcon } from '@/components/ui/icons';
 
 type Mode = 'login' | 'signup';
 type Method = 'phone' | 'email' | 'password';
 type Phase = 'role' | 'enter' | 'otp' | 'sent';
 
-const ROLE_CARDS: { role: SignupRole; emoji: string; title: string; desc: string }[] = [
-  { role: 'CLIENT', emoji: '🏠', title: 'Sou cliente', desc: 'Quero um móvel novo ou trocar o atual' },
-  { role: 'CARPENTER', emoji: '🪚', title: 'Sou marceneiro', desc: 'Quero receber pedidos e orçar' },
-  { role: 'ARCHITECT', emoji: '📐', title: 'Sou arquiteto', desc: 'Quero indicar e acompanhar projetos' },
+const ROLE_CARDS: { role: SignupRole; Icon: LucideIcon; title: string; desc: string }[] = [
+  { role: 'CLIENT', Icon: IconInicio, title: 'Sou cliente', desc: 'Quero um móvel novo ou trocar o atual' },
+  { role: 'CARPENTER', Icon: IconObra, title: 'Sou marceneiro', desc: 'Quero receber pedidos e orçar' },
+  { role: 'ARCHITECT', Icon: IconArquitetos, title: 'Sou arquiteto', desc: 'Quero indicar e acompanhar projetos' },
 ];
 
 export function AuthFlow({ mode }: { mode: Mode }) {
@@ -62,7 +64,6 @@ export function AuthFlow({ mode }: { mode: Mode }) {
       if (r && !r.ok) setError(r.error); // sucesso redireciona no servidor
     });
 
-  const big = 'w-full rounded-xl px-5 py-4 text-lg font-semibold transition hover:opacity-90';
   const field =
     'w-full rounded-xl border border-subtle bg-surface px-4 py-4 text-lg text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
 
@@ -81,8 +82,8 @@ export function AuthFlow({ mode }: { mode: Mode }) {
             }}
             className="flex items-center gap-4 rounded-xl border border-subtle bg-surface px-5 py-4 text-left transition hover:-translate-y-0.5 hover:border-brand-primary/50 hover:shadow-sm"
           >
-            <span className="text-3xl" aria-hidden>
-              {c.emoji}
+            <span className="text-brand-primary" aria-hidden>
+              <c.Icon size={28} />
             </span>
             <span>
               <span className="block text-lg font-semibold text-charcoal">{c.title}</span>
@@ -125,7 +126,10 @@ export function AuthFlow({ mode }: { mode: Mode }) {
               method === m ? 'bg-surface text-charcoal' : 'text-muted'
             }`}
           >
-            {m === 'phone' ? '📱 Celular' : m === 'email' ? '✉️ E-mail' : '🔑 Senha'}
+            <span className="inline-flex items-center justify-center gap-1.5">
+              {m === 'phone' ? <IconTelefone size={16} aria-hidden /> : m === 'email' ? <IconEmail size={16} aria-hidden /> : <IconBloqueado size={16} aria-hidden />}
+              {m === 'phone' ? 'Celular' : m === 'email' ? 'E-mail' : 'Senha'}
+            </span>
           </button>
         ))}
       </div>
@@ -145,9 +149,9 @@ export function AuthFlow({ mode }: { mode: Mode }) {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
-          <button type="submit" className={`${big} bg-brand text-white`} disabled={loading}>
+          <Button type="submit" variant="primary" size="lg" className="w-full" disabled={loading}>
             {loading ? 'Enviando…' : 'Enviar código por SMS'}
-          </button>
+          </Button>
         </form>
       )}
 
@@ -167,9 +171,9 @@ export function AuthFlow({ mode }: { mode: Mode }) {
             value={token}
             onChange={(e) => setToken(e.target.value.replace(/\D/g, ''))}
           />
-          <button type="submit" className={`${big} bg-brand text-white`} disabled={loading}>
+          <Button type="submit" variant="primary" size="lg" className="w-full" disabled={loading}>
             {loading ? 'Conferindo…' : 'Entrar'}
-          </button>
+          </Button>
           <button type="button" className="text-base text-muted underline" onClick={() => setPhase('enter')}>
             Trocar o número
           </button>
@@ -191,9 +195,9 @@ export function AuthFlow({ mode }: { mode: Mode }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <button type="submit" className={`${big} bg-brand text-white`} disabled={loading}>
+          <Button type="submit" variant="primary" size="lg" className="w-full" disabled={loading}>
             {loading ? 'Enviando…' : 'Enviar link de acesso'}
-          </button>
+          </Button>
         </form>
       )}
 
@@ -223,9 +227,9 @@ export function AuthFlow({ mode }: { mode: Mode }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <button type="submit" className={`${big} bg-brand text-white`} disabled={loading}>
+          <Button type="submit" variant="primary" size="lg" className="w-full" disabled={loading}>
             {loading ? 'Entrando…' : 'Entrar'}
-          </button>
+          </Button>
           <p className="text-center text-sm text-muted">
             Ainda não tem senha? Entre por celular/e-mail e defina uma senha em “Minha conta”.
           </p>
@@ -233,7 +237,7 @@ export function AuthFlow({ mode }: { mode: Mode }) {
       )}
 
       {error && (
-        <p className="rounded-md bg-ochre/20 px-4 py-3 text-base text-charcoal" role="alert" aria-live="assertive">
+        <p className="rounded-md bg-danger/10 px-4 py-3 text-base text-danger" role="alert" aria-live="assertive">
           {error}
         </p>
       )}

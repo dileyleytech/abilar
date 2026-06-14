@@ -6,6 +6,7 @@ import { countUnreadNotifications } from '@/lib/data';
 import { subscribeNotifications } from '@/lib/realtime';
 import { NOTIF_READ_EVENT } from '@/lib/events';
 import { color } from '@/theme';
+import { IconConversas, IconAvisos } from '@/components/icons';
 
 // Ícones no topo (Conversas + Avisos) — padrão de apps mobile.
 export function HeaderIcons() {
@@ -28,10 +29,10 @@ export function HeaderIcons() {
   return (
     <View style={styles.row}>
       <Pressable onPress={() => router.push('/(app)/conversas')} hitSlop={8} style={styles.btn}>
-        <Text style={styles.icon}>💬</Text>
+        <IconConversas size={22} color={color.text.primary} strokeWidth={2} />
       </Pressable>
       <Pressable onPress={() => router.push('/(app)/avisos')} hitSlop={8} style={styles.btn}>
-        <Text style={styles.icon}>🔔</Text>
+        <IconAvisos size={22} color={color.text.primary} strokeWidth={2} />
         {unread > 0 && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{unread > 9 ? '9+' : unread}</Text>
@@ -45,7 +46,6 @@ export function HeaderIcons() {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 6, marginRight: 12 },
   btn: { padding: 4 },
-  icon: { fontSize: 20 },
   badge: { position: 'absolute', top: -2, right: -4, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: color.brand.primary, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   badgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
 });

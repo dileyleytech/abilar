@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import type { Role } from '@abilar/shared';
 import { getSessionProfile } from '@/lib/auth/session';
 import { signOut } from '@/lib/auth/actions';
+import { Page, PageHeader, Card, Badge, Button } from '@/components/ui';
 import { SetPasswordForm } from './_components/SetPasswordForm';
 import { MeuPerfil } from './_components/MeuPerfil';
 
@@ -21,19 +22,17 @@ export default async function ContaPage() {
   const initial = (profile.name ?? 'U').charAt(0).toUpperCase();
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-      <h1 className="mb-6 text-2xl font-bold text-charcoal">Minha conta</h1>
+    <Page width="sm">
+      <PageHeader title="Minha conta" />
 
-      <div className="mb-4 flex items-center justify-between gap-4 rounded-2xl border border-subtle bg-surface p-6 shadow-sm">
+      <Card className="mb-4 flex items-center justify-between gap-4" pad="lg">
         <div className="flex items-center gap-4">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-primary text-xl font-bold text-white">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-primary text-h3 font-bold text-white">
             {initial}
           </span>
           <div>
-            <p className="text-xl font-bold text-charcoal">{profile.name ?? 'Sem nome'}</p>
-            <span className="inline-block rounded-pill bg-brand-secondary/15 px-3 py-0.5 text-xs font-semibold text-brand-secondary">
-              {ROLE_LABEL[profile.role]}
-            </span>
+            <p className="text-h3 font-bold text-charcoal">{profile.name ?? 'Sem nome'}</p>
+            <Badge tone="success">{ROLE_LABEL[profile.role]}</Badge>
           </div>
         </div>
         {profile.role === 'CLIENT' && (
@@ -46,21 +45,18 @@ export default async function ContaPage() {
             Minha área →
           </Link>
         )}
-      </div>
+      </Card>
 
       <div className="grid gap-4">
         <MeuPerfil name={profile.name} email={profile.email} phone={profile.phone} />
         <SetPasswordForm />
 
         <form action={signOut}>
-          <button
-            type="submit"
-            className="w-full rounded-2xl border border-subtle bg-surface px-5 py-4 text-lg font-medium text-charcoal shadow-sm transition hover:bg-deep"
-          >
+          <Button type="submit" variant="outline" size="lg" className="w-full">
             Sair
-          </button>
+          </Button>
         </form>
       </div>
-    </main>
+    </Page>
   );
 }

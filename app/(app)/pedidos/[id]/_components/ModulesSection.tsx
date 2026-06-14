@@ -7,6 +7,8 @@ import { addModule, updateModule, deleteModule, registerProjectPhoto } from '@/l
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { downscaleImage } from '@/lib/image';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
+import { Button } from '@/components/ui';
+import { IconAdicionar, IconEditar, IconExcluir, IconFoto, IconNovo, IconAtualizar } from '@/components/ui/icons';
 
 export type ModuleView = {
   id: string;
@@ -85,7 +87,7 @@ export function ModulesSection({
   const ready = w !== '' && h !== '' && d !== '' && !eW && !eH && !eD;
   const fld =
     'w-full rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
-  const fldErr = 'border-ochre ring-2 ring-ochre/30';
+  const fldErr = 'border-danger ring-2 ring-danger/30';
 
   const resetForm = () => {
     setAmbiente('');
@@ -182,13 +184,13 @@ export function ModulesSection({
           )}
         </h2>
         {editable && !open && (
-          <button
-            type="button"
-            className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+          <Button
+            variant="primary"
+            size="sm"
             onClick={() => { resetForm(); setOpen(true); }}
           >
-            + Adicionar móvel
-          </button>
+            <IconAdicionar size={20} aria-hidden /> Adicionar móvel
+          </Button>
         )}
       </div>
 
@@ -223,8 +225,8 @@ export function ModulesSection({
                       )}
                       {editable && (
                         <>
-                          <span className="absolute bottom-0 w-full bg-charcoal/60 py-0.5 text-center text-[10px] font-medium text-white">
-                            {busyId === m.id ? '...' : m.photoUrl ? 'trocar' : '📷 foto'}
+                          <span className="absolute bottom-0 flex w-full items-center justify-center gap-1 bg-charcoal/60 py-0.5 text-center text-[10px] font-medium text-white">
+                            {busyId === m.id ? '...' : m.photoUrl ? 'trocar' : <><IconFoto size={12} aria-hidden /> foto</>}
                           </span>
                           <input
                             type="file"
@@ -243,24 +245,24 @@ export function ModulesSection({
                         </p>
                         {editable && !m.id.startsWith('temp-') && (
                           <div className="flex shrink-0 items-center gap-1">
-                            <button
-                              type="button"
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               aria-label="Editar móvel"
                               disabled={pending}
                               onClick={() => startEdit(m)}
-                              className="rounded-md px-2 py-0.5 text-muted hover:bg-deep hover:text-charcoal disabled:opacity-50"
                             >
-                              ✏️
-                            </button>
-                            <button
-                              type="button"
+                              <IconEditar size={16} aria-hidden />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               aria-label="Remover móvel"
                               disabled={pending}
                               onClick={() => remove(m.id)}
-                              className="rounded-md px-2 py-0.5 text-muted hover:bg-deep hover:text-charcoal disabled:opacity-50"
                             >
-                              ✕
-                            </button>
+                              <IconExcluir size={16} aria-hidden />
+                            </Button>
                           </div>
                         )}
                       </div>
@@ -311,33 +313,33 @@ export function ModulesSection({
           )}
           <div className="flex gap-2">
             {([
-              { v: 'NEW_INSTALL', t: '🆕 Móvel novo' },
-              { v: 'REPLACE_EXISTING', t: '🔁 Substituição' },
+              { v: 'NEW_INSTALL', t: 'Móvel novo', Icon: IconNovo },
+              { v: 'REPLACE_EXISTING', t: 'Substituição', Icon: IconAtualizar },
             ] as const).map((o) => (
               <button
                 key={o.v}
                 type="button"
                 onClick={() => setWt(o.v)}
-                className={`flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-medium transition ${
                   wt === o.v ? 'border-brand-primary bg-brand-primary/10 text-charcoal' : 'border-subtle text-muted'
                 }`}
               >
-                {o.t}
+                <o.Icon size={16} aria-hidden /> {o.t}
               </button>
             ))}
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div>
               <input className={`${fld} ${eW ? fldErr : ''}`} type="number" inputMode="numeric" min={1} placeholder="Larg. cm" value={w} onChange={(e) => setW(e.target.value)} />
-              {eW && <span className="text-xs text-ochre">{eW}</span>}
+              {eW && <span className="text-xs text-danger">{eW}</span>}
             </div>
             <div>
               <input className={`${fld} ${eH ? fldErr : ''}`} type="number" inputMode="numeric" min={1} placeholder="Alt. cm" value={h} onChange={(e) => setH(e.target.value)} />
-              {eH && <span className="text-xs text-ochre">{eH}</span>}
+              {eH && <span className="text-xs text-danger">{eH}</span>}
             </div>
             <div>
               <input className={`${fld} ${eD ? fldErr : ''}`} type="number" inputMode="numeric" min={1} placeholder="Prof. cm" value={d} onChange={(e) => setD(e.target.value)} />
-              {eD && <span className="text-xs text-ochre">{eD}</span>}
+              {eD && <span className="text-xs text-danger">{eD}</span>}
             </div>
           </div>
           <label className="flex flex-col gap-1">
@@ -347,23 +349,24 @@ export function ModulesSection({
             <input type="file" accept="image/*" className={fld} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           </label>
           <div className="flex gap-2">
-            <button
-              type="button"
-              className="flex-1 rounded-xl bg-brand-primary px-4 py-3 text-base font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+            <Button
+              variant="primary"
+              size="lg"
+              className="flex-1"
               disabled={!ready || pending}
               onClick={submit}
             >
               {pending ? 'Salvando…' : editId ? 'Salvar alterações' : 'Adicionar móvel'}
-            </button>
-            <button type="button" className="rounded-xl border border-subtle px-4 py-3 text-base text-charcoal hover:bg-deep" onClick={resetForm}>
+            </Button>
+            <Button variant="outline" size="lg" onClick={resetForm}>
               Cancelar
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {error && (
-        <p className="mt-3 rounded-xl bg-ochre/20 px-4 py-3 text-base text-charcoal" role="alert">
+        <p className="mt-3 rounded-xl bg-danger/10 px-4 py-3 text-base text-danger" role="alert">
           {error}
         </p>
       )}

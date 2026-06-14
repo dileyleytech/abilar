@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { REPORT_REASONS, type ConversationStatus, type ReportReason } from '@abilar/shared';
 import { REPORT_REASON_LABEL } from '@/lib/labels';
 import { reportConversation, setConversationStatus } from '@/lib/chat/actions';
+import { Button } from '@/components/ui';
+import { IconMais, IconDenuncias, IconOk, IconAtualizar, IconBloqueado, IconConversas } from '@/components/ui/icons';
 
 const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? 'suporte@abilar.com.br';
 
@@ -46,21 +48,21 @@ export function ChatMenu({
       setDetail('');
     });
 
-  const item = 'w-full px-4 py-2.5 text-left text-sm text-charcoal hover:bg-deep';
+  const item = 'flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-charcoal hover:bg-deep';
 
   return (
     <div className="relative">
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => {
           setOpen((v) => !v);
           setReporting(false);
         }}
         aria-label="Opções da conversa"
-        className="rounded-lg px-2 py-1 text-xl text-muted hover:bg-deep hover:text-charcoal"
       >
-        ⋮
-      </button>
+        <IconMais size={20} />
+      </Button>
 
       {open && (
         <div className="absolute right-0 z-30 mt-1 w-64 overflow-hidden rounded-xl border border-subtle bg-surface shadow-lg">
@@ -84,56 +86,47 @@ export function ChatMenu({
                 placeholder="Conte o que aconteceu (opcional)"
                 className="mb-2 min-h-16 w-full rounded-lg border border-subtle bg-surface px-3 py-2 text-sm"
               />
-              {error && <p className="mb-2 text-xs text-ochre">{error}</p>}
+              {error && <p className="mb-2 text-xs text-danger">{error}</p>}
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={submitReport}
-                  disabled={pending}
-                  className="flex-1 rounded-lg bg-brand-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                >
+                <Button variant="primary" size="sm" className="flex-1" onClick={submitReport} disabled={pending}>
                   {pending ? 'Enviando…' : 'Enviar denúncia'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setReporting(false)}
-                  className="rounded-lg border border-subtle px-3 py-2 text-sm text-charcoal"
-                >
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setReporting(false)}>
                   Voltar
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
             <div className="flex flex-col py-1">
               <button type="button" className={item} onClick={() => setReporting(true)}>
-                🚩 Denunciar conversa
+                <IconDenuncias size={16} aria-hidden /> Denunciar conversa
               </button>
               {status === 'ACTIVE' && (
                 <button type="button" className={item} onClick={() => changeStatus('CLOSED')}>
-                  ✓ Encerrar conversa
+                  <IconOk size={16} aria-hidden /> Encerrar conversa
                 </button>
               )}
               {status === 'CLOSED' && (
                 <button type="button" className={item} onClick={() => changeStatus('ACTIVE')}>
-                  ↩︎ Reabrir conversa
+                  <IconAtualizar size={16} aria-hidden /> Reabrir conversa
                 </button>
               )}
               {status !== 'BLOCKED' && (
                 <button
                   type="button"
-                  className={`${item} text-ochre`}
+                  className={`${item} text-danger`}
                   onClick={() =>
                     changeStatus('BLOCKED', 'Bloquear esta conversa? Você não troca mais mensagens e só o suporte reabre.')
                   }
                 >
-                  ⛔ Bloquear
+                  <IconBloqueado size={16} aria-hidden /> Bloquear
                 </button>
               )}
               <a
                 href={`mailto:${SUPPORT_EMAIL}?subject=Suporte%20-%20conversa%20${conversationId}`}
                 className={item}
               >
-                💬 Falar com o suporte
+                <IconConversas size={16} aria-hidden /> Falar com o suporte
               </a>
             </div>
           )}

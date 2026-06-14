@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { acceptQuote } from '@/lib/contracts/actions';
+import { Button } from '@/components/ui';
+import { IconOk } from '@/components/ui/icons';
 
 /** Cliente aceita o orçamento → gera o contrato e vai para a tela de aceite. */
 export function AcceptQuoteButton({ quoteId }: { quoteId: string }) {
@@ -20,15 +22,10 @@ export function AcceptQuoteButton({ quoteId }: { quoteId: string }) {
 
   return (
     <div>
-      <button
-        type="button"
-        onClick={go}
-        disabled={pending}
-        className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
-      >
-        {pending ? '…' : '✅ Aceitar e gerar contrato'}
-      </button>
-      {error && <p className="mt-1 text-sm text-ochre">{error}</p>}
+      <Button variant="primary" size="sm" onClick={go} disabled={pending}>
+        {pending ? '…' : <><IconOk size={20} aria-hidden /> Aceitar e gerar contrato</>}
+      </Button>
+      {error && <p className="mt-1 text-sm text-danger">{error}</p>}
     </div>
   );
 }

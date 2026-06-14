@@ -12,9 +12,16 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui';
+import { IconTelefone, IconEmail, IconBloqueado } from '@/components/icons';
 import { color, radius, space } from '@/theme';
 
 type Method = 'phone' | 'email' | 'password';
+
+const METHOD_META: Record<Method, { icon: typeof IconTelefone; label: string }> = {
+  phone: { icon: IconTelefone, label: 'Celular' },
+  email: { icon: IconEmail, label: 'E-mail' },
+  password: { icon: IconBloqueado, label: 'Senha' },
+};
 
 // Normaliza telefone BR para E.164 (+55...). Aceita já com +.
 function toE164(raw: string): string {
@@ -99,17 +106,22 @@ export default function Login() {
         <Text style={styles.subtitle}>Marcenaria sob medida, do orçamento à entrega.</Text>
 
         <View style={styles.tabs}>
-          {(['phone', 'email', 'password'] as Method[]).map((m) => (
-            <Pressable
-              key={m}
-              onPress={() => switchMethod(m)}
-              style={[styles.tab, method === m && styles.tabActive]}
-            >
-              <Text style={[styles.tabText, method === m && styles.tabTextActive]}>
-                {m === 'phone' ? '📱 Celular' : m === 'email' ? '✉️ E-mail' : '🔑 Senha'}
-              </Text>
-            </Pressable>
-          ))}
+          {(['phone', 'email', 'password'] as Method[]).map((m) => {
+            const Icon = METHOD_META[m].icon;
+            const activeTab = method === m;
+            return (
+              <Pressable
+                key={m}
+                onPress={() => switchMethod(m)}
+                style={[styles.tab, activeTab && styles.tabActive]}
+              >
+                <Icon size={16} color={activeTab ? color.text.primary : color.text.muted} strokeWidth={2} />
+                <Text style={[styles.tabText, activeTab && styles.tabTextActive]}>
+                  {METHOD_META[m].label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
 
         {method === 'phone' && step === 'enter' && (
@@ -188,9 +200,12 @@ export default function Login() {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Text style={styles.hint}>
-          🔒 Telefone, e-mail e links são protegidos. Negocie e pague pela plataforma (garantia do escrow).
-        </Text>
+        <View style={styles.hintRow}>
+          <IconBloqueado size={12} color={color.text.subtle} strokeWidth={2} />
+          <Text style={styles.hint}>
+            Telefone, e-mail e links são protegidos. Negocie e pague pela plataforma (garantia do escrow).
+          </Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -202,7 +217,7 @@ const styles = StyleSheet.create({
   brand: { fontSize: 40, fontWeight: '700', color: color.brand.primary, letterSpacing: -1 },
   subtitle: { fontSize: 16, color: color.text.muted, marginBottom: space.lg },
   tabs: { flexDirection: 'row', backgroundColor: color.bg.deep, borderRadius: radius.pill, padding: 4, marginBottom: space.md },
-  tab: { flex: 1, paddingVertical: 8, borderRadius: radius.pill, alignItems: 'center' },
+  tab: { flex: 1, paddingVertical: 8, borderRadius: radius.pill, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
   tabActive: { backgroundColor: color.bg.surface },
   tabText: { fontSize: 13, fontWeight: '500', color: color.text.muted },
   tabTextActive: { color: color.text.primary },
@@ -220,5 +235,6 @@ const styles = StyleSheet.create({
   code: { textAlign: 'center', letterSpacing: 8, fontSize: 22 },
   link: { color: color.text.muted, textAlign: 'center', paddingVertical: space.sm, textDecorationLine: 'underline' },
   error: { backgroundColor: 'rgba(179,66,46,0.12)', color: color.state.danger, padding: space.md, borderRadius: radius.md },
-  hint: { fontSize: 12, color: color.text.subtle, textAlign: 'center', marginTop: space.xl },
+  hintRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', gap: 4, marginTop: space.xl },
+  hint: { fontSize: 12, color: color.text.subtle, textAlign: 'center', flexShrink: 1 },
 });

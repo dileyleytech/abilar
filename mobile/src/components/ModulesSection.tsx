@@ -8,6 +8,7 @@ import { CATEGORIES, CATEGORY_LABEL } from '@/lib/types';
 import { formatCm } from '@/lib/format';
 import { Button, Card } from '@/components/ui';
 import { Lightbox } from '@/components/Lightbox';
+import { IconEditar, IconExcluir, IconFoto } from '@/components/icons';
 import { color, radius, space } from '@/theme';
 
 const WORK_TYPES = [
@@ -232,11 +233,19 @@ export function ModulesSection({
           </View>
           {editable && !open && (
             <View style={styles.cardActions}>
-              <Pressable onPress={() => startEdit(m)} hitSlop={6} disabled={busyId === m.id}>
-                <Text style={styles.editLink}>✏️ Editar</Text>
+              <Pressable style={styles.actionRow} onPress={() => startEdit(m)} hitSlop={6} disabled={busyId === m.id}>
+                <IconEditar size={16} color={color.brand.secondary} strokeWidth={2} />
+                <Text style={styles.editLink}>Editar</Text>
               </Pressable>
-              <Pressable onPress={() => remove(m)} hitSlop={6} disabled={busyId === m.id}>
-                <Text style={styles.removeLink}>{busyId === m.id ? '…' : '✕ Remover'}</Text>
+              <Pressable style={styles.actionRow} onPress={() => remove(m)} hitSlop={6} disabled={busyId === m.id}>
+                {busyId === m.id ? (
+                  <Text style={styles.removeLink}>…</Text>
+                ) : (
+                  <>
+                    <IconExcluir size={16} color={color.state.danger} strokeWidth={2} />
+                    <Text style={styles.removeLink}>Remover</Text>
+                  </>
+                )}
               </Pressable>
             </View>
           )}
@@ -290,7 +299,7 @@ export function ModulesSection({
               </Pressable>
             </View>
           ) : (
-            <Button title="📷 Adicionar foto" variant="outline" onPress={addPhoto} />
+            <Button title="Adicionar foto" variant="outline" onPress={addPhoto} icon={(p) => <IconFoto {...p} />} />
           )}
 
           <View style={styles.row}>
@@ -317,6 +326,7 @@ const styles = StyleSheet.create({
   section: { fontSize: 18, fontWeight: '700', color: color.text.primary },
   muted: { color: color.text.muted, fontSize: 13 },
   cardActions: { flexDirection: 'row', gap: space.lg, marginTop: space.sm, paddingTop: space.sm, borderTopWidth: 1, borderTopColor: color.border.subtle },
+  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   editLink: { color: color.brand.secondary, fontWeight: '600' },
   removeLink: { color: color.state.danger, fontWeight: '600' },
   mRow: { flexDirection: 'row', gap: space.md, alignItems: 'center' },

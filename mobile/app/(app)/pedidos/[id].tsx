@@ -19,6 +19,7 @@ import { milestoneStatusLabel, PROJECT_STATUS_LABEL } from '@/lib/types';
 import { formatCents, formatDateTime } from '@/lib/format';
 import { Badge, Button, Card, Loading } from '@/components/ui';
 import { EvidenceForm } from '@/components/EvidenceForm';
+import { IconEditar, IconDinheiro, IconConcluido } from '@/components/icons';
 import { color, radius, space } from '@/theme';
 
 type EvidenceView = { id: string; comment: string | null; urls: string[]; date: string };
@@ -193,7 +194,7 @@ export default function PedidoDetail() {
               <Text style={styles.title}>{project.title}</Text>
               {canRename && (
                 <Pressable onPress={() => { setTitleDraft(project.title); setRenaming(true); }} hitSlop={8}>
-                  <Text style={styles.pencil}>✏️</Text>
+                  <IconEditar size={20} color={color.text.muted} strokeWidth={2} />
                 </Pressable>
               )}
             </View>
@@ -242,7 +243,12 @@ export default function PedidoDetail() {
                         ou {q.clientInstallments}x de {formatCents(q.installmentValueCents)} no cartão (total {formatCents(q.parceladoCents)})
                       </Text>
                     )}
-                    {economia > 0 && <Text style={styles.economia}>💰 Economize {formatCents(economia)} à vista</Text>}
+                    {economia > 0 && (
+                      <View style={styles.economiaRow}>
+                        <IconDinheiro size={16} color={color.brand.secondary} strokeWidth={2} />
+                        <Text style={styles.economia}>Economize {formatCents(economia)} à vista</Text>
+                      </View>
+                    )}
                   </View>
 
                   {q.items.length > 0 && (
@@ -264,7 +270,10 @@ export default function PedidoDetail() {
                   {signed ? null : awaitingCarpenter ? (
                     isClient ? (
                       <View style={{ gap: space.sm }}>
-                        <Text style={styles.waiting}>✓ Você aceitou — aguardando o marceneiro assinar.</Text>
+                        <View style={styles.waitingRow}>
+                          <IconConcluido size={16} color={color.text.muted} strokeWidth={2} />
+                          <Text style={styles.waiting}>Você aceitou — aguardando o marceneiro assinar.</Text>
+                        </View>
                         {q.contractId && <Button title="Ver contrato" variant="outline" onPress={() => router.push(`/(app)/contratos/${q.contractId}`)} />}
                       </View>
                     ) : (
@@ -404,7 +413,6 @@ const styles = StyleSheet.create({
   container: { padding: space.lg, gap: space.md },
   title: { flex: 1, fontSize: 20, fontWeight: '700', color: color.text.primary },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  pencil: { fontSize: 18 },
   titleInput: { borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 10, fontSize: 18, fontWeight: '700', color: color.text.primary, backgroundColor: color.bg.base },
   metaRow: { marginTop: 6, flexDirection: 'row', gap: space.sm, alignItems: 'center', flexWrap: 'wrap' },
   section: { fontSize: 18, fontWeight: '700', color: color.text.primary },
@@ -417,12 +425,14 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
   mLabel: { flex: 1, fontSize: 16, fontWeight: '600', color: color.text.primary },
   note: { color: color.text.muted, fontStyle: 'italic' },
-  waiting: { color: color.text.muted },
+  waiting: { color: color.text.muted, flex: 1 },
+  waitingRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   qCarpenter: { flex: 1, fontSize: 17, fontWeight: '700', color: color.text.primary },
   priceBox: { backgroundColor: 'rgba(197,106,51,0.06)', borderWidth: 1, borderColor: 'rgba(197,106,51,0.2)', borderRadius: radius.md, padding: space.md, gap: 2 },
   priceLabel: { fontSize: 11, fontWeight: '700', color: color.text.muted, letterSpacing: 0.5 },
   priceBig: { fontSize: 26, fontWeight: '800', color: color.text.primary },
-  economia: { color: color.brand.secondary, fontWeight: '700', fontSize: 13, marginTop: 2 },
+  economia: { color: color.brand.secondary, fontWeight: '700', fontSize: 13 },
+  economiaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   incluiTitle: { fontSize: 13, fontWeight: '700', color: color.text.primary, marginBottom: 2 },
   noteBox: { backgroundColor: color.bg.base, borderRadius: radius.md, padding: space.sm },
   evidence: { backgroundColor: color.bg.base, borderRadius: radius.md, padding: space.sm, gap: 6 },

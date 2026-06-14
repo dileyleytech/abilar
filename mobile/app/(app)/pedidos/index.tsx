@@ -12,9 +12,10 @@ import {
 import { PROJECT_STATUS_LABEL, type ProjectStatus } from '@/lib/types';
 import { formatDate } from '@/lib/format';
 import { Badge, EmptyState, Loading } from '@/components/ui';
+import { IconObra, IconConversas, IconAguardando, IconAgenda, IconAvancar, type LucideIcon } from '@/components/icons';
 import { color, radius, space } from '@/theme';
 
-type Section = { title: string; data: ProjectRow[] };
+type Section = { title: string; icon?: LucideIcon; data: ProjectRow[] };
 const isObra = (s: ProjectStatus) => s === 'HIRED' || s === 'EXECUTED';
 
 export default function PedidosScreen() {
@@ -34,7 +35,7 @@ export default function PedidosScreen() {
           listOpenProjects(),
         ]);
         next = [
-          { title: '🏗️ Em obra', data: obras },
+          { title: 'Em obra', icon: IconObra, data: obras },
           { title: 'Pedidos na região', data: open },
         ];
       } else {
@@ -42,9 +43,9 @@ export default function PedidosScreen() {
         const naoObra = all.filter((p) => !isObra(p.status));
         const counts = await quoteCountsByProject(naoObra.map((p) => p.id));
         next = [
-          { title: '🏗️ Em obra', data: all.filter((p) => isObra(p.status)) },
-          { title: '💬 Com orçamentos', data: naoObra.filter((p) => (counts[p.id] ?? 0) > 0) },
-          { title: 'Aguardando orçamentos', data: naoObra.filter((p) => (counts[p.id] ?? 0) === 0) },
+          { title: 'Em obra', icon: IconObra, data: all.filter((p) => isObra(p.status)) },
+          { title: 'Com orçamentos', icon: IconConversas, data: naoObra.filter((p) => (counts[p.id] ?? 0) > 0) },
+          { title: 'Aguardando orçamentos', icon: IconAguardando, data: naoObra.filter((p) => (counts[p.id] ?? 0) === 0) },
         ];
       }
     } catch {
@@ -89,12 +90,20 @@ export default function PedidosScreen() {
       ListHeaderComponent={
         isCarpenter ? (
           <Pressable style={styles.agendaBtn} onPress={() => router.push('/(app)/agenda')}>
-            <Text style={styles.agendaText}>🗓️  Minha agenda</Text>
-            <Text style={styles.agendaChev}>›</Text>
+            <View style={styles.agendaLabel}>
+              <IconAgenda size={18} color={color.text.primary} strokeWidth={2} />
+              <Text style={styles.agendaText}>Minha agenda</Text>
+            </View>
+            <IconAvancar size={22} color={color.text.subtle} strokeWidth={2} />
           </Pressable>
         ) : null
       }
-      renderSectionHeader={({ section }) => <Text style={styles.heading}>{section.title}</Text>}
+      renderSectionHeader={({ section }) => (
+        <View style={styles.headingRow}>
+          {section.icon ? <section.icon size={18} color={color.text.primary} strokeWidth={2} /> : null}
+          <Text style={styles.heading}>{section.title}</Text>
+        </View>
+      )}
       renderItem={({ item }) => {
         const obra = isObra(item.status);
         return (
@@ -119,7 +128,8 @@ export default function PedidosScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: color.bg.base },
   list: { padding: space.lg, gap: space.md },
-  heading: { fontSize: 18, fontWeight: '700', color: color.text.primary, marginTop: space.sm, marginBottom: 2 },
+  headingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: space.sm, marginBottom: 2 },
+  heading: { fontSize: 18, fontWeight: '700', color: color.text.primary },
   card: {
     backgroundColor: color.bg.surface,
     borderRadius: radius.lg,
@@ -132,6 +142,6 @@ const styles = StyleSheet.create({
   cardTitle: { flex: 1, fontSize: 16, fontWeight: '600', color: color.text.primary },
   cardMeta: { fontSize: 13, color: color.text.muted },
   agendaBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: color.bg.surface, borderWidth: 1, borderColor: color.border.subtle, borderRadius: radius.lg, padding: space.lg, marginBottom: space.sm },
+  agendaLabel: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   agendaText: { fontSize: 16, fontWeight: '700', color: color.text.primary },
-  agendaChev: { fontSize: 22, color: color.text.subtle },
 });

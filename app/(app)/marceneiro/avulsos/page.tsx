@@ -1,6 +1,7 @@
 import { requireRole } from '@/lib/auth/session';
 import { listExternalQuotes } from '@/lib/external-quotes/queries';
 import { listMaterials } from '@/lib/carpenter/materials';
+import { Page, PageHeader } from '@/components/ui';
 import { AvulsosManager, type CatalogItem, type ExternalQuoteCard, type LineItem } from './_components/AvulsosManager';
 
 export const metadata = { title: 'Orçamentos avulsos — Abilar' };
@@ -29,12 +30,12 @@ export default async function AvulsosPage() {
   }));
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-      <h1 className="text-2xl font-bold text-charcoal sm:text-3xl">Orçamentos avulsos</h1>
-      <p className="mb-6 text-sm text-muted">
-        Para clientes fora da plataforma. Monte pelo seu catálogo; o valor é custo + sua margem (sem taxas).
-      </p>
+    <Page width="lg">
+      <PageHeader
+        title="Orçamentos avulsos"
+        description="Para clientes fora da plataforma. Monte pelo seu catálogo; o valor é custo + sua margem (sem taxas)."
+      />
       <AvulsosManager initialQuotes={cards} catalog={catalog} />
-    </main>
+    </Page>
   );
 }

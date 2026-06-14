@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ProjectStatus } from '@abilar/shared';
 import { changeProjectStatus } from '@/lib/projects/actions';
+import { Button } from '@/components/ui';
+import { IconEnviar } from '@/components/ui/icons';
 
 export function ProjectActions({
   projectId,
@@ -34,32 +36,33 @@ export function ProjectActions({
     <div className="flex flex-col items-center gap-3">
       {status === 'DRAFT' && (
         <>
-          <button
-            type="button"
-            className="w-full max-w-md rounded-xl bg-brand-primary px-5 py-4 text-lg font-semibold text-white shadow-sm transition hover:opacity-90 disabled:opacity-50"
+          <Button
+            variant="primary"
+            size="lg"
+            className="w-full max-w-md"
             disabled={pending || !hasModules}
             onClick={() => go('OPEN_FOR_QUOTES')}
           >
-            {pending ? 'Publicando…' : '📨 Publicar e receber orçamentos'}
-          </button>
+            {pending ? 'Publicando…' : <><IconEnviar size={20} aria-hidden /> Publicar e receber orçamentos</>}
+          </Button>
           {!hasModules && (
             <p className="text-sm text-muted">Adicione ao menos um móvel para publicar o pedido.</p>
           )}
         </>
       )}
       {error && (
-        <p className="w-full max-w-md rounded-xl bg-ochre/20 px-4 py-3 text-center text-base text-charcoal" role="alert">
+        <p className="w-full max-w-md rounded-xl bg-danger/10 px-4 py-3 text-center text-base text-danger" role="alert">
           {error}
         </p>
       )}
-      <button
-        type="button"
-        className="text-sm font-medium text-muted underline-offset-2 transition hover:text-charcoal hover:underline disabled:opacity-50"
+      <Button
+        variant="danger"
+        size="sm"
         disabled={pending}
         onClick={() => go('CANCELLED')}
       >
         Cancelar pedido
-      </button>
+      </Button>
     </div>
   );
 }

@@ -5,6 +5,8 @@ import { useAuth } from '@/lib/auth';
 import { api, type Pipeline } from '@/lib/api';
 import { listJobs, saveJob, setJobDone, setJobDates, deleteJob, type JobRow } from '@/lib/data';
 import { Badge, Button, Card, Loading } from '@/components/ui';
+import { IconAdicionar, IconAgenda, IconAtencao, IconFechar } from '@/components/icons';
+import { AgendaCalendar, type CalEvent } from '@/components/AgendaCalendar';
 import { color, radius, space } from '@/theme';
 
 const fmtDate = (d: string | null) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : null);
@@ -60,12 +62,29 @@ export default function AgendaScreen() {
       </View>
     ) : (
       <View style={styles.datesRow}>
-        <Text style={styles.muted}>{s || e ? `📅 ${fmtDate(s) ?? '—'} → ${fmtDate(e) ?? '—'}` : 'Sem prazos definidos'}</Text>
+        {s || e ? (
+          <View style={styles.dateLabel}>
+            <IconAgenda size={16} color={color.text.muted} strokeWidth={2} />
+            <Text style={styles.muted}>{`${fmtDate(s) ?? '—'} → ${fmtDate(e) ?? '—'}`}</Text>
+          </View>
+        ) : (
+          <Text style={styles.muted}>Sem prazos definidos</Text>
+        )}
         <Text style={styles.editLink} onPress={() => openDates(kind, id, s, e)}>{s || e ? 'editar prazos' : 'definir prazos'}</Text>
       </View>
     );
 
   if (!pipe) return <Loading label="Carregando agenda…" />;
+
+  const calEvents: CalEvent[] = [
+    ...pipe.obras
+      .filter((o) => o.startDate || o.endDate)
+      .map((o) => ({ id: `p-${o.projectId}`, title: o.title, kind: 'platform' as const, start: (o.startDate ?? o.endDate)!, end: (o.endDate ?? o.startDate)!, projectId: o.projectId })),
+    ...jobs
+      .filter((j) => j.start_date || j.end_date)
+      .map((j) => ({ id: `e-${j.id}`, title: j.title, kind: 'external' as const, start: (j.start_date ?? j.end_date)!, end: (j.end_date ?? j.start_date)! })),
+  ];
+  const undatedCount = pipe.obras.length + jobs.length - calEvents.length;
 
   return (
     <>
@@ -73,8 +92,23 @@ export default function AgendaScreen() {
       <ScrollView style={{ backgroundColor: color.bg.base }} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <Card style={pipe.overloaded ? styles.over : undefined}>
           <Text style={styles.capacity}>{pipe.activeCount} obra(s) ativa(s) · capacidade {pipe.maxParallel}</Text>
-          {pipe.overloaded && <Text style={styles.warn}>⚠️ Acima da capacidade — atenção aos prazos antes de aceitar novas obras.</Text>}
+          {pipe.overloaded && (
+            <View style={styles.warnRow}>
+              <IconAtencao size={16} color={color.accent.ochre} strokeWidth={2} />
+              <Text style={styles.warn}>Acima da capacidade — atenção aos prazos antes de aceitar novas obras.</Text>
+            </View>
+          )}
           <Text style={styles.hint}>Ajuste a capacidade no seu Perfil profissional.</Text>
+        </Card>
+
+        <Card>
+          <AgendaCalendar events={calEvents} onEventPress={(e) => { if (e.projectId) router.push(`/(app)/pedidos/${e.projectId}`); }} />
+          {undatedCount > 0 && (
+            <View style={styles.warnRow}>
+              <IconAgenda size={15} color={color.text.muted} strokeWidth={2} />
+              <Text style={styles.hint}>{undatedCount} obra(s) sem prazo não aparecem no calendário — defina datas abaixo.</Text>
+            </View>
+          )}
         </Card>
 
         <Text style={styles.section}>Obras da plataforma</Text>
@@ -94,7 +128,10 @@ export default function AgendaScreen() {
 
         <View style={styles.sectionRow}>
           <Text style={styles.section}>Obras externas</Text>
-          <Text style={styles.add} onPress={() => setEditing('new')}>+ Adicionar</Text>
+          <Pressable style={styles.addRow} onPress={() => setEditing('new')}>
+            <IconAdicionar size={18} color={color.brand.primary} strokeWidth={2} />
+            <Text style={styles.add}>Adicionar</Text>
+          </Pressable>
         </View>
         {jobs.length === 0 ? (
           <Card><Text style={styles.muted}>Cadastre obras fora da plataforma para vê-las na agenda.</Text></Card>
@@ -147,7 +184,7 @@ function JobForm({ job, carpenterId, onClose, onSaved }: { job: JobRow | null; c
       <KeyboardAvoidingView style={styles.modal} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <Text style={styles.hTitle}>{job ? 'Editar obra' : 'Nova obra externa'}</Text>
-          <Pressable onPress={onClose}><Text style={styles.close}>✕</Text></Pressable>
+          <Pressable onPress={onClose}><IconFechar size={22} color={color.text.muted} strokeWidth={2} /></Pressable>
         </View>
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
           <Text style={styles.fLabel}>Título</Text>
@@ -169,11 +206,14 @@ const styles = StyleSheet.create({
   container: { padding: space.lg, gap: space.md },
   over: { borderColor: color.accent.ochre, borderWidth: 2 },
   capacity: { fontSize: 16, fontWeight: '700', color: color.text.primary },
-  warn: { color: color.text.primary, marginTop: 4 },
+  warnRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  warn: { color: color.text.primary, flex: 1 },
   hint: { color: color.text.subtle, fontSize: 12, marginTop: 4 },
   section: { fontSize: 18, fontWeight: '700', color: color.text.primary, marginTop: space.sm },
   sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: space.sm },
+  addRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   add: { color: color.brand.primary, fontWeight: '700' },
+  dateLabel: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
   muted: { color: color.text.muted, fontSize: 13 },
   rowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   datesRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },

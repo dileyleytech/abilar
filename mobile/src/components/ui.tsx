@@ -7,7 +7,7 @@ import {
   View,
   type ViewStyle,
 } from 'react-native';
-import { color, radius, space } from '@/theme';
+import { color, radius, space, shadow } from '@/theme';
 
 export function Button({
   title,
@@ -15,29 +15,42 @@ export function Button({
   loading,
   disabled,
   variant = 'primary',
+  icon: Ico,
 }: {
   title: string;
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
-  variant?: 'primary' | 'secondary' | 'outline';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger';
+  /** Ícone lucide opcional, renderizado antes do título. */
+  icon?: (props: { size: number; color: string; strokeWidth: number }) => ReactNode;
 }) {
-  const isOutline = variant === 'outline';
-  const bg = isOutline ? 'transparent' : variant === 'secondary' ? color.brand.secondary : color.brand.primary;
+  // Espelha os variants do web (app/components/ui/Button.tsx).
+  const V = {
+    primary: { bg: color.brand.primary, fg: color.text.onDark, border: false },
+    secondary: { bg: color.brand.secondary, fg: color.text.onDark, border: false },
+    ghost: { bg: 'transparent', fg: color.text.primary, border: false },
+    outline: { bg: 'transparent', fg: color.text.primary, border: true },
+    danger: { bg: 'transparent', fg: color.state.danger, border: false },
+  }[variant];
+  const fg = V.fg;
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [
         styles.btn,
-        { backgroundColor: bg, opacity: disabled ? 0.5 : pressed ? 0.85 : 1 },
-        isOutline && { borderWidth: 1, borderColor: color.border.subtle },
+        { backgroundColor: V.bg, opacity: disabled ? 0.5 : pressed ? 0.85 : 1 },
+        V.border && { borderWidth: 1, borderColor: color.border.subtle },
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={isOutline ? color.text.primary : color.text.onDark} />
+        <ActivityIndicator color={fg} />
       ) : (
-        <Text style={[styles.btnText, { color: isOutline ? color.text.primary : color.text.onDark }]}>{title}</Text>
+        <View style={styles.btnInner}>
+          {Ico ? Ico({ size: 20, color: fg, strokeWidth: 2 }) : null}
+          <Text style={[styles.btnText, { color: fg }]}>{title}</Text>
+        </View>
       )}
     </Pressable>
   );
@@ -47,12 +60,13 @@ export function Card({ children, style }: { children: ReactNode; style?: ViewSty
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-export function Badge({ label, tone = 'neutral' }: { label: string; tone?: 'neutral' | 'primary' | 'success' | 'warn' }) {
+export function Badge({ label, tone = 'neutral' }: { label: string; tone?: 'neutral' | 'primary' | 'success' | 'warn' | 'danger' }) {
   const tones = {
     neutral: { bg: color.bg.deep, fg: color.text.muted },
     primary: { bg: 'rgba(197,106,51,0.15)', fg: color.brand.primary },
     success: { bg: 'rgba(123,174,158,0.3)', fg: color.text.primary },
     warn: { bg: 'rgba(232,167,101,0.3)', fg: color.text.primary },
+    danger: { bg: 'rgba(178,59,46,0.12)', fg: color.state.danger },
   }[tone];
   return (
     <View style={[styles.badge, { backgroundColor: tones.bg }]}>
@@ -82,6 +96,7 @@ export function EmptyState({ emoji, title, subtitle }: { emoji: string; title: s
 
 const styles = StyleSheet.create({
   btn: { borderRadius: radius.md, paddingVertical: 14, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center' },
+  btnInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   btnText: { fontSize: 16, fontWeight: '600' },
   card: {
     backgroundColor: color.bg.surface,
@@ -89,6 +104,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: color.border.subtle,
     padding: space.lg,
+    ...shadow.card,
   },
   badge: { alignSelf: 'flex-start', borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 3 },
   badgeText: { fontSize: 12, fontWeight: '600' },

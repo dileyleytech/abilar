@@ -2,6 +2,8 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
+import { Button, buttonVariants } from '@/components/ui';
+import { IconAtencao } from '@/components/ui/icons';
 
 /** Boundary da área logada: mostra um erro recuperável em vez de derrubar a tela.
  *  Em dev também exibe a mensagem para facilitar o diagnóstico. */
@@ -12,7 +14,7 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
 
   return (
     <main className="mx-auto flex min-h-[60vh] w-full max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
-      <span className="text-5xl" aria-hidden>🪛</span>
+      <span className="text-danger" aria-hidden><IconAtencao size={40} /></span>
       <h1 className="text-xl font-bold text-charcoal">Algo deu errado por aqui</h1>
       <p className="text-muted">Tente de novo. Se continuar, recarregue a página.</p>
       {process.env.NODE_ENV !== 'production' && (
@@ -22,14 +24,10 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
         </pre>
       )}
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={reset}
-          className="rounded-xl bg-brand-primary px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90"
-        >
+        <Button variant="primary" onClick={reset}>
           Tentar de novo
-        </button>
-        <Link href="/" className="rounded-xl border border-subtle px-5 py-3 text-sm font-semibold text-charcoal">
+        </Button>
+        <Link href="/" className={buttonVariants({ variant: 'outline' })}>
           Ir para o início
         </Link>
       </div>

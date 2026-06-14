@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatBRL, type QuoteStatus } from '@abilar/shared';
 import { acceptQuote } from '@/lib/contracts/actions';
+import { Button, buttonVariants } from '@/components/ui';
+import { IconImprimir, IconContrato, IconOk } from '@/components/ui/icons';
 
 export type Proposal = {
   projectId: string;
@@ -69,32 +71,27 @@ export function ProposalPanel({
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Link
           href={`/orcamentos/${proposal.quoteId}/imprimir${from}`}
-          className="rounded-xl border border-subtle px-3 py-2 text-sm font-semibold text-charcoal hover:bg-deep"
+          className={buttonVariants({ variant: 'outline', size: 'sm' })}
         >
-          🖨️ Ver orçamento
+          <IconImprimir size={18} aria-hidden /> Ver orçamento
         </Link>
 
         {proposal.contractId ? (
           <Link
             href={`/contratos/${proposal.contractId}${from}`}
-            className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+            className={buttonVariants({ variant: 'primary', size: 'sm' })}
           >
-            📄 {meIsClient ? 'Ver contrato' : 'Contrato (assinar)'}
+            <IconContrato size={18} aria-hidden /> {meIsClient ? 'Ver contrato' : 'Contrato (assinar)'}
           </Link>
         ) : meIsClient ? (
-          <button
-            type="button"
-            onClick={approve}
-            disabled={pending}
-            className="rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
-          >
-            {pending ? '…' : '✅ Aprovar proposta'}
-          </button>
+          <Button variant="primary" size="sm" onClick={approve} disabled={pending}>
+            {pending ? '…' : <><IconOk size={18} aria-hidden /> Aprovar proposta</>}
+          </Button>
         ) : (
           <span className="text-sm text-muted">Aguardando o cliente aprovar.</span>
         )}
       </div>
-      {error && <p className="mt-1 text-sm text-ochre">{error}</p>}
+      {error && <p className="mt-1 text-sm text-danger">{error}</p>}
     </section>
   );
 }

@@ -6,12 +6,13 @@ import { createProject, registerProjectPhoto } from '@/lib/projects/actions';
 import { searchArchitectsAction } from '@/lib/architects/actions';
 import type { ArchitectOption } from '@/lib/architects/queries';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { Button } from '@/components/ui';
+import { IconConversas, IconArquitetos, IconOk, IconVoltar } from '@/components/ui/icons';
 
 type Path = 'AI' | 'ARCHITECT';
 type Step = 'path' | 'name' | 'pdf';
 type PickedArchitect = { id: string; name: string };
 
-const big = 'w-full rounded-xl px-5 py-4 text-lg font-semibold transition hover:opacity-90 disabled:opacity-50';
 const card =
   'flex items-center gap-4 rounded-xl border border-subtle bg-surface px-5 py-4 text-left transition hover:-translate-y-0.5 hover:border-brand-primary/50 hover:shadow-sm';
 const fld =
@@ -93,14 +94,14 @@ export function NovoPedido({ referred = null }: { referred?: PickedArchitect | n
     return (
       <Frame title="Como você quer começar?">
         <button type="button" className={card} onClick={() => { setPath('AI'); setStep('name'); }}>
-          <span className="text-3xl" aria-hidden>💬</span>
+          <IconConversas size={28} className="text-brand-primary" aria-hidden />
           <span>
             <span className="block text-lg font-semibold text-charcoal">Montar com a ABI</span>
             <span className="block text-sm text-muted">Adiciono os cômodos e móveis e mando fotos</span>
           </span>
         </button>
         <button type="button" className={card} onClick={() => { setPath('ARCHITECT'); setStep('name'); }}>
-          <span className="text-3xl" aria-hidden>📐</span>
+          <IconArquitetos size={28} className="text-brand-primary" aria-hidden />
           <span>
             <span className="block text-lg font-semibold text-charcoal">Tenho projeto de arquiteto</span>
             <span className="block text-sm text-muted">Envio o PDF do projeto</span>
@@ -128,7 +129,7 @@ export function NovoPedido({ referred = null }: { referred?: PickedArchitect | n
           <input className={fld} inputMode="numeric" placeholder="00000-000" value={cep} onChange={(e) => onCepChange(e.target.value)} />
         </label>
         {cepStatus === 'loading' && <p className="text-sm text-muted">Buscando endereço…</p>}
-        {cepStatus === 'error' && <p className="text-sm text-ochre">CEP não encontrado — confira o número.</p>}
+        {cepStatus === 'error' && <p className="text-sm text-danger">CEP não encontrado — confira o número.</p>}
         <label className="flex flex-col gap-1">
           <span className="text-base text-charcoal">Cidade da obra</span>
           <input className={fld} placeholder="Preenche pelo CEP" value={city} onChange={(e) => setCity(e.target.value)} />
@@ -136,7 +137,7 @@ export function NovoPedido({ referred = null }: { referred?: PickedArchitect | n
         <p className="text-sm text-muted">Usamos a cidade para mostrar seu pedido aos marceneiros da região.</p>
 
         <div className="flex flex-col gap-2 rounded-2xl border border-subtle bg-base p-4">
-          <span className="flex items-center gap-2 text-base font-semibold text-charcoal">📐 Arquiteto parceiro <span className="text-sm font-normal text-muted">(opcional)</span></span>
+          <span className="flex items-center gap-2 text-base font-semibold text-charcoal"><IconArquitetos size={18} aria-hidden /> Arquiteto parceiro <span className="text-sm font-normal text-muted">(opcional)</span></span>
           {referred ? (
             <div className="rounded-xl bg-sage/15 px-4 py-3 text-sm text-charcoal">
               Indicado por <strong>{referred.name}</strong> pelo link. A comissão sai da fatia da plataforma — você não paga a mais.
@@ -147,13 +148,13 @@ export function NovoPedido({ referred = null }: { referred?: PickedArchitect | n
         </div>
 
         {path === 'AI' ? (
-          <button type="button" className={`${big} bg-brand-primary text-white`} disabled={!nameOk || busy} onClick={submit}>
+          <Button variant="primary" size="lg" className="w-full" disabled={!nameOk || busy} onClick={submit}>
             {status === 'creating' ? 'Criando…' : 'Criar pedido'}
-          </button>
+          </Button>
         ) : (
-          <button type="button" className={`${big} bg-brand-primary text-white`} disabled={!nameOk} onClick={() => setStep('pdf')}>
+          <Button variant="primary" size="lg" className="w-full" disabled={!nameOk} onClick={() => setStep('pdf')}>
             Continuar
-          </button>
+          </Button>
         )}
         {error && <Err msg={error} />}
       </Frame>
@@ -164,10 +165,10 @@ export function NovoPedido({ referred = null }: { referred?: PickedArchitect | n
   return (
     <Frame title="Envie o PDF do projeto" onBack={() => setStep('name')}>
       <input type="file" accept="application/pdf" className={fld} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-      {file && <p className="text-sm text-brand-secondary">✓ {file.name}</p>}
-      <button type="button" className={`${big} bg-brand-primary text-white`} disabled={!file || busy} onClick={submit}>
+      {file && <p className="inline-flex items-center gap-1 text-sm text-brand-secondary"><IconOk size={16} aria-hidden /> {file.name}</p>}
+      <Button variant="primary" size="lg" className="w-full" disabled={!file || busy} onClick={submit}>
         {status === 'uploading' ? 'Enviando PDF…' : status === 'creating' ? 'Criando…' : 'Criar pedido'}
-      </button>
+      </Button>
       {error && <Err msg={error} />}
     </Frame>
   );
@@ -201,7 +202,7 @@ function ArchitectPicker({ value, onChange }: { value: PickedArchitect | null; o
   if (value) {
     return (
       <div className="flex items-center justify-between rounded-xl border border-subtle bg-deep px-4 py-3 text-sm">
-        <span className="text-charcoal">📐 Arquiteto: <strong>{value.name}</strong></span>
+        <span className="inline-flex items-center gap-1 text-charcoal"><IconArquitetos size={16} aria-hidden /> Arquiteto: <strong>{value.name}</strong></span>
         <button type="button" onClick={() => { onChange(null); setQ(''); }} className="text-muted hover:underline">trocar</button>
       </div>
     );
@@ -226,7 +227,7 @@ function ArchitectPicker({ value, onChange }: { value: PickedArchitect | null; o
                 onClick={() => { onChange({ id: a.userId, name: a.name }); setOpen(false); }}
                 className="flex w-full items-center gap-2 px-4 py-3 text-left text-charcoal hover:bg-deep"
               >
-                <span aria-hidden>📐</span>
+                <IconArquitetos size={18} aria-hidden />
                 <span className="flex-1">{a.name}{a.cau && <span className="ml-2 text-xs text-muted">CAU {a.cau}</span>}</span>
               </button>
             </li>
@@ -242,9 +243,9 @@ function Frame({ title, onBack, children }: { title: string; onBack?: () => void
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
         {onBack && (
-          <button type="button" onClick={onBack} className="rounded-md px-2 py-1 text-sm text-muted hover:bg-deep hover:text-charcoal">
-            ← Voltar
-          </button>
+          <Button variant="ghost" size="sm" onClick={onBack}>
+            <IconVoltar size={16} aria-hidden /> Voltar
+          </Button>
         )}
         <h2 className="flex-1 text-center text-lg font-semibold text-charcoal">{title}</h2>
         {onBack && <span className="w-16" aria-hidden />}
@@ -256,7 +257,7 @@ function Frame({ title, onBack, children }: { title: string; onBack?: () => void
 
 function Err({ msg }: { msg: string }) {
   return (
-    <p className="rounded-xl bg-ochre/20 px-4 py-3 text-base text-charcoal" role="alert">
+    <p className="rounded-xl bg-danger/10 px-4 py-3 text-base text-danger" role="alert">
       {msg}
     </p>
   );

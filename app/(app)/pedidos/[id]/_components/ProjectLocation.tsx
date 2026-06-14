@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateProjectLocation } from '@/lib/projects/actions';
+import { Button } from '@/components/ui';
+import { IconLocal } from '@/components/ui/icons';
 
 const fld =
   'w-full rounded-xl border border-subtle bg-surface px-4 py-3 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
@@ -73,10 +75,10 @@ export function ProjectLocation({
       {!open ? (
         <p className="mt-2 text-base text-charcoal">
           {initialCity ? (
-            <>
-              📍 {initialCity}
+            <span className="inline-flex items-center gap-1">
+              <IconLocal size={18} aria-hidden /> {initialCity}
               {initialCep ? <span className="text-muted"> · {initialCep}</span> : null}
-            </>
+            </span>
           ) : (
             <span className="text-ochre">Sem cidade — os marceneiros não veem este pedido. Adicione o CEP.</span>
           )}
@@ -88,20 +90,20 @@ export function ProjectLocation({
             <input className={fld} inputMode="numeric" placeholder="00000-000" value={cep} onChange={(e) => onCepChange(e.target.value)} />
           </label>
           {cepStatus === 'loading' && <p className="text-sm text-muted">Buscando endereço…</p>}
-          {cepStatus === 'error' && <p className="text-sm text-ochre">CEP não encontrado.</p>}
+          {cepStatus === 'error' && <p className="text-sm text-danger">CEP não encontrado.</p>}
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium text-charcoal">Cidade</span>
             <input className={fld} placeholder="Preenche pelo CEP" value={city} onChange={(e) => setCity(e.target.value)} />
           </label>
           <div className="flex gap-2">
-            <button type="button" onClick={save} disabled={pending || city.trim().length < 2} className="flex-1 rounded-xl bg-brand-primary px-4 py-3 text-base font-semibold text-white disabled:opacity-50">
+            <Button variant="primary" size="lg" className="flex-1" onClick={save} disabled={pending || city.trim().length < 2}>
               {pending ? 'Salvando…' : 'Salvar'}
-            </button>
-            <button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-subtle px-4 py-3 text-base text-charcoal hover:bg-deep">
+            </Button>
+            <Button variant="outline" size="lg" onClick={() => setOpen(false)}>
               Cancelar
-            </button>
+            </Button>
           </div>
-          {error && <p className="rounded-lg bg-ochre/20 px-3 py-2 text-sm text-charcoal">{error}</p>}
+          {error && <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
         </div>
       )}
     </div>

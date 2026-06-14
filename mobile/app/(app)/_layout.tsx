@@ -1,12 +1,15 @@
-import { Text } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 import { HeaderIcons } from '@/components/HeaderIcons';
 import { color } from '@/theme';
+import {
+  IconPedidos, IconNovo, IconInicio, IconAvulsos, IconRelatorios,
+  IconCustos, IconConta, type LucideIcon,
+} from '@/components/icons';
 
-function Icon({ emoji }: { emoji: string }) {
-  return <Text style={{ fontSize: 20 }}>{emoji}</Text>;
-}
+type TabIconProps = { color: string; size: number };
+const tabIcon = (Ico: LucideIcon) =>
+  ({ color: c, size }: TabIconProps) => <Ico color={c} size={size} strokeWidth={2} />;
 
 export default function AppLayout() {
   const { profile } = useAuth();
@@ -31,11 +34,11 @@ export default function AppLayout() {
         tabBarStyle: { backgroundColor: color.bg.surface, borderTopColor: color.border.subtle },
       }}
     >
-      <Tabs.Screen name="pedidos" options={{ title: 'Pedidos', tabBarIcon: () => <Icon emoji="📋" />, href: architect ? null : undefined }} />
+      <Tabs.Screen name="pedidos" options={{ title: 'Pedidos', tabBarIcon: tabIcon(IconPedidos), href: architect ? null : undefined }} />
       {/* Arquiteto: início (projetos indicados + comissões + link) */}
       <Tabs.Screen
         name="arquiteto"
-        options={{ ...header, title: 'Início', tabBarIcon: () => <Icon emoji="🏠" />, href: architect ? undefined : null }}
+        options={{ ...header, title: 'Início', tabBarIcon: tabIcon(IconInicio), href: architect ? undefined : null }}
       />
       <Tabs.Screen
         name="novo"
@@ -43,24 +46,24 @@ export default function AppLayout() {
           ...header,
           title: 'Novo pedido',
           tabBarLabel: 'Criar',
-          tabBarIcon: () => <Icon emoji="➕" />,
+          tabBarIcon: tabIcon(IconNovo),
           href: profile?.role === 'CLIENT' ? undefined : null,
         }}
       />
       {/* Marceneiro: gestão dividida em 3 abas */}
       <Tabs.Screen
         name="avulsos"
-        options={{ ...header, title: 'Orçamentos avulsos', tabBarLabel: 'Orçamentos', tabBarIcon: () => <Icon emoji="📄" />, href: carpenter ? undefined : null }}
+        options={{ ...header, title: 'Orçamentos avulsos', tabBarLabel: 'Orçamentos', tabBarIcon: tabIcon(IconAvulsos), href: carpenter ? undefined : null }}
       />
       <Tabs.Screen
         name="relatorios"
-        options={{ ...header, title: 'Relatórios', tabBarIcon: () => <Icon emoji="📊" />, href: carpenter ? undefined : null }}
+        options={{ ...header, title: 'Relatórios', tabBarIcon: tabIcon(IconRelatorios), href: carpenter ? undefined : null }}
       />
       <Tabs.Screen
         name="catalogo-custos"
-        options={{ ...header, title: 'Catálogo de custos', tabBarLabel: 'Custos', tabBarIcon: () => <Icon emoji="📦" />, href: carpenter ? undefined : null }}
+        options={{ ...header, title: 'Catálogo de custos', tabBarLabel: 'Custos', tabBarIcon: tabIcon(IconCustos), href: carpenter ? undefined : null }}
       />
-      <Tabs.Screen name="conta" options={{ ...header, title: 'Minha conta', tabBarLabel: 'Conta', tabBarIcon: () => <Icon emoji="👤" /> }} />
+      <Tabs.Screen name="conta" options={{ ...header, title: 'Minha conta', tabBarLabel: 'Conta', tabBarIcon: tabIcon(IconConta) }} />
 
       {/* Fora da barra de baixo (topo / navegação) */}
       <Tabs.Screen name="catalogo" options={{ href: null }} />

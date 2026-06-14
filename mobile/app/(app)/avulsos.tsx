@@ -16,6 +16,7 @@ import { api } from '@/lib/api';
 import { formatCents } from '@/lib/format';
 import { shareExternalQuotePdf } from '@/lib/pdf';
 import { Badge, Button, Card, EmptyState, Loading } from '@/components/ui';
+import { IconCompartilhar, IconFechar } from '@/components/icons';
 import { color, radius, space } from '@/theme';
 
 const STATUS_LABEL: Record<string, string> = { SENT: 'Enviado', ACCEPTED: 'Aceito', REJECTED: 'Recusado' };
@@ -72,8 +73,8 @@ export default function AvulsosScreen() {
                 </View>
               </View>
               <View style={styles.actions}>
-                <Text
-                  style={styles.link}
+                <Pressable
+                  style={styles.linkRow}
                   onPress={() => shareExternalQuotePdf({
                     clientName: q.client_name,
                     title: q.title,
@@ -82,7 +83,10 @@ export default function AvulsosScreen() {
                     note: q.note,
                     carpenterName: profile?.name ?? undefined,
                   }).catch((e) => Alert.alert('PDF', e instanceof Error ? e.message : 'Falha ao gerar.'))}
-                >📄 PDF</Text>
+                >
+                  <IconCompartilhar size={16} color={color.brand.primary} strokeWidth={2} />
+                  <Text style={styles.link}>PDF</Text>
+                </Pressable>
                 <Text style={styles.editLink} onPress={() => setEditing(q)}>Editar</Text>
                 {q.status !== 'ACCEPTED' && <Text style={styles.link} onPress={() => act(async () => { await api.acceptExternalQuote(q.id); })}>Marcar aceito</Text>}
                 {q.status !== 'REJECTED' && <Text style={styles.muted2} onPress={() => act(() => setExternalQuoteStatus(q.id, 'REJECTED'))}>Recusado</Text>}
@@ -140,7 +144,7 @@ function Form({ quote, carpenterId, catalog, onClose, onSaved }: { quote: Extern
       <KeyboardAvoidingView style={styles.modal} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <Text style={styles.hTitle}>{quote ? 'Editar avulso' : 'Novo avulso'}</Text>
-          <Pressable onPress={onClose}><Text style={styles.close}>✕</Text></Pressable>
+          <Pressable onPress={onClose}><IconFechar size={22} color={color.text.muted} strokeWidth={2} /></Pressable>
         </View>
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
           <Text style={styles.fLabel}>Cliente</Text>
@@ -154,7 +158,9 @@ function Form({ quote, carpenterId, catalog, onClose, onSaved }: { quote: Extern
             <View key={idx} style={styles.lineRow}>
               <Text style={{ flex: 1, color: color.text.primary }}>{it.name} <Text style={styles.muted}>({formatCents(it.unitCostCents)}/{it.unit})</Text></Text>
               <TextInput style={styles.qty} keyboardType="numeric" value={String(it.qty)} onChangeText={(t) => setLineItems((arr) => arr.map((x, i) => (i === idx ? { ...x, qty: Math.max(0, Number(t.replace(',', '.')) || 0) } : x)))} />
-              <Text style={styles.danger} onPress={() => setLineItems((arr) => arr.filter((_, i) => i !== idx))}>✕</Text>
+              <Pressable hitSlop={6} onPress={() => setLineItems((arr) => arr.filter((_, i) => i !== idx))}>
+                <IconFechar size={18} color={color.state.danger} strokeWidth={2} />
+              </Pressable>
             </View>
           ))}
 
@@ -194,6 +200,7 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: space.lg, marginTop: 4, flexWrap: 'wrap' },
   editLink: { color: color.brand.secondary, fontWeight: '600' },
   link: { color: color.brand.primary, fontWeight: '600' },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   muted2: { color: color.text.muted, fontWeight: '600' },
   danger: { color: color.state.danger, fontWeight: '700' },
   modal: { flex: 1, backgroundColor: color.bg.base },

@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { PricingConfigInput } from '@abilar/pricing';
 import { updatePricingConfig } from '@/lib/pricing/actions';
+import { IconInfo, IconFechar, IconAdicionar } from '@/components/ui/icons';
+import { Button } from '@/components/ui';
 
 const fld =
   'w-full rounded-xl border border-subtle bg-surface px-3 py-2 text-base text-charcoal outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20';
@@ -82,10 +84,10 @@ export function PricingForm({ initial }: { initial: PricingConfigInput }) {
           <Field label="Taxa fixa Pix" value={pix} onChange={setPix} suffix="centavos" />
           <Field label="Desconto no parcelado" value={disc} onChange={setDisc} suffix="pontos" />
         </div>
-        <p className="mt-2 text-sm text-muted">
-          💡 <strong>Desconto no parcelado</strong>: pontos a menos na comissão do marceneiro
+        <p className="mt-2 flex gap-1.5 text-sm text-muted">
+          <IconInfo size={16} className="mt-0.5 shrink-0" aria-hidden /> <span><strong>Desconto no parcelado</strong>: pontos a menos na comissão do marceneiro
           (tm) <strong>só</strong> nas vendas parceladas no cartão — incentivo para ele aceitar
-          parcelamento. À vista mantém o tm cheio. Ex.: tm 10% e desconto 2 → 8% no parcelado.
+          parcelamento. À vista mantém o tm cheio. Ex.: tm 10% e desconto 2 → 8% no parcelado.</span>
         </p>
       </Section>
 
@@ -97,14 +99,14 @@ export function PricingForm({ initial }: { initial: PricingConfigInput }) {
               <span className="text-muted">x →</span>
               <input className={`${fld} w-32`} type="number" step="0.01" min={0} placeholder="MDR %" value={r.mdrPct} onChange={(e) => setRow(i, 'mdrPct', e.target.value)} />
               <span className="text-muted">%</span>
-              <button type="button" onClick={() => removeRow(i)} className="rounded-md px-2 py-1 text-muted hover:bg-deep hover:text-charcoal">
-                ✕
-              </button>
+              <Button variant="ghost" size="sm" onClick={() => removeRow(i)} aria-label="Remover parcela" className="px-2">
+                <IconFechar size={18} />
+              </Button>
             </div>
           ))}
-          <button type="button" onClick={addRow} className="self-start rounded-xl border border-subtle px-4 py-2 text-sm font-medium text-charcoal hover:bg-deep">
-            + Adicionar parcela
-          </button>
+          <Button variant="outline" size="sm" onClick={addRow} className="self-start">
+            <IconAdicionar size={18} aria-hidden /> Adicionar parcela
+          </Button>
         </div>
       </Section>
 
@@ -122,11 +124,11 @@ export function PricingForm({ initial }: { initial: PricingConfigInput }) {
       </Section>
 
       <div className="flex items-center gap-3">
-        <button type="button" onClick={save} disabled={pending} className="rounded-xl bg-brand-primary px-6 py-3 text-lg font-semibold text-white transition hover:opacity-90 disabled:opacity-50">
+        <Button variant="primary" size="lg" onClick={save} disabled={pending}>
           {pending ? 'Salvando…' : 'Salvar configuração'}
-        </button>
+        </Button>
         {msg && (
-          <span className={`rounded-lg px-3 py-2 text-sm ${msg.ok ? 'bg-sage/25 text-charcoal' : 'bg-ochre/20 text-charcoal'}`} role="status">
+          <span className={`rounded-lg px-3 py-2 text-sm ${msg.ok ? 'bg-sage/25 text-charcoal' : 'bg-danger/10 text-danger'}`} role="status">
             {msg.text}
           </span>
         )}

@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { architectProfiles, eq, asc } from '@abilar/db';
 import { getDb } from '@/lib/db';
 import { signedProjectPhotoUrl } from '@/lib/storage';
+import { IconArquitetos } from '@/components/ui/icons';
+import { buttonVariants } from '@/components/ui';
 
 export const metadata = {
   title: 'Arquitetos parceiros — Abilar',
@@ -31,8 +33,8 @@ export default async function ArquitetosPage() {
           <img src="/brand/abilar-logo-horizontal.svg" alt="Abilar" className="h-7 w-auto" />
         </Link>
         <nav className="flex items-center gap-2">
-          <Link href="/entrar" className="rounded-md px-3 py-2 text-sm font-medium text-charcoal hover:bg-deep">Entrar</Link>
-          <Link href="/cadastro" className="rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white">Criar conta</Link>
+          <Link href="/entrar" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>Entrar</Link>
+          <Link href="/cadastro" className={buttonVariants({ variant: 'primary', size: 'sm' })}>Criar conta</Link>
         </nav>
       </header>
 
@@ -55,7 +57,7 @@ export default async function ArquitetosPage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={a.logoUrl} alt={`Logo ${a.name}`} className="h-12 w-12 shrink-0 rounded-full object-contain" />
                 ) : (
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-secondary/12 text-2xl">📐</span>
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-secondary/12 text-brand-secondary"><IconArquitetos size={24} aria-hidden /></span>
                 )}
                 <div>
                   <p className="font-semibold text-charcoal">{a.name}</p>

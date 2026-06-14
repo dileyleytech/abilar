@@ -7,41 +7,52 @@ import type { Role } from '@abilar/shared';
 import { createAuthedChannel } from '@/lib/supabase/client';
 import { getMyUnreadCount } from '@/lib/chat/actions';
 import { getMyNotificationCount } from '@/lib/notifications/actions';
+import { buttonVariants } from '@/components/ui';
+import {
+  IconPedidos, IconNovo, IconConversas, IconAvisos, IconInicio, IconAgenda,
+  IconAvulsos, IconRelatorios, IconCustos, IconFinanceiro, IconArquitetos,
+  IconTaxas, IconDenuncias, IconVoltar, IconAvancar, IconConta, IconMais,
+  type LucideIcon,
+} from '@/components/ui/icons';
 
-type Item = { href: string; label: string; icon: string; badge?: 'chat' | 'notif' };
+type Item = { href: string; label: string; icon: LucideIcon; badge?: 'chat' | 'notif' };
 
-const NOTIF: Item = { href: '/notificacoes', label: 'Avisos', icon: '🔔', badge: 'notif' };
+const NOTIF: Item = { href: '/notificacoes', label: 'Avisos', icon: IconAvisos, badge: 'notif' };
 
 const ITEMS: Record<'CLIENT' | 'CARPENTER' | 'ARCHITECT' | 'ADMIN', Item[]> = {
   CLIENT: [
-    { href: '/pedidos', label: 'Meus pedidos', icon: '📋' },
-    { href: '/pedidos/novo', label: 'Novo pedido', icon: '➕' },
-    { href: '/conversas', label: 'Conversas', icon: '💬', badge: 'chat' },
+    { href: '/pedidos', label: 'Meus pedidos', icon: IconPedidos },
+    { href: '/pedidos/novo', label: 'Novo pedido', icon: IconNovo },
+    { href: '/conversas', label: 'Conversas', icon: IconConversas, badge: 'chat' },
     NOTIF,
   ],
+  // Ordem = prioridade: os 4 primeiros ocupam a barra inferior (mobile);
+  // o restante vai para o menu "Mais". Sidebar (desktop) mostra todos.
   CARPENTER: [
-    { href: '/marceneiro', label: 'Início', icon: '🏠' },
-    { href: '/marceneiro/agenda', label: 'Agenda', icon: '🗓️' },
-    { href: '/marceneiro/avulsos', label: 'Orçamentos avulsos', icon: '📄' },
-    { href: '/marceneiro/relatorios', label: 'Relatórios', icon: '📊' },
-    { href: '/marceneiro/catalogo', label: 'Custos', icon: '📦' },
-    { href: '/conversas', label: 'Conversas', icon: '💬', badge: 'chat' },
+    { href: '/marceneiro', label: 'Início', icon: IconInicio },
+    { href: '/marceneiro/agenda', label: 'Agenda', icon: IconAgenda },
+    { href: '/conversas', label: 'Conversas', icon: IconConversas, badge: 'chat' },
     NOTIF,
+    { href: '/marceneiro/catalogo', label: 'Custos', icon: IconCustos },
+    { href: '/marceneiro/avulsos', label: 'Orçamentos avulsos', icon: IconAvulsos },
+    { href: '/marceneiro/relatorios', label: 'Relatórios', icon: IconRelatorios },
   ],
   ARCHITECT: [
-    { href: '/arquiteto', label: 'Início', icon: '🏠' },
-    { href: '/conversas', label: 'Conversas', icon: '💬', badge: 'chat' },
+    { href: '/arquiteto', label: 'Início', icon: IconInicio },
+    { href: '/conversas', label: 'Conversas', icon: IconConversas, badge: 'chat' },
     NOTIF,
   ],
   ADMIN: [
-    { href: '/admin', label: 'Painel', icon: '📊' },
-    { href: '/admin/financeiro', label: 'Financeiro', icon: '💰' },
-    { href: '/admin/arquitetos', label: 'Arquitetos', icon: '📐' },
-    { href: '/admin/precos', label: 'Taxas', icon: '⚙️' },
-    { href: '/admin/denuncias', label: 'Denúncias', icon: '🚩' },
+    { href: '/admin', label: 'Painel', icon: IconRelatorios },
+    { href: '/admin/financeiro', label: 'Financeiro', icon: IconFinanceiro },
+    { href: '/admin/denuncias', label: 'Denúncias', icon: IconDenuncias },
     NOTIF,
+    { href: '/admin/arquitetos', label: 'Arquitetos', icon: IconArquitetos },
+    { href: '/admin/precos', label: 'Taxas', icon: IconTaxas },
   ],
 };
+
+const BOTTOM_NAV_MAX = 4; // abas diretas na barra inferior; o resto vai p/ "Mais"
 
 export function AppNav({
   role,
@@ -60,6 +71,10 @@ export function AppNav({
   const [unread, setUnread] = useState(initialUnread);
   const [notif, setNotif] = useState(initialNotif);
   const [collapsed, setCollapsed] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  // Fecha o menu "Mais" ao navegar.
+  useEffect(() => setMoreOpen(false), [pathname]);
 
   useEffect(() => {
     setCollapsed(localStorage.getItem('abilar:nav-collapsed') === '1');
@@ -107,7 +122,7 @@ export function AppNav({
   }, [userId]);
 
   const items = role && role in ITEMS ? ITEMS[role as keyof typeof ITEMS] : [];
-  const account: Item = { href: '/conta', label: firstName ?? 'Conta', icon: '👤' };
+  const account: Item = { href: '/conta', label: firstName ?? 'Conta', icon: IconConta };
   const allHrefs = [...items.map((i) => i.href), account.href];
   const activeHref = allHrefs
     .filter((h) => pathname === h || pathname.startsWith(`${h}/`))
@@ -119,6 +134,13 @@ export function AppNav({
     return n > 0 ? (n > 9 ? '9+' : String(n)) : null;
   };
 
+  // Barra inferior (mobile): primeiros itens diretos + "Mais" para o overflow.
+  const bottomItems = items.slice(0, BOTTOM_NAV_MAX);
+  const overflowItems = items.slice(BOTTOM_NAV_MAX);
+  const hasMore = overflowItems.length > 0;
+  const overflowActive = [...overflowItems, account].some((it) => isActive(it.href));
+  const overflowBadge = overflowItems.some((it) => badgeFor(it));
+
   if (!role) {
     // Deslogado: cabeçalho mínimo.
     return (
@@ -128,8 +150,8 @@ export function AppNav({
           <img src="/brand/abilar-logo-horizontal.svg" alt="Abilar" className="h-7 w-auto" />
         </Link>
         <nav className="flex items-center gap-2">
-          <Link href="/entrar" className="rounded-md px-3 py-2 text-sm font-medium text-charcoal hover:bg-deep">Entrar</Link>
-          <Link href="/cadastro" className="rounded-md bg-brand-primary px-4 py-2 text-sm font-semibold text-white">Criar conta</Link>
+          <Link href="/entrar" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>Entrar</Link>
+          <Link href="/cadastro" className={buttonVariants({ variant: 'primary', size: 'sm' })}>Criar conta</Link>
         </nav>
       </header>
     );
@@ -157,7 +179,7 @@ export function AppNav({
             title={collapsed ? 'Expandir menu' : 'Recolher menu'}
             className="rounded-lg p-2 text-muted transition hover:bg-deep hover:text-charcoal"
           >
-            {collapsed ? '»' : '«'}
+            {collapsed ? <IconAvancar size={18} /> : <IconVoltar size={18} />}
           </button>
         </div>
 
@@ -171,8 +193,8 @@ export function AppNav({
                 collapsed ? 'justify-center' : ''
               } ${isActive(it.href) ? 'bg-brand-primary text-white' : 'text-charcoal hover:bg-deep'}`}
             >
-              <span className="relative text-lg" aria-hidden>
-                {it.icon}
+              <span className="relative" aria-hidden>
+                <it.icon size={20} strokeWidth={2} />
                 {collapsed && badgeFor(it) && (
                   <span className="absolute -right-1.5 -top-1 h-2 w-2 rounded-full bg-brand-secondary" />
                 )}
@@ -210,9 +232,42 @@ export function AppNav({
         </Link>
       </header>
 
+      {/* Menu "Mais" (mobile) — overflow + conta */}
+      {moreOpen && (
+        <div className="fixed inset-0 z-30 lg:hidden print:hidden" role="dialog" aria-label="Mais opções">
+          <button
+            type="button"
+            aria-label="Fechar"
+            onClick={() => setMoreOpen(false)}
+            className="absolute inset-0 bg-charcoal/40"
+          />
+          <div className="absolute inset-x-0 bottom-0 rounded-t-xl bg-surface p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-overlay">
+            <div className="mx-auto mb-1 h-1 w-10 rounded-pill bg-deep" />
+            <ul className="grid grid-cols-2 gap-1">
+              {[...overflowItems, account].map((it) => (
+                <li key={it.href}>
+                  <Link
+                    href={it.href}
+                    className={`flex items-center gap-3 rounded-md px-3 py-3 text-small font-medium transition ${
+                      isActive(it.href) ? 'bg-brand-primary text-white' : 'text-charcoal hover:bg-deep'
+                    }`}
+                  >
+                    <span className="relative" aria-hidden>
+                      <it.icon size={20} strokeWidth={2} />
+                      {badgeFor(it) && <span className="absolute -right-1.5 -top-1 h-2 w-2 rounded-full bg-brand-secondary" />}
+                    </span>
+                    <span className="truncate">{it.label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
       {/* Barra inferior (mobile) */}
-      <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-subtle bg-surface lg:hidden print:hidden">
-        {[...items, account].map((it) => (
+      <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-subtle bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden">
+        {bottomItems.map((it) => (
           <Link
             key={it.href}
             href={it.href}
@@ -220,13 +275,29 @@ export function AppNav({
               isActive(it.href) ? 'text-brand-primary' : 'text-muted'
             }`}
           >
-            <span className="text-xl" aria-hidden>{it.icon}</span>
+            <span aria-hidden><it.icon size={22} strokeWidth={2} /></span>
             <span className="truncate px-1">{it.label}</span>
             {badgeFor(it) && (
               <span className="absolute right-1/4 top-1 rounded-full bg-brand-secondary px-1 text-[10px] font-bold text-white">{badgeFor(it)}</span>
             )}
           </Link>
         ))}
+        {hasMore && (
+          <button
+            type="button"
+            onClick={() => setMoreOpen((v) => !v)}
+            aria-expanded={moreOpen}
+            className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${
+              moreOpen || overflowActive ? 'text-brand-primary' : 'text-muted'
+            }`}
+          >
+            <span aria-hidden><IconMais size={22} strokeWidth={2} /></span>
+            <span className="truncate px-1">Mais</span>
+            {overflowBadge && !moreOpen && (
+              <span className="absolute right-1/4 top-1 h-2 w-2 rounded-full bg-brand-secondary" />
+            )}
+          </button>
+        )}
       </nav>
     </>
   );

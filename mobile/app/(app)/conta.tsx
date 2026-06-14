@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 import { api } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { Button, Card } from '@/components/ui';
+import { IconEditar } from '@/components/icons';
 import { color, radius, space } from '@/theme';
 
 const PRIVACY_URL = 'https://abilar.com.br/privacidade';
@@ -90,7 +91,9 @@ export default function ContaScreen() {
           ) : (
             <View style={styles.nameRow}>
               <Text style={styles.name}>{profile?.name || 'Sem nome'}</Text>
-              <Text style={styles.edit} onPress={() => { setName(profile?.name ?? ''); setEditingName(true); }}>✏️</Text>
+              <Pressable onPress={() => { setName(profile?.name ?? ''); setEditingName(true); }} hitSlop={8}>
+                <IconEditar size={20} color={color.text.muted} strokeWidth={2} />
+              </Pressable>
             </View>
           )}
           <Text style={styles.role}>{ROLE_LABEL[profile?.role ?? ''] ?? profile?.role}</Text>
@@ -137,7 +140,6 @@ const styles = StyleSheet.create({
   container: { padding: space.lg, gap: space.lg },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   name: { flex: 1, fontSize: 20, fontWeight: '700', color: color.text.primary },
-  edit: { fontSize: 18 },
   role: { fontSize: 15, color: color.brand.secondary, fontWeight: '600' },
   section: { fontSize: 16, fontWeight: '700', color: color.text.primary },
   muted: { color: color.text.muted, fontSize: 13 },

@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { formatBRL } from '@abilar/shared';
 import { saveExternalQuote, setExternalQuoteStatus, deleteExternalQuote } from '@/lib/external-quotes/actions';
+import { IconAdicionar, IconImprimir, IconFechar } from '@/components/ui/icons';
+import { Button } from '@/components/ui';
 
 export type LineItem = { materialId?: string | null; name: string; category: string; unit: string; qty: number; unitCostCents: number };
 export type CatalogItem = { id: string; name: string; category: string; unit: string; unitCostCents: number };
@@ -30,9 +32,9 @@ export function AvulsosManager({ initialQuotes, catalog }: { initialQuotes: Exte
   return (
     <div className="flex flex-col gap-4">
       {!editing && (
-        <button type="button" onClick={() => setEditing('new')} className="self-start rounded-xl bg-brand-primary px-5 py-3 text-sm font-semibold text-white hover:opacity-90">
-          + Novo orçamento avulso
-        </button>
+        <Button variant="primary" size="sm" onClick={() => setEditing('new')} className="self-start">
+          <IconAdicionar size={18} aria-hidden /> Novo orçamento avulso
+        </Button>
       )}
 
       {editing ? (
@@ -60,7 +62,7 @@ export function AvulsosManager({ initialQuotes, catalog }: { initialQuotes: Exte
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-                <Link href={`/marceneiro/avulsos/${q.id}/imprimir`} className="font-semibold text-brand-primary hover:underline">🖨️ PDF</Link>
+                <Link href={`/marceneiro/avulsos/${q.id}/imprimir`} className="inline-flex items-center gap-1.5 font-semibold text-brand-primary hover:underline"><IconImprimir size={16} aria-hidden /> PDF</Link>
                 <button type="button" onClick={() => setEditing(q)} className="font-semibold text-brand-secondary hover:underline">Editar</button>
                 {q.status !== 'ACCEPTED' && (
                   <button type="button" disabled={pending} onClick={() => start(async () => { await setExternalQuoteStatus(q.id, 'ACCEPTED'); refresh(); })} className="font-semibold text-brand-primary hover:underline">Marcar aceito</button>
@@ -68,7 +70,7 @@ export function AvulsosManager({ initialQuotes, catalog }: { initialQuotes: Exte
                 {q.status !== 'REJECTED' && (
                   <button type="button" disabled={pending} onClick={() => start(async () => { await setExternalQuoteStatus(q.id, 'REJECTED'); refresh(); })} className="text-muted hover:underline">Recusado</button>
                 )}
-                <button type="button" disabled={pending} onClick={() => { if (confirm('Excluir este orçamento?')) start(async () => { await deleteExternalQuote(q.id); refresh(); }); }} className="text-ochre hover:underline">Excluir</button>
+                <button type="button" disabled={pending} onClick={() => { if (confirm('Excluir este orçamento?')) start(async () => { await deleteExternalQuote(q.id); refresh(); }); }} className="text-danger hover:underline">Excluir</button>
               </div>
             </li>
           ))}
@@ -129,7 +131,7 @@ function Form({ quote, catalog, onClose }: { quote: ExternalQuoteCard | null; ca
                 value={it.qty}
                 onChange={(e) => setItems((arr) => arr.map((x, i) => (i === idx ? { ...x, qty: Math.max(0, Number(e.target.value) || 0) } : x)))}
               />
-              <button type="button" onClick={() => setItems((arr) => arr.filter((_, i) => i !== idx))} className="text-ochre">✕</button>
+              <Button variant="danger" size="sm" onClick={() => setItems((arr) => arr.filter((_, i) => i !== idx))} aria-label="Remover item" className="px-2"><IconFechar size={18} aria-hidden /></Button>
             </li>
           ))}
         </ul>
@@ -151,12 +153,12 @@ function Form({ quote, catalog, onClose }: { quote: ExternalQuoteCard | null; ca
 
       <textarea className={fld} rows={2} placeholder="Observação (opcional)" value={note} onChange={(e) => setNote(e.target.value)} />
 
-      {error && <p className="rounded-xl bg-ochre/20 px-4 py-2 text-sm text-charcoal">{error}</p>}
+      {error && <p className="rounded-xl bg-danger/10 px-4 py-2 text-sm text-danger">{error}</p>}
       <div className="flex gap-2">
-        <button type="button" disabled={pending || items.length === 0} onClick={save} className="flex-1 rounded-xl bg-brand-primary px-4 py-3 text-base font-semibold text-white hover:opacity-90 disabled:opacity-50">
+        <Button variant="primary" disabled={pending || items.length === 0} onClick={save} className="flex-1">
           {pending ? 'Salvando…' : 'Salvar'}
-        </button>
-        <button type="button" onClick={onClose} className="rounded-xl border border-subtle px-4 py-3 text-base text-charcoal hover:bg-deep">Cancelar</button>
+        </Button>
+        <Button variant="outline" onClick={onClose}>Cancelar</Button>
       </div>
     </div>
   );

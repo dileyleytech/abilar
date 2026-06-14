@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { preApproveQuote } from '@/lib/chat/actions';
+import { Button } from '@/components/ui';
+import { IconConversas, IconOk } from '@/components/ui/icons';
 
 /** Cliente pré-aprova o orçamento e abre o chat com o marceneiro. */
 export function PreApproveButton({ quoteId, approved }: { quoteId: string; approved: boolean }) {
@@ -20,17 +22,10 @@ export function PreApproveButton({ quoteId, approved }: { quoteId: string; appro
 
   return (
     <div className="mt-3">
-      <button
-        type="button"
-        onClick={go}
-        disabled={pending}
-        className={`rounded-xl px-4 py-2 text-sm font-semibold transition disabled:opacity-50 ${
-          approved ? 'border border-subtle text-charcoal hover:bg-deep' : 'bg-brand-primary text-white hover:opacity-90'
-        }`}
-      >
-        {pending ? '…' : approved ? '💬 Abrir conversa' : '👍 Pré-aprovar e conversar'}
-      </button>
-      {error && <p className="mt-1 text-sm text-ochre">{error}</p>}
+      <Button variant={approved ? 'outline' : 'primary'} size="sm" onClick={go} disabled={pending}>
+        {pending ? '…' : approved ? <><IconConversas size={20} aria-hidden /> Abrir conversa</> : <><IconOk size={20} aria-hidden /> Pré-aprovar e conversar</>}
+      </Button>
+      {error && <p className="mt-1 text-sm text-danger">{error}</p>}
     </div>
   );
 }

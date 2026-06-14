@@ -19,6 +19,7 @@ import { subscribeMessages } from '@/lib/realtime';
 import { api, type Photo } from '@/lib/api';
 import { chooseAndPick } from '@/lib/pickImages';
 import { Loading } from '@/components/ui';
+import { IconAtencao, IconFechar, IconImagem, IconEnviar, IconBloqueado } from '@/components/icons';
 import { color, radius, space } from '@/theme';
 
 type Msg = { id: string; senderId: string; text: string; images: string[] };
@@ -138,7 +139,7 @@ export default function ChatScreen() {
           title: conv?.otherName ?? 'Conversa',
           headerRight: () => (
             <Pressable onPress={report} hitSlop={10}>
-              <Text style={{ fontSize: 18 }}>⚠️</Text>
+              <IconAtencao size={20} color={color.state.danger} strokeWidth={2} />
             </Pressable>
           ),
         }}
@@ -174,7 +175,7 @@ export default function ChatScreen() {
                   <View key={i} style={styles.previewWrap}>
                     <Image source={{ uri: p.uri }} style={styles.preview} />
                     <Pressable style={styles.removeP} onPress={() => setPhotos((arr) => arr.filter((_, idx) => idx !== i))}>
-                      <Text style={styles.removePText}>✕</Text>
+                      <IconFechar size={12} color="#fff" strokeWidth={2.5} />
                     </Pressable>
                   </View>
                 ))}
@@ -182,7 +183,7 @@ export default function ChatScreen() {
             )}
             <View style={styles.inputRow}>
               <Pressable style={styles.attachBtn} onPress={addPhotos}>
-                <Text style={{ fontSize: 20 }}>📎</Text>
+                <IconImagem size={22} color={color.text.muted} strokeWidth={2} />
               </Pressable>
               <TextInput
                 style={styles.input}
@@ -197,14 +198,17 @@ export default function ChatScreen() {
                 onPress={send}
                 disabled={(!text.trim() && photos.length === 0) || sending}
               >
-                <Text style={styles.sendText}>Enviar</Text>
+                <IconEnviar size={20} color={color.text.onDark} strokeWidth={2} />
               </Pressable>
             </View>
           </>
         ) : (
           <Text style={styles.closed}>Esta conversa está fechada.</Text>
         )}
-        <Text style={styles.hint}>🔒 Telefone, e-mail e links são ocultados. Feche o negócio pela plataforma.</Text>
+        <View style={styles.hintRow}>
+          <IconBloqueado size={12} color={color.text.subtle} strokeWidth={2} />
+          <Text style={styles.hint}>Telefone, e-mail e links são ocultados. Feche o negócio pela plataforma.</Text>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -242,8 +246,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: color.text.primary,
   },
-  sendBtn: { backgroundColor: color.brand.primary, borderRadius: radius.md, paddingHorizontal: 18, paddingVertical: 12 },
-  sendText: { color: color.text.onDark, fontWeight: '600', fontSize: 15 },
+  sendBtn: { backgroundColor: color.brand.primary, borderRadius: radius.md, paddingHorizontal: 16, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
   closed: { textAlign: 'center', color: color.text.muted, paddingVertical: space.sm },
+  hintRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
   hint: { fontSize: 11, color: color.text.subtle, textAlign: 'center' },
 });
