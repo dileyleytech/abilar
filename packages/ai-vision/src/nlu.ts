@@ -2,7 +2,10 @@
 // Regra de ouro #6: todo LLM é Gemini (3.1 Flash-Lite, function calling), atrás de
 // interface trocável. O `mockNluProvider` é determinístico (heurístico) para CI/dev
 // sem chave; em produção, com GEMINI_API_KEY, usa-se o provider Gemini.
-import { parseDesignCommand, type DesignCommand } from './dsl';
+import {
+  parseDesignCommand, type DesignCommand,
+  DESIGN_INTENTS, DIMENSION_AXES, ITEM_TYPES, ITEM_POSITIONS, HARDWARE,
+} from './dsl';
 
 export type NluInput = {
   /** Texto livre do usuário (ou transcrição de áudio). */
@@ -89,22 +92,128 @@ export const mockNluProvider: NluProvider = {
   },
 };
 
-/**
- * Provider Gemini (3.1 Flash-Lite, function calling) — TODO Fase 6 (real).
- * Sem a chamada de rede ainda; o factory abaixo decide qual provider usar.
- */
-export function createGeminiNluProvider(_apiKey: string): NluProvider {
+// ── Provider Gemini (3.1 Flash-Lite, function calling) ──────────────────────
+// Regra de ouro #6: todo LLM é Gemini. A chave vem de env (.env.local / binding),
+// NUNCA do código. Modelo configurável via GEMINI_NLU_MODEL.
+
+export const DEFAULT_NLU_MODEL = 'gemini-flash-lite-latest';
+const DEFAULT_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
+
+export type GeminiNluOptions = {
+  apiKey: string;
+  model?: string;
+  baseUrl?: string;
+  /** Injetável para testes (default: fetch global). */
+  fetchImpl?: typeof fetch;
+};
+
+const SYSTEM_PROMPT = [
+  'Você é o NLU do chat de design da Abilar (marcenaria sob demanda).',
+  'Converta a fala do cliente em UM comando de marcenaria chamando a função emit_design_command.',
+  'Sempre chame a função. Preencha "echo" em PT-BR com "o que entendi" (frase curta e gentil).',
+  'Se a intenção for ambígua ou faltar dado essencial, use intent ASK_HELP e clarificationNeeded=true.',
+  'NUNCA invente medidas; medidas só via RESIZE quando o cliente disser um valor explícito.',
+  'confidence é de 0 a 1.',
+].join(' ');
+
+const FUNCTION_DECLARATION = {
+  name: 'emit_design_command',
+  description: 'Registra o comando de marcenaria entendido a partir da fala do cliente.',
+  parameters: {
+    type: 'OBJECT',
+    properties: {
+      intent: { type: 'STRING', enum: [...DESIGN_INTENTS] },
+      targetModuleId: { type: 'STRING', description: "uuid do módulo alvo, 'ALL' para todos, ou vazio se indefinido" },
+      params: {
+        type: 'OBJECT',
+        properties: {
+          finish: { type: 'STRING' },
+          material: { type: 'STRING' },
+          dimension: {
+            type: 'OBJECT',
+            properties: {
+              axis: { type: 'STRING', enum: [...DIMENSION_AXES] },
+              deltaMm: { type: 'INTEGER' },
+              absoluteMm: { type: 'INTEGER' },
+            },
+          },
+          item: {
+            type: 'OBJECT',
+            properties: {
+              type: { type: 'STRING', enum: [...ITEM_TYPES] },
+              qty: { type: 'INTEGER' },
+              position: { type: 'STRING', enum: [...ITEM_POSITIONS] },
+            },
+          },
+          hardware: { type: 'STRING', enum: [...HARDWARE] },
+          lighting: { type: 'STRING' },
+        },
+      },
+      confidence: { type: 'NUMBER' },
+      clarificationNeeded: { type: 'BOOLEAN' },
+      echo: { type: 'STRING' },
+    },
+    required: ['intent', 'echo'],
+  },
+} as const;
+
+const ASK_HELP_FALLBACK = (): DesignCommand =>
+  parseDesignCommand({ intent: 'ASK_HELP', confidence: 0.2, clarificationNeeded: true, echo: 'Não entendi bem — pode dizer de outro jeito o que quer mudar?' });
+
+/** Normaliza targetModuleId vindo do modelo ('' → null; valor inválido → null). */
+function sanitizeTarget(v: unknown): string | null {
+  if (v === 'ALL') return 'ALL';
+  if (typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v)) return v;
+  return null;
+}
+
+/** Extrai os args da function call da resposta do Gemini (v1beta generateContent). */
+function extractFunctionArgs(json: unknown): Record<string, unknown> | null {
+  const parts = (json as { candidates?: { content?: { parts?: { functionCall?: { args?: unknown } }[] } }[] })
+    ?.candidates?.[0]?.content?.parts;
+  const call = parts?.find((p) => p.functionCall)?.functionCall;
+  return call?.args && typeof call.args === 'object' ? (call.args as Record<string, unknown>) : null;
+}
+
+export function createGeminiNluProvider(opts: GeminiNluOptions | string): NluProvider {
+  const o: GeminiNluOptions = typeof opts === 'string' ? { apiKey: opts } : opts;
+  const model = o.model || DEFAULT_NLU_MODEL;
+  const baseUrl = o.baseUrl || DEFAULT_BASE_URL;
+  const doFetch = o.fetchImpl ?? fetch;
+
   return {
     name: 'gemini',
-    async interpret() {
-      // TODO(Fase 6 — §8.4): chamar Gemini 3.1 Flash-Lite com function calling,
-      // validar a saída com parseDesignCommand. Requer GEMINI_API_KEY + deploy.
-      throw new Error('GeminiNluProvider ainda não implementado (TODO Fase 6).');
+    async interpret(input) {
+      const userText = input.moduleIds?.length
+        ? `${input.utterance}\n\n(IDs de módulos disponíveis: ${input.moduleIds.join(', ')})`
+        : input.utterance;
+      const body = {
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: [{ role: 'user', parts: [{ text: userText }] }],
+        tools: [{ functionDeclarations: [FUNCTION_DECLARATION] }],
+        toolConfig: { functionCallingConfig: { mode: 'ANY', allowedFunctionNames: ['emit_design_command'] } },
+      };
+      try {
+        const res = await doFetch(`${baseUrl}/models/${model}:generateContent?key=${o.apiKey}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) return ASK_HELP_FALLBACK();
+        const args = extractFunctionArgs(await res.json());
+        if (!args) return ASK_HELP_FALLBACK();
+        return parseDesignCommand({ ...args, targetModuleId: sanitizeTarget(args.targetModuleId) });
+      } catch {
+        // Rede/parse/validação falhou → não quebra o chat; pede esclarecimento.
+        return ASK_HELP_FALLBACK();
+      }
     },
   };
 }
 
 /** Resolve o provider de NLU: Gemini quando há chave; senão o mock determinístico. */
-export function resolveNluProvider(env: { GEMINI_API_KEY?: string }): NluProvider {
-  return env.GEMINI_API_KEY ? createGeminiNluProvider(env.GEMINI_API_KEY) : mockNluProvider;
+export function resolveNluProvider(env: { GEMINI_API_KEY?: string; GEMINI_NLU_MODEL?: string }): NluProvider {
+  return env.GEMINI_API_KEY
+    ? createGeminiNluProvider({ apiKey: env.GEMINI_API_KEY, model: env.GEMINI_NLU_MODEL })
+    : mockNluProvider;
 }
