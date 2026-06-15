@@ -160,10 +160,12 @@ export function ModulesSection({
     };
     setSaving(true);
     try {
-      if (editId) await api.updateModule(editId, input, photo);
-      else await api.addModule({ projectId, ...input }, photo);
+      const r = editId ? await api.updateModule(editId, input, photo) : await api.addModule({ projectId, ...input }, photo);
       resetForm();
       await load();
+      if (r.photoRejected) {
+        Alert.alert('Foto não usada', r.photoReason ?? 'Essa foto não parece ser do cômodo. Envie a parede onde o móvel vai ficar.');
+      }
     } catch (e) {
       Alert.alert('Ops', e instanceof Error ? e.message : 'Não foi possível salvar o móvel.');
     } finally {

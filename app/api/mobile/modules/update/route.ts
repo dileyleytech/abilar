@@ -1,5 +1,6 @@
 import { moduleInputSchema, categorySchema } from '@abilar/shared';
 import { projects, modules, projectPhotos, and, eq } from '@abilar/db';
+import { resolvePhotoModerator, bytesToBase64 } from '@abilar/ai-vision';
 import { getDb } from '@/lib/db';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { PROJECT_PHOTOS_BUCKET } from '@/lib/storage';
@@ -59,12 +60,20 @@ export async function POST(req: Request): Promise<Response> {
   if (file instanceof File && file.size > 0) {
     if (!file.type.startsWith('image/')) return json({ error: 'Anexo deve ser uma imagem.' }, 400);
     if (file.size > 10 * 1024 * 1024) return json({ error: 'A foto deve ter no máx 10 MB.' }, 400);
+    const bytes = new Uint8Array(await file.arrayBuffer());
+
+    // Moderação (§8.7): foto irrelevante não substitui a atual; pede outra. Fail-open.
+    const mod = await resolvePhotoModerator({ GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_MODERATION_MODEL: process.env.GEMINI_MODERATION_MODEL }).check(bytesToBase64(bytes), file.type || 'image/jpeg');
+    if (!mod.relevant) {
+      return json({ ok: true, photoRejected: true, photoReason: mod.reason ?? 'Essa foto não parece ser do cômodo. Envie a parede onde o móvel vai ficar.' });
+    }
+
     const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
     const path = `${row.projectId}/${moduleId}/${Date.now()}.${ext}`;
     const supabase = createSupabaseAdminClient();
     const { error } = await supabase.storage
       .from(PROJECT_PHOTOS_BUCKET)
-      .upload(path, new Uint8Array(await file.arrayBuffer()), { contentType: file.type || 'image/jpeg', upsert: true });
+      .upload(path, bytes, { contentType: file.type || 'image/jpeg', upsert: true });
     if (!error) {
       await db.delete(projectPhotos).where(and(eq(projectPhotos.projectId, row.projectId), eq(projectPhotos.moduleId, moduleId)));
       await db.insert(projectPhotos).values({ projectId: row.projectId, moduleId, kind: 'REFERENCE', path });
