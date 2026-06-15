@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import type { DesignState } from '@abilar/ai-vision';
 import { getUserId } from '@/lib/auth/session';
 import { ownsProject, runDesignTurn, restoreDesignState, type Result, type DesignTurn } from './core';
+import { requestPreview, type PreviewResult } from './preview';
 
 /** Um turno do chat de design (web). Auth por sessão; delega ao core. */
 export async function designTurn(projectId: string, utterance: unknown): Promise<Result<DesignTurn>> {
@@ -23,6 +24,17 @@ export async function restoreDesign(projectId: string, snapshot: unknown): Promi
   if (!(await ownsProject(projectId, userId))) return { ok: false, error: 'Pedido não encontrado.' };
 
   const r = await restoreDesignState(projectId, snapshot);
+  if (r.ok) revalidatePath(`/pedidos/${projectId}`);
+  return r;
+}
+
+/** Gera (ou enfileira) uma prévia de imagem do projeto — web. */
+export async function requestDesignPreview(projectId: string): Promise<Result<PreviewResult>> {
+  const userId = await getUserId();
+  if (!userId) return { ok: false, error: 'Faça login.' };
+  if (!(await ownsProject(projectId, userId))) return { ok: false, error: 'Pedido não encontrado.' };
+
+  const r = await requestPreview(projectId);
   if (r.ok) revalidatePath(`/pedidos/${projectId}`);
   return r;
 }

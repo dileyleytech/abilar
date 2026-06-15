@@ -9,6 +9,7 @@ export * from './prompt';
 export * from './guardrails';
 export * from './nlu';
 export * from './session';
+export * from './preview';
 
 /** Provider de edição de imagem (trocável: Gemini Nano Banana 2 default, Flux fallback). */
 export interface ImageEditProvider {

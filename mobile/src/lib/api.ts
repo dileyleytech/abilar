@@ -150,11 +150,13 @@ export const api = {
 
   // Chat de design com a ABI (Fase 6). O servidor faz o NLU (Gemini) e persiste.
   getDesignState: (projectId: string) =>
-    getJson<{ state: DesignStateView }>(`/api/mobile/design/state?projectId=${encodeURIComponent(projectId)}`),
+    getJson<{ state: DesignStateView; previewUrl: string | null }>(`/api/mobile/design/state?projectId=${encodeURIComponent(projectId)}`),
   designTurn: (projectId: string, utterance: string) =>
     postJson<DesignTurnResult>('/api/mobile/design/turn', { projectId, utterance }),
   designRestore: (projectId: string, snapshot: DesignStateView) =>
     postJson<DesignStateView>('/api/mobile/design/restore', { projectId, snapshot }),
+  designPreview: (projectId: string) =>
+    postJson<{ queued: boolean; url?: string | null }>('/api/mobile/design/preview', { projectId }),
 };
 
 // Tipos do chat de design (espelham @abilar/ai-vision; o mobile não importa o monorepo).
