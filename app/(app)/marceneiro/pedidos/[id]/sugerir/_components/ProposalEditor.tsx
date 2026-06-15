@@ -101,30 +101,37 @@ export function ProposalEditor({ projectId, initialState }: { projectId: string;
         </ul>
       </Card>
 
-      <div className="flex min-h-[160px] flex-col gap-3">
-        {messages.map((m, i) => (
-          <div key={i} className={m.role === 'USER' ? 'flex justify-end' : 'flex items-start gap-2'}>
-            {m.role === 'ABI' && <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-secondary/15 text-brand-secondary" aria-hidden><IconAbi size={16} /></span>}
-            <div className={m.role === 'USER' ? 'max-w-[80%] rounded-lg rounded-tr-sm bg-brand-primary px-3 py-2 text-small text-white' : 'max-w-[80%] rounded-lg rounded-tl-sm bg-surface px-3 py-2 text-small text-charcoal shadow-card'}>{m.text}</div>
-          </div>
-        ))}
-        {pending && <p className="pl-9 text-small text-subtle">processando…</p>}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {EXAMPLES.map((ex) => (
-          <button key={ex} type="button" disabled={pending} onClick={() => send(ex)} className="rounded-pill border border-subtle bg-surface px-3 py-1 text-caption text-muted transition hover:border-brand-primary/40 hover:text-charcoal disabled:opacity-50">{ex}</button>
-        ))}
-      </div>
-
-      <form onSubmit={(e) => { e.preventDefault(); send(text); }} className="flex items-center gap-2">
-        <input className={`${inputClass} flex-1`} placeholder="Ex.: troca as 2 portas por um gaveteiro de 4…" value={text} onChange={(e) => setText(e.target.value)} disabled={pending} />
-        <Button type="submit" variant="primary" size="md" disabled={pending || !text.trim()} aria-label="Enviar"><IconEnviar size={18} aria-hidden /></Button>
-      </form>
-
+      {/* Passo 1 — onde o marceneiro faz as alterações */}
       <Card pad="sm" className="flex flex-col gap-3">
-        <textarea className={inputClass} rows={2} placeholder="Mensagem ao cliente (opcional): por que essa mudança é melhor…" value={note} onChange={(e) => setNote(e.target.value)} />
+        <p className="text-small font-semibold text-charcoal">1. Ajuste o projeto conversando com a ABI</p>
+        <div className="flex min-h-[120px] flex-col gap-3">
+          {messages.map((m, i) => (
+            <div key={i} className={m.role === 'USER' ? 'flex justify-end' : 'flex items-start gap-2'}>
+              {m.role === 'ABI' && <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-secondary/15 text-brand-secondary" aria-hidden><IconAbi size={16} /></span>}
+              <div className={m.role === 'USER' ? 'max-w-[80%] rounded-lg rounded-tr-sm bg-brand-primary px-3 py-2 text-small text-white' : 'max-w-[80%] rounded-lg rounded-tl-sm bg-surface px-3 py-2 text-small text-charcoal shadow-card'}>{m.text}</div>
+            </div>
+          ))}
+          {pending && <p className="pl-9 text-small text-subtle">processando…</p>}
+        </div>
+
         <div className="flex flex-wrap gap-2">
+          {EXAMPLES.map((ex) => (
+            <button key={ex} type="button" disabled={pending} onClick={() => send(ex)} className="rounded-pill border border-subtle bg-surface px-3 py-1 text-caption text-muted transition hover:border-brand-primary/40 hover:text-charcoal disabled:opacity-50">{ex}</button>
+          ))}
+        </div>
+
+        <form onSubmit={(e) => { e.preventDefault(); send(text); }} className="flex items-center gap-2">
+          <input className={`${inputClass} flex-1`} placeholder="Escreva a mudança aqui. Ex.: troca as 2 portas por um gaveteiro de 4…" value={text} onChange={(e) => setText(e.target.value)} disabled={pending} autoFocus />
+          <Button type="submit" variant="primary" size="md" disabled={pending || !text.trim()} aria-label="Enviar mudança"><IconEnviar size={18} aria-hidden /></Button>
+        </form>
+      </Card>
+
+      {/* Passo 2 — enviar (secundário; recado é opcional) */}
+      <Card pad="sm" className="flex flex-col gap-2">
+        <p className="text-small font-semibold text-charcoal">2. Quando ficar do jeito certo, envie ao cliente</p>
+        <label htmlFor="proposal-note" className="text-caption text-muted">Recado ao cliente (opcional)</label>
+        <textarea id="proposal-note" className={inputClass} rows={2} placeholder="Ex.: o gaveteiro organiza melhor os calçados." value={note} onChange={(e) => setNote(e.target.value)} />
+        <div className="mt-1 flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => submit('SUGGESTION')} disabled={pending}>Enviar sugestão ao cliente</Button>
           <Button variant="outline" onClick={() => submit('EDIT')} disabled={pending}>Aplicar como edição da minha proposta</Button>
         </div>
