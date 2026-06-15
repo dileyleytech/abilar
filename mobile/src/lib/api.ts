@@ -147,6 +147,9 @@ export const api = {
   acceptExternalQuote: (id: string) => postJson<{ ok: true }>('/api/mobile/external-quotes/accept', { id }),
   setProjectDates: (projectId: string, startDate?: string, endDate?: string) =>
     postJson<{ ok: true }>('/api/mobile/projects/dates', { projectId, startDate, endDate }),
+  // Paths das fotos do pedido (autorizado p/ dono, pedido aberto ou marceneiro engajado).
+  projectPhotos: (projectId: string) =>
+    getJson<{ paths: string[] }>(`/api/mobile/projects/photos?projectId=${encodeURIComponent(projectId)}`),
 
   // Chat de design com a ABI (Fase 6). O servidor faz o NLU (Gemini) e persiste.
   getDesignState: (projectId: string) =>
