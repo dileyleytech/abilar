@@ -101,6 +101,7 @@ const SYSTEM_PROMPT = [
   'Se ele der as 3 medidas (ex.: "80x120x35"), emita TRÊS comandos RESIZE: WIDTH=800, HEIGHT=1200, DEPTH=350 (absoluteMm).',
   'Remover algo (espelho, porta, gaveta) = REMOVE_ITEM. "Toda fechada"/portas = ADD_ITEM PORTA. "Sem metal/ferragem aparente" = CHANGE_HARDWARE.',
   'Preencha "echo" em PT-BR com um resumo gentil do que entendeu (uma frase).',
+  'Emita SOMENTE as mudanças pedidas EXPLICITAMENTE; não invente alterações, não troque o TIPO do móvel e não mexa no que não foi mencionado.',
   'Se for ambíguo ou nada acionável, deixe commands vazio e clarificationNeeded=true.',
 ].join(' ');
 

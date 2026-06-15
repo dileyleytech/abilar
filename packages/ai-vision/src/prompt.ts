@@ -68,6 +68,8 @@ export function buildImagePrompt(module: DesignModule, ctx: PromptContext = {}):
   const prompt = [
     `Interior photo of ${room}.`,
     `${verb}${specsText ? `, ${specsText}` : ''}.`,
+    // Mantém a IDENTIDADE e a PROPORÇÃO do móvel — evita virar "painel gigante".
+    `It must stay a single ${unit} with realistic, modest residential proportions; do not change its type, do not enlarge it into a full-wall built-in unit, and add nothing that was not requested.`,
     `Keep the room's walls, floor, lighting and perspective unchanged.`,
     `Photorealistic, natural lighting, Brazilian residential style.`,
     `Modify ONLY the furniture area.`,
