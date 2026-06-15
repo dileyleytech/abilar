@@ -120,6 +120,7 @@ export default function SugerirScreen() {
             ))}
           </Card>
 
+          <Text style={styles.stepTitle}>Ajuste o projeto conversando com a ABI</Text>
           {messages.map((m, i) => (
             <View key={i} style={m.role === 'USER' ? styles.userRow : styles.abiRow}>
               {m.role === 'ABI' && <View style={styles.avatar}><IconAbi size={15} color={color.brand.secondary} /></View>}
@@ -130,7 +131,9 @@ export default function SugerirScreen() {
           ))}
           {busy && <Text style={styles.thinking}>processando…</Text>}
 
-          <TextInput style={styles.noteInput} placeholder="Mensagem ao cliente (opcional)…" placeholderTextColor={color.text.subtle} value={note} onChangeText={setNote} multiline />
+          <Text style={styles.stepTitle}>Quando ficar do jeito certo, envie ao cliente</Text>
+          <Text style={styles.fieldLabel}>Recado ao cliente (opcional)</Text>
+          <TextInput style={styles.noteInput} placeholder="Ex.: o gaveteiro organiza melhor os calçados." placeholderTextColor={color.text.subtle} value={note} onChangeText={setNote} multiline />
           <Button title="Enviar sugestão ao cliente" variant="secondary" onPress={() => submit('SUGGESTION')} loading={busy} />
           <Button title="Aplicar como edição da proposta" variant="outline" onPress={() => submit('EDIT')} loading={busy} />
         </ScrollView>
@@ -152,6 +155,8 @@ const styles = StyleSheet.create({
   previewImg: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.md, backgroundColor: color.bg.deep },
   previewPlaceholder: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.md, backgroundColor: color.bg.deep, alignItems: 'center', justifyContent: 'center' },
   muted: { color: color.text.muted, fontSize: 13 },
+  stepTitle: { fontSize: 14, fontWeight: '700', color: color.text.primary, marginTop: space.sm },
+  fieldLabel: { fontSize: 12, color: color.text.muted },
   summaryTitle: { fontSize: 13, fontWeight: '600', color: color.text.muted },
   modRow: { gap: 4 },
   modTitle: { fontSize: 15, fontWeight: '600', color: color.text.primary },
