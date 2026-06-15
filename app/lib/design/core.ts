@@ -4,7 +4,9 @@ import { projects, modules, and, eq } from '@abilar/db';
 import {
   resolveNluProvider,
   applyCommand,
+  parseDesignCommand,
   type DesignCommand,
+  type DesignBatch,
   type DesignState,
   type DesignModule,
 } from '@abilar/ai-vision';
@@ -14,6 +16,29 @@ import { loadDesignState } from './queries';
 
 export type Result<T> = { ok: true; data: T } | { ok: false; error: string };
 export type DesignTurn = { command: DesignCommand; state: DesignState; message: string };
+
+/** Aplica TODOS os comandos do lote em sequência. Devolve o estado final, se algo
+ *  mudou, e a intenção "representativa" para a UI (UNDO / ASK_HELP / mudança real). */
+function applyBatch(state: DesignState, batch: DesignBatch): { state: DesignState; changed: boolean; repIntent: DesignCommand['intent'] } {
+  const isSingleUndo = batch.commands.length === 1 && batch.commands[0]!.intent === 'UNDO';
+  if (isSingleUndo) return { state, changed: false, repIntent: 'UNDO' };
+
+  let cur = state;
+  let changed = false;
+  let firstApplied: DesignCommand['intent'] | null = null;
+  for (const c of batch.commands) {
+    if (c.intent === 'UNDO' || c.intent === 'ASK_HELP') continue;
+    const r = applyCommand(cur, parseDesignCommand(c));
+    if (r.ok) { cur = r.state; changed = true; firstApplied = firstApplied ?? c.intent; }
+  }
+  return { state: cur, changed, repIntent: changed ? (firstApplied ?? 'CHANGE_LAYOUT') : 'ASK_HELP' };
+}
+
+/** Monta o DesignTurn (comando representativo para a UI) a partir do lote + estado. */
+function turnFromBatch(batch: DesignBatch, applied: { state: DesignState; repIntent: DesignCommand['intent'] }, fallbackMsg: string): DesignTurn {
+  const command = parseDesignCommand({ intent: applied.repIntent, echo: batch.echo, clarificationNeeded: batch.clarificationNeeded, confidence: batch.confidence });
+  return { command, state: applied.state, message: batch.echo || fallbackMsg };
+}
 
 /** Confirma posse do projeto (cliente dono) — Drizzle é serviço, autorização explícita. */
 export async function ownsProject(projectId: string, userId: string): Promise<boolean> {
@@ -56,16 +81,15 @@ export async function runDesignTurn(projectId: string, utterance: unknown): Prom
   if (state.modules.length === 0) return { ok: false, error: 'Adicione um móvel ao pedido antes de conversar com a ABI.' };
 
   const provider = resolveNluProvider({ GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_NLU_MODEL: process.env.GEMINI_NLU_MODEL });
-  const command = await provider.interpret({ utterance: text, moduleIds: state.modules.map((m) => m.id) });
+  const batch = await provider.interpret({ utterance: text, moduleIds: state.modules.map((m) => m.id) });
 
-  // UNDO é resolvido no cliente (snapshot → restoreDesignState); aqui é no-op informativo.
-  if (command.intent === 'UNDO') {
-    return { ok: true, data: { command, state, message: 'Para voltar, use o botão Desfazer.' } };
+  const applied = applyBatch(state, batch);
+  if (applied.repIntent === 'UNDO') {
+    // UNDO é resolvido no cliente (snapshot → restoreDesignState).
+    return { ok: true, data: { command: parseDesignCommand({ intent: 'UNDO', echo: batch.echo }), state, message: 'Para voltar, use o botão Desfazer.' } };
   }
-
-  const result = applyCommand(state, command);
-  if (result.ok) await persistState(projectId, result.state);
-  return { ok: true, data: { command, state: result.state, message: result.message || command.echo } };
+  if (applied.changed) await persistState(projectId, applied.state);
+  return { ok: true, data: turnFromBatch(batch, applied, 'Não entendi bem — pode dizer de outro jeito?') };
 }
 
 /** Interpreta uma fala sobre um estado FORNECIDO, sem carregar nem persistir nada.
@@ -76,11 +100,13 @@ export async function runTurnOnState(state: DesignState, utterance: unknown): Pr
   if (!state?.modules?.length) return { ok: false, error: 'Sem móveis para editar.' };
 
   const provider = resolveNluProvider({ GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_NLU_MODEL: process.env.GEMINI_NLU_MODEL });
-  const command = await provider.interpret({ utterance: text, moduleIds: state.modules.map((m) => m.id) });
-  if (command.intent === 'UNDO') return { ok: true, data: { command, state, message: 'Para voltar, use o botão Desfazer.' } };
+  const batch = await provider.interpret({ utterance: text, moduleIds: state.modules.map((m) => m.id) });
 
-  const result = applyCommand(state, command);
-  return { ok: true, data: { command, state: result.state, message: result.message || command.echo } };
+  const applied = applyBatch(state, batch);
+  if (applied.repIntent === 'UNDO') {
+    return { ok: true, data: { command: parseDesignCommand({ intent: 'UNDO', echo: batch.echo }), state, message: 'Para voltar, use o botão Desfazer.' } };
+  }
+  return { ok: true, data: turnFromBatch(batch, applied, 'Não entendi bem — pode dizer de outro jeito?') };
 }
 
 /** Restaura um snapshot anterior (UNDO). Valida cada módulo contra o projeto. Sem auth. */

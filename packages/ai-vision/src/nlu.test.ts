@@ -3,50 +3,45 @@ import { mockNluProvider, resolveNluProvider } from './nlu';
 
 const run = (utterance: string) => mockNluProvider.interpret({ utterance });
 
-describe('mockNluProvider — NLU determinístico para CI/dev sem chave', () => {
-  it('"muda pra verde" → CHANGE_FINISH', async () => {
-    const c = await run('muda pra verde');
-    expect(c.intent).toBe('CHANGE_FINISH');
-    expect(c.params.finish).toBeTruthy();
-    expect(c.echo).toBeTruthy();
+describe('mockNluProvider — NLU determinístico (lote) para CI/dev sem chave', () => {
+  it('"muda pra verde" → 1 comando CHANGE_FINISH', async () => {
+    const b = await run('muda pra verde');
+    expect(b.commands).toHaveLength(1);
+    expect(b.commands[0]!.intent).toBe('CHANGE_FINISH');
+    expect(b.commands[0]!.params.finish).toBeTruthy();
+    expect(b.echo).toBeTruthy();
   });
 
-  it('"aumenta a altura em 10 cm" → RESIZE no eixo HEIGHT com deltaMm=100', async () => {
-    const c = await run('aumenta a altura em 10 cm');
-    expect(c.intent).toBe('RESIZE');
-    expect(c.params.dimension?.axis).toBe('HEIGHT');
-    expect(c.params.dimension?.deltaMm).toBe(100);
+  it('"aumenta a altura em 10 cm" → RESIZE HEIGHT deltaMm=100', async () => {
+    const b = await run('aumenta a altura em 10 cm');
+    expect(b.commands[0]!.intent).toBe('RESIZE');
+    expect(b.commands[0]!.params.dimension?.axis).toBe('HEIGHT');
+    expect(b.commands[0]!.params.dimension?.deltaMm).toBe(100);
   });
 
   it('"adiciona uma gaveta embaixo" → ADD_ITEM GAVETA', async () => {
-    const c = await run('adiciona uma gaveta embaixo');
-    expect(c.intent).toBe('ADD_ITEM');
-    expect(c.params.item?.type).toBe('GAVETA');
+    const b = await run('adiciona uma gaveta embaixo');
+    expect(b.commands[0]!.intent).toBe('ADD_ITEM');
+    expect(b.commands[0]!.params.item?.type).toBe('GAVETA');
   });
 
   it('"coloca ferragem soft close" → CHANGE_HARDWARE SOFT_CLOSE', async () => {
-    const c = await run('coloca ferragem soft close');
-    expect(c.intent).toBe('CHANGE_HARDWARE');
-    expect(c.params.hardware).toBe('SOFT_CLOSE');
+    const b = await run('coloca ferragem soft close');
+    expect(b.commands[0]!.intent).toBe('CHANGE_HARDWARE');
+    expect(b.commands[0]!.params.hardware).toBe('SOFT_CLOSE');
   });
 
-  it('"põe uma fita de led nas prateleiras" → ADD_LIGHTING', async () => {
-    const c = await run('põe uma fita de led nas prateleiras');
-    expect(c.intent).toBe('ADD_LIGHTING');
-    expect(c.params.lighting).toBeTruthy();
+  it('frase ambígua → lote vazio + clarificationNeeded', async () => {
+    const b = await run('sei lá, faz aí bonito');
+    expect(b.commands).toHaveLength(0);
+    expect(b.clarificationNeeded).toBe(true);
+    expect(b.confidence).toBeLessThan(0.5);
   });
 
-  it('frase ambígua → ASK_HELP com clarificationNeeded e baixa confiança', async () => {
-    const c = await run('sei lá, faz aí bonito');
-    expect(c.intent).toBe('ASK_HELP');
-    expect(c.clarificationNeeded).toBe(true);
-    expect(c.confidence).toBeLessThan(0.5);
-  });
-
-  it('sempre devolve um comando válido pelo schema (echo presente)', async () => {
-    const c = await run('muda o material pra MDF 25mm');
-    expect(c.intent).toBe('CHANGE_MATERIAL');
-    expect(typeof c.echo).toBe('string');
+  it('sempre devolve um lote válido (echo presente)', async () => {
+    const b = await run('muda o material pra MDF 25mm');
+    expect(b.commands[0]!.intent).toBe('CHANGE_MATERIAL');
+    expect(typeof b.echo).toBe('string');
   });
 });
 
