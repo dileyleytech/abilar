@@ -93,7 +93,7 @@ export const api = {
     if (input.ambiente) fields.ambiente = input.ambiente;
     if (input.label) fields.label = input.label;
     if (input.workType) fields.workType = input.workType;
-    return postForm<{ ok: true; moduleId: string }>('/api/mobile/modules', fields, photo ? [photo] : [], 'photo');
+    return postForm<{ ok: true; moduleId: string; photoRejected?: boolean; photoReason?: string }>('/api/mobile/modules', fields, photo ? [photo] : [], 'photo');
   },
   updateModule: (
     moduleId: string,
@@ -110,7 +110,7 @@ export const api = {
     if (input.ambiente) fields.ambiente = input.ambiente;
     if (input.label) fields.label = input.label;
     if (input.workType) fields.workType = input.workType;
-    return postForm<{ ok: true }>('/api/mobile/modules/update', fields, photo ? [photo] : [], 'photo');
+    return postForm<{ ok: true; photoRejected?: boolean; photoReason?: string }>('/api/mobile/modules/update', fields, photo ? [photo] : [], 'photo');
   },
   deleteModule: (moduleId: string) => postJson<{ ok: true }>('/api/mobile/modules/delete', { moduleId }),
   publishProject: (projectId: string) => postJson<{ ok: true }>('/api/mobile/projects/publish', { projectId }),

@@ -23,13 +23,16 @@ export type ModuleView = {
 };
 
 /** Sobe 1 foto para um módulo (path "<projectId>/<moduleId>/...") e registra. */
-async function uploadModulePhoto(projectId: string, moduleId: string, file: File) {
+// Devolve um aviso se a foto foi recusada pela moderação (§8.7).
+async function uploadModulePhoto(projectId: string, moduleId: string, file: File): Promise<string | null> {
   const toUpload = await downscaleImage(file); // comprime no navegador (upload rápido)
   const supabase = createSupabaseBrowserClient();
   const safe = toUpload.name.replace(/[^\w.-]/g, '_');
   const path = `${projectId}/${moduleId}/${Date.now()}-${safe}`;
   const up = await supabase.storage.from('project-photos').upload(path, toUpload, { upsert: true });
-  if (!up.error) await registerProjectPhoto(projectId, { kind: 'REFERENCE', path, moduleId });
+  if (up.error) return null;
+  const r = await registerProjectPhoto(projectId, { kind: 'REFERENCE', path, moduleId });
+  return r.ok ? null : r.error;
 }
 
 function Spinner() {
@@ -134,7 +137,7 @@ export function ModulesSection({
       if (isEdit) {
         const r = await updateModule(projectId, isEdit, payload);
         if (!r.ok) return setError(r.error);
-        if (localFile) await uploadModulePhoto(projectId, isEdit, localFile);
+        if (localFile) { const warn = await uploadModulePhoto(projectId, isEdit, localFile); if (warn) setError(warn); }
         return router.refresh();
       }
       addOptimistic({
@@ -150,7 +153,7 @@ export function ModulesSection({
       });
       const r = await addModule(projectId, payload);
       if (!r.ok) return setError(r.error); // otimista reverte ao fim da transição
-      if (localFile) await uploadModulePhoto(projectId, r.data.moduleId, localFile);
+      if (localFile) { const warn = await uploadModulePhoto(projectId, r.data.moduleId, localFile); if (warn) setError(warn); }
       router.refresh();
     });
   };

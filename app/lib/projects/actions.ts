@@ -11,9 +11,12 @@ import {
   ProjectStatusError,
 } from '@abilar/shared';
 import { cookies } from 'next/headers';
+import { resolvePhotoModerator, bytesToBase64 } from '@abilar/ai-vision';
 import { projects, modules, projectPhotos, and, eq, sql } from '@abilar/db';
 import { getDb } from '@/lib/db';
 import { getUserId } from '@/lib/auth/session';
+import { createSupabaseAdminClient } from '@/lib/supabase/admin';
+import { PROJECT_PHOTOS_BUCKET, signedProjectPhotoUrl } from '@/lib/storage';
 import { activeArchitectById, activeArchitectByCode } from '@/lib/architects/queries';
 
 const REF_COOKIE = 'abilar_ref';
@@ -245,6 +248,23 @@ export async function registerProjectPhoto(
   const kind = photoKindSchema.safeParse(input.kind);
   if (!kind.success || typeof input.path !== 'string' || !input.path.startsWith(`${projectId}/`)) {
     return { ok: false, error: 'Anexo inválido.' };
+  }
+
+  // Moderação (§8.7): foto de ambiente irrelevante é apagada do Storage e recusada.
+  // Fail-open (erro de API não bloqueia). O upload no web é client→Storage, então
+  // baixamos os bytes aqui para moderar.
+  if (kind.data === 'REFERENCE' || kind.data === 'ORIGINAL_ROOM') {
+    const url = await signedProjectPhotoUrl(input.path);
+    const res = url ? await fetch(url).catch(() => null) : null;
+    if (res?.ok) {
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      const mime = res.headers.get('content-type') || 'image/jpeg';
+      const mod = await resolvePhotoModerator({ GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_MODERATION_MODEL: process.env.GEMINI_MODERATION_MODEL }).check(bytesToBase64(bytes), mime);
+      if (!mod.relevant) {
+        await createSupabaseAdminClient().storage.from(PROJECT_PHOTOS_BUCKET).remove([input.path]).catch(() => {});
+        return { ok: false, error: mod.reason ?? 'Essa foto não parece ser do cômodo. Envie a parede onde o móvel vai ficar.' };
+      }
+    }
   }
 
   const db = getDb();
