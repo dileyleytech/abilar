@@ -267,6 +267,20 @@
       "when": 1780694418000,
       "tag": "0037_architect_referral",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1781536020702,
+      "tag": "0038_fase6_design_proposals",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1781536044940,
+      "tag": "0039_fase6_design_proposals_rls",
+      "breakpoints": true
     }
   ]
 }
