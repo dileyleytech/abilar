@@ -71,6 +71,7 @@ export default function AppLayout() {
       <Tabs.Screen name="avisos" options={{ ...header, title: 'Avisos', href: null }} />
       <Tabs.Screen name="contratos" options={{ href: null }} />
       <Tabs.Screen name="design" options={{ ...header, title: 'Conversar com a ABI', href: null }} />
+      <Tabs.Screen name="sugerir" options={{ ...header, title: 'Sugerir mudança', href: null }} />
       <Tabs.Screen name="marceneiro-perfil" options={{ href: null }} />
       <Tabs.Screen name="agenda" options={{ ...header, title: 'Agenda', href: null }} />
     </Tabs>

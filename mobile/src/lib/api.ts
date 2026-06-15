@@ -157,6 +157,26 @@ export const api = {
     postJson<DesignStateView>('/api/mobile/design/restore', { projectId, snapshot }),
   designPreview: (projectId: string) =>
     postJson<{ queued: boolean; url?: string | null }>('/api/mobile/design/preview', { projectId }),
+
+  // Propostas do marceneiro (§8.6).
+  proposalTurn: (projectId: string, state: DesignStateView, utterance: string) =>
+    postJson<DesignTurnResult>('/api/mobile/design/proposal-turn', { projectId, state, utterance }),
+  createProposal: (projectId: string, type: 'EDIT' | 'SUGGESTION', note: string | undefined, state: DesignStateView) =>
+    postJson<{ id: string }>('/api/mobile/design/proposals', { projectId, type, note, state }),
+  listProposals: (projectId: string) =>
+    getJson<{ proposals: ProposalView[] }>(`/api/mobile/design/proposals?projectId=${encodeURIComponent(projectId)}`),
+  decideProposal: (projectId: string, proposalId: string, decision: 'APPROVED' | 'REJECTED') =>
+    postJson<{ applied: boolean }>('/api/mobile/design/proposals/decide', { projectId, proposalId, decision }),
+};
+
+export type ProposalView = {
+  id: string;
+  type: 'EDIT' | 'SUGGESTION';
+  status: string;
+  note: string | null;
+  state: DesignStateView;
+  previewUrl: string | null;
+  createdAt: string;
 };
 
 // Tipos do chat de design (espelham @abilar/ai-vision; o mobile não importa o monorepo).
