@@ -16,6 +16,7 @@ const TYPE_LABEL: Record<string, string> = {
 const HARDWARE_LABEL: Record<string, string> = { PUSH: 'Toque', PUXADOR_CAVA: 'Puxador cava', SOFT_CLOSE: 'Soft-close' };
 const EXAMPLES = ['Muda a cor para verde', 'Aumenta a altura em 10 cm', 'Adiciona uma gaveta embaixo', 'Coloca soft-close'];
 const cm = (mm: number) => mm / 10;
+const WANTS_PREVIEW = /\b(pr[eé]via|foto|imagem|render|gera|gere|gerar|mostra|mostrar|visualiza|como (vai )?fica)\b/i;
 
 export default function DesignScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
@@ -82,7 +83,8 @@ export default function DesignScreen() {
       setState(r.state);
       say({ role: 'ABI', text: r.message });
       setBusy(false);
-      if (changed && previewUrl) await regen(false); // reflete a mudança na prévia
+      if (changed) await regen(false); // toda mudança gera/atualiza a prévia (inclusive a 1ª)
+      else if (WANTS_PREVIEW.test(utterance)) await regen(true); // pediu a prévia no chat
       return;
     } catch (e) {
       say({ role: 'ABI', text: e instanceof Error ? e.message : 'Não consegui entender agora.' });

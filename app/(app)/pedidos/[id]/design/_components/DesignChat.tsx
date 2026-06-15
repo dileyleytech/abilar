@@ -85,7 +85,9 @@ export function DesignChat({ projectId, initialState, initialPreviewUrl }: { pro
       if (command.intent !== 'ASK_HELP') {
         setHistory((h) => [...h, before]);
         setState(next);
-        if (previewUrl) regen(false); // atualiza a prévia automaticamente após a mudança
+        regen(false); // toda mudança gera/atualiza a prévia (inclusive a 1ª)
+      } else if (/\b(pr[eé]via|foto|imagem|render|gera|gere|gerar|mostra|mostrar|visualiza|como (vai )?fica)\b/i.test(utterance)) {
+        regen(true); // pediu a prévia explicitamente no chat
       }
     });
   };
