@@ -164,6 +164,8 @@ export const api = {
   // Propostas do marceneiro (§8.6).
   proposalTurn: (projectId: string, state: DesignStateView, utterance: string) =>
     postJson<DesignTurnResult>('/api/mobile/design/proposal-turn', { projectId, state, utterance }),
+  proposalPreview: (projectId: string, state: DesignStateView) =>
+    postJson<{ url: string | null }>('/api/mobile/design/proposal-preview', { projectId, state }),
   createProposal: (projectId: string, type: 'EDIT' | 'SUGGESTION', note: string | undefined, state: DesignStateView) =>
     postJson<{ id: string }>('/api/mobile/design/proposals', { projectId, type, note, state }),
   listProposals: (projectId: string) =>

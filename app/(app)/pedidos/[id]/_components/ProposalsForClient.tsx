@@ -5,7 +5,7 @@ import { useTransition, useState } from 'react';
 import { mmToCm } from '@abilar/shared';
 import type { DesignState } from '@abilar/ai-vision';
 import { decideDesignProposal } from '@/lib/design/actions';
-import { Card, Button, Badge } from '@/components/ui';
+import { Card, Button, Badge, PhotoButton } from '@/components/ui';
 
 export type ClientProposal = {
   id: string;
@@ -36,8 +36,7 @@ export function ProposalsForClient({ projectId, proposals }: { projectId: string
           <li key={p.id}>
             <Card pad="sm" className="flex flex-col gap-3 sm:flex-row">
               {p.previewUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={p.previewUrl} alt="Prévia da sugestão" className="h-32 w-full rounded-md object-cover sm:w-44" />
+                <PhotoButton url={p.previewUrl} alt="Prévia da sugestão" className="h-32 w-full rounded-md sm:w-44" />
               )}
               <div className="flex min-w-0 flex-1 flex-col gap-2">
                 <div className="flex items-center gap-2">

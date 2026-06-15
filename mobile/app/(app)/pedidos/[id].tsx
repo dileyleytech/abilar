@@ -344,6 +344,11 @@ export default function PedidoDetail() {
                   <Text style={{ fontSize: 15, fontWeight: '600', color: color.text.primary }}>Sugestão</Text>
                   {p.status === 'PENDING' ? <Badge label="Aguardando você" tone="warn" /> : <Badge label={p.status === 'APPROVED' ? 'Aprovada' : 'Recusada'} tone={p.status === 'APPROVED' ? 'success' : 'neutral'} />}
                 </View>
+                {p.previewUrl ? (
+                  <Pressable onPress={() => setLightbox(p.previewUrl)}>
+                    <Image source={{ uri: p.previewUrl }} style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: radius.md, backgroundColor: color.bg.deep }} contentFit="cover" />
+                  </Pressable>
+                ) : null}
                 {p.note ? <Text style={{ color: color.text.muted, fontSize: 13 }}>{`“${p.note}”`}</Text> : null}
                 <Text style={{ color: color.text.muted, fontSize: 13 }}>{p.state.modules.map((m) => `${m.widthMm / 10}×${m.heightMm / 10}×${m.depthMm / 10} cm`).join(' · ')}</Text>
                 {p.status === 'PENDING' && (

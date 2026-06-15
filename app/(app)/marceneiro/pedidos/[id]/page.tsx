@@ -15,6 +15,7 @@ import { ObraBoard } from '@/components/ObraBoard';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
 import { IconVoltar, IconLocal, IconConversas, IconContrato, IconImprimir, IconAvulsos, IconAbi } from '@/components/ui/icons';
 import { StatusBadge } from '@/components/StatusBadge';
+import { PhotoButton } from '@/components/ui';
 import { backFrom } from '@/lib/nav';
 import { QuoteForm, type QuoteInitial, type MaterialOption } from './_components/QuoteForm';
 
@@ -170,10 +171,7 @@ export default async function CarpenterPedidoPage({
                       <IconAvulsos size={20} aria-hidden /> PDF
                     </a>
                   ) : (
-                    <a key={p.id} href={p.url} target="_blank" rel="noreferrer" title="Abrir foto" className="block aspect-square overflow-hidden rounded-xl border border-subtle">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.url} alt="Foto do pedido" className="h-full w-full object-cover transition hover:opacity-90" />
-                    </a>
+                    <PhotoButton key={p.id} url={p.url} alt="Foto do pedido" className="aspect-square rounded-xl border border-subtle" />
                   )
                 ) : null,
               )}
@@ -190,10 +188,7 @@ export default async function CarpenterPedidoPage({
                     return (
                       <div key={m.id} className="flex gap-3 rounded-xl border border-subtle p-3">
                         {url ? (
-                          <a href={url} target="_blank" rel="noreferrer" title="Abrir foto" className="flex h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-deep">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={url} alt={m.label ?? m.type} className="h-full w-full object-cover transition hover:opacity-90" />
-                          </a>
+                          <PhotoButton url={url} alt={m.label ?? m.type} className="h-16 w-16 shrink-0 rounded-lg bg-deep" />
                         ) : (
                           <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-deep text-2xl">
                             <span aria-hidden>{CATEGORY_EMOJI[m.type as Category] ?? '🪵'}</span>

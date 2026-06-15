@@ -12,6 +12,7 @@ import {
   bytesToBase64,
   checkRegenLimit,
   DEFAULT_REGEN_LIMIT,
+  type DesignState,
 } from '@abilar/ai-vision';
 import type { WorkType } from '@abilar/shared';
 import { getDb } from '@/lib/db';
@@ -94,27 +95,35 @@ async function nextVersion(projectId: string): Promise<number> {
   return (row?.v ?? 0) + 1;
 }
 
+/** Renderiza a imagem (grounded na foto do cliente quando há) a partir de um prompt. */
+async function renderImage(
+  projectId: string,
+  primaryModuleId: string,
+  basePrompt: string,
+): Promise<{ imageBase64: string; mimeType: string } | { error: string }> {
+  const provider = resolveImageProvider({ GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_IMAGE_MODEL: process.env.GEMINI_IMAGE_MODEL });
+  if (provider.name === 'echo') return { error: 'Geração de imagem indisponível (configure a GEMINI_API_KEY).' };
+
+  const basePath = await pickBasePhotoPath(projectId, primaryModuleId);
+  const base = basePath ? await downloadBase(basePath) : null;
+  const prompt = base
+    ? `Edit the attached photo of the wall/room. ${basePrompt} Place the furniture on the wall shown in the photo.`
+    : basePrompt;
+  try {
+    const r = await provider.editImage({ prompt, imageBase64: base?.base64, mimeType: base?.mimeType });
+    return { imageBase64: r.imageBase64, mimeType: r.mimeType };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Não foi possível gerar a prévia agora.' };
+  }
+}
+
 /** Gera a prévia SINCRONAMENTE (caminho local) e guarda. */
 export async function generatePreview(projectId: string): Promise<Result<PreviewResult>> {
   const built = await buildPrompt(projectId);
   if (!built) return { ok: false, error: 'Adicione um móvel ao pedido antes de gerar a prévia.' };
 
-  const provider = resolveImageProvider({ GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_IMAGE_MODEL: process.env.GEMINI_IMAGE_MODEL });
-  if (provider.name === 'echo') return { ok: false, error: 'Geração de imagem indisponível (configure a GEMINI_API_KEY).' };
-
-  // Edita a FOTO real do cliente (preserva parede/perspectiva, §8.5) quando há base.
-  const basePath = await pickBasePhotoPath(projectId, built.primaryModuleId);
-  const base = basePath ? await downloadBase(basePath) : null;
-  const prompt = base
-    ? `Edit the attached photo of the wall/room. ${built.prompt} Place the furniture on the wall shown in the photo.`
-    : built.prompt;
-
-  let result;
-  try {
-    result = await provider.editImage({ prompt, imageBase64: base?.base64, mimeType: base?.mimeType });
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Não foi possível gerar a prévia agora.' };
-  }
+  const result = await renderImage(projectId, built.primaryModuleId, built.prompt);
+  if ('error' in result) return { ok: false, error: result.error };
 
   const version = await nextVersion(projectId);
   const path = `${projectId}/generated/v${version}.png`;
@@ -158,4 +167,19 @@ export async function currentPreviewUrl(projectId: string): Promise<string | nul
     .limit(1);
   if (!row) return null;
   return resolveImageStore(getBindings() ?? undefined).signedUrl(row.path);
+}
+
+/** Prévia do RASCUNHO da proposta do marceneiro (estado em edição, não persistido).
+ *  Gera a partir do estado fornecido e guarda num caminho de rascunho por marceneiro. */
+export async function proposalDraftPreview(projectId: string, carpenterId: string, state: DesignState): Promise<Result<{ url: string | null }>> {
+  const primary = pickPrimaryModule(state);
+  if (!primary) return { ok: false, error: 'Adicione um móvel antes de gerar a prévia.' };
+  const { prompt } = buildImagePrompt(primary, { roomType: ROOM_TYPE[primary.type] });
+  const result = await renderImage(projectId, primary.id, prompt);
+  if ('error' in result) return { ok: false, error: result.error };
+
+  const path = `${projectId}/proposals/draft-${carpenterId}.png`;
+  const store = resolveImageStore(getBindings() ?? undefined);
+  await store.put(path, base64ToBytes(result.imageBase64), result.mimeType);
+  return { ok: true, data: { url: await store.signedUrl(path) } };
 }

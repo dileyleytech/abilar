@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { mmToCm, type Category } from '@abilar/shared';
 import type { DesignState, DesignModule, Hardware } from '@abilar/ai-vision';
 import { designTurn, restoreDesign, requestDesignPreview } from '@/lib/design/actions';
-import { Card, Button, Badge, inputClass } from '@/components/ui';
+import { Card, Button, Badge, inputClass, PhotoButton } from '@/components/ui';
 import { IconEnviar, IconVoltar, IconAbi, IconObra, IconFoto } from '@/components/ui/icons';
 
 type Msg = { role: 'USER' | 'ABI'; text: string };
@@ -104,8 +104,7 @@ export function DesignChat({ projectId, initialState, initialPreviewUrl }: { pro
           <div className="flex aspect-[4/3] items-center justify-center rounded-md bg-deep text-small text-muted">Gerando sua prévia…</div>
         ) : previewUrl ? (
           <div className="relative overflow-hidden rounded-md">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={previewUrl} alt="Prévia gerada pela ABI" className="w-full" />
+            <PhotoButton url={previewUrl} alt="Prévia gerada pela ABI" className="w-full" imgClassName="object-contain" />
             {/* Overlay de cotas (§8.3) — a verdade são as medidas, não a imagem. */}
             <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-center gap-1.5 bg-charcoal/65 px-2 py-1.5">
               <span className="text-caption font-medium text-white/70">Medidas reais (L×A×P):</span>

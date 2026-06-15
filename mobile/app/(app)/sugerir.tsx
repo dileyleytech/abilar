@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { api, type DesignStateView, type DesignModuleView } from '@/lib/api';
 import { Badge, Button, Card, Loading } from '@/components/ui';
-import { IconEnviar, IconAbi } from '@/components/icons';
+import { Lightbox } from '@/components/Lightbox';
+import { IconEnviar, IconAbi, IconFoto } from '@/components/icons';
 import { color, radius, space } from '@/theme';
 
 type Msg = { role: 'USER' | 'ABI'; text: string };
@@ -23,7 +25,23 @@ export default function SugerirScreen() {
   const [text, setText] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const scroller = useRef<ScrollView>(null);
+
+  const regen = async (st: DesignStateView, announce: boolean) => {
+    if (generating || !projectId) return;
+    setGenerating(true);
+    if (announce) say({ role: 'ABI', text: 'Gerando uma prévia do que você ajustou…' });
+    try {
+      const r = await api.proposalPreview(projectId, st);
+      if (r.url) setPreviewUrl(r.url);
+      say({ role: 'ABI', text: announce ? 'Prévia pronta — ajuste e envie ao cliente.' : 'Atualizei a prévia. 🎨' });
+    } catch (e) {
+      say({ role: 'ABI', text: e instanceof Error ? e.message : 'Não consegui gerar a prévia.' });
+    } finally { setGenerating(false); }
+  };
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -42,8 +60,12 @@ export default function SugerirScreen() {
     setBusy(true);
     try {
       const r = await api.proposalTurn(projectId, state, u);
-      if (r.command.intent !== 'ASK_HELP' && r.command.intent !== 'UNDO') setState(r.state);
+      const changed = r.command.intent !== 'ASK_HELP' && r.command.intent !== 'UNDO';
+      if (changed) setState(r.state);
       say({ role: 'ABI', text: r.message });
+      setBusy(false);
+      if (changed && previewUrl) await regen(r.state, false);
+      return;
     } catch (e) {
       say({ role: 'ABI', text: e instanceof Error ? e.message : 'Não consegui entender agora.' });
     } finally { setBusy(false); }
@@ -69,6 +91,20 @@ export default function SugerirScreen() {
       <Stack.Screen options={{ title: 'Sugerir mudança' }} />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView ref={scroller} style={styles.flex} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+          <Card style={{ gap: 8 }}>
+            <View style={styles.previewHead}>
+              <Text style={styles.summaryTitle}>Prévia da proposta</Text>
+              <Button title={previewUrl ? 'Atualizar' : 'Gerar prévia'} variant="outline" icon={(p) => <IconFoto {...p} />} onPress={() => regen(state, true)} loading={generating} />
+            </View>
+            {generating ? (
+              <View style={styles.previewPlaceholder}><Text style={styles.muted}>Gerando prévia…</Text></View>
+            ) : previewUrl ? (
+              <Pressable onPress={() => setLightbox(previewUrl)}><Image source={{ uri: previewUrl }} style={styles.previewImg} contentFit="cover" /></Pressable>
+            ) : (
+              <Text style={styles.muted}>Gere uma prévia pra ver como fica e ir ajustando antes de enviar ao cliente.</Text>
+            )}
+          </Card>
+
           <Card style={{ gap: 6 }}>
             <Text style={styles.summaryTitle}>Projeto proposto</Text>
             {state.modules.map((m: DesignModuleView) => (
@@ -104,6 +140,7 @@ export default function SugerirScreen() {
           <Pressable onPress={() => send(text)} disabled={busy || !text.trim()} style={[styles.sendBtn, (busy || !text.trim()) && styles.sendDisabled]} accessibilityLabel="Enviar"><IconEnviar size={20} color={color.text.onDark} /></Pressable>
         </View>
       </KeyboardAvoidingView>
+      <Lightbox url={lightbox} onClose={() => setLightbox(null)} />
     </>
   );
 }
@@ -111,6 +148,10 @@ export default function SugerirScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: color.bg.base },
   body: { padding: space.lg, gap: space.md },
+  previewHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  previewImg: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.md, backgroundColor: color.bg.deep },
+  previewPlaceholder: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.md, backgroundColor: color.bg.deep, alignItems: 'center', justifyContent: 'center' },
+  muted: { color: color.text.muted, fontSize: 13 },
   summaryTitle: { fontSize: 13, fontWeight: '600', color: color.text.muted },
   modRow: { gap: 4 },
   modTitle: { fontSize: 15, fontWeight: '600', color: color.text.primary },
