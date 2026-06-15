@@ -10,6 +10,8 @@ import {
   seedFromModules,
   previewJobSchema,
   bytesToBase64,
+  checkRegenLimit,
+  DEFAULT_REGEN_LIMIT,
 } from '@abilar/ai-vision';
 import type { WorkType } from '@abilar/shared';
 import { getDb } from '@/lib/db';
@@ -66,6 +68,22 @@ async function downloadBase(path: string): Promise<{ base64: string; mimeType: s
   return { base64: bytesToBase64(bytes), mimeType };
 }
 
+/** Limite de regenerações por projeto (custo, §8.7). Config por env, default seguro. */
+function previewLimit(): number {
+  const n = Number(process.env.GEMINI_PREVIEW_LIMIT);
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_REGEN_LIMIT;
+}
+
+/** Quantas prévias já foram geradas (cada uma é uma versão GENERATED). */
+async function regenUsed(projectId: string): Promise<number> {
+  const db = getDb();
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(projectPhotos)
+    .where(and(eq(projectPhotos.projectId, projectId), eq(projectPhotos.kind, 'GENERATED')));
+  return row?.n ?? 0;
+}
+
 /** Próxima versão da prévia (GENERATED) do projeto. */
 async function nextVersion(projectId: string): Promise<number> {
   const db = getDb();
@@ -113,6 +131,10 @@ export async function generatePreview(projectId: string): Promise<Result<Preview
 
 /** Decide o caminho: enfileira (produção) ou gera já (local). */
 export async function requestPreview(projectId: string): Promise<Result<PreviewResult>> {
+  // Guardrail de custo (§8.7): limite de regenerações por projeto.
+  const limit = checkRegenLimit(await regenUsed(projectId), previewLimit());
+  if (!limit.allowed) return { ok: false, error: limit.message ?? 'Você atingiu o limite de prévias.' };
+
   const bindings = getBindings();
   if (bindings?.JOBS) {
     const built = await buildPrompt(projectId);
