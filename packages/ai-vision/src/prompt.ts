@@ -49,7 +49,10 @@ export type PromptContext = { roomType?: string; workType?: WorkType };
 /** Monta o prompt de edição de imagem a partir do estado (sem medidas). */
 export function buildImagePrompt(module: DesignModule, ctx: PromptContext = {}): { prompt: string } {
   const room = ctx.roomType?.trim() || 'a Brazilian residential room';
-  const unit = MODULE_LABEL[module.type] ?? MODULE_LABEL.OUTRO;
+  // O rótulo do cliente (ex.: "Sapateira") manda — sobretudo quando type=OUTRO.
+  const generic = MODULE_LABEL[module.type] ?? MODULE_LABEL.OUTRO;
+  const label = module.label?.trim();
+  const unit = label ? (module.type === 'OUTRO' ? label : `${label} (${generic})`) : generic;
 
   const specs: string[] = [];
   if (module.material) specs.push(`made of ${module.material}`);

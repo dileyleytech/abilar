@@ -11,6 +11,7 @@ export function toSeed(rows: ModuleRow[]): SeedModule[] {
     return {
       id: r.id,
       type: r.type as SeedModule['type'],
+      label: r.label,
       widthMm: r.widthMm,
       heightMm: r.heightMm,
       depthMm: r.depthMm,

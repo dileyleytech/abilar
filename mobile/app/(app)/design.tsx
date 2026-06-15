@@ -159,7 +159,7 @@ export default function DesignScreen() {
 function ModuleRow({ m }: { m: DesignModuleView }) {
   return (
     <View style={styles.modRow}>
-      <Text style={styles.modTitle}>{TYPE_LABEL[m.type] ?? m.type}</Text>
+      <Text style={styles.modTitle}>{m.label?.trim() || TYPE_LABEL[m.type] || m.type}</Text>
       <Text style={styles.modDims}>{`${cm(m.widthMm)}×${cm(m.heightMm)}×${cm(m.depthMm)} cm`}</Text>
       <View style={styles.badges}>
         {m.finish ? <Badge label={m.finish} tone="primary" /> : null}

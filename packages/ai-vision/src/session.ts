@@ -23,6 +23,7 @@ export type DesignSession = {
 export type SeedModule = {
   id: string;
   type: Category;
+  label?: string | null;
   widthMm: number;
   heightMm: number;
   depthMm: number;
@@ -40,6 +41,7 @@ export function seedFromModules(modules: SeedModule[]): DesignSession {
       modules: modules.map((m) => ({
         id: m.id,
         type: m.type,
+        label: m.label ?? undefined,
         widthMm: m.widthMm,
         heightMm: m.heightMm,
         depthMm: m.depthMm,

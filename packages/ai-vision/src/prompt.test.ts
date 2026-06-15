@@ -50,6 +50,13 @@ describe('buildImagePrompt — §8.5 (a imagem é ilustrativa; medidas NÃO entr
     expect(troca).toMatch(/replace/);
   });
 
+  it('usa o RÓTULO do cliente no prompt (ex.: "Sapateira" em type OUTRO)', () => {
+    const sapateira: DesignModule = { ...mod, type: 'OUTRO', label: 'Sapateira' };
+    const { prompt } = buildImagePrompt(sapateira, { roomType: 'hall' });
+    expect(prompt).toContain('Sapateira');
+    expect(prompt).not.toMatch(/TV panel/i);
+  });
+
   it('editScope: cor/material/ferragem = local (inpainting); layout = global', () => {
     expect(editScope(parseDesignCommand({ intent: 'CHANGE_FINISH' }))).toBe('local');
     expect(editScope(parseDesignCommand({ intent: 'CHANGE_MATERIAL' }))).toBe('local');

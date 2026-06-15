@@ -34,6 +34,8 @@ export default {
         if (msg.body?.type !== 'IMAGE_PREVIEW') { msg.ack(); continue; }
         const job = previewJobSchema.parse(msg.body.job);
 
+        // TODO(deploy): se job.baseImagePath, ler os bytes do R2 (env.MEDIA.get) e
+        // passar como imageBase64 (igual ao caminho local) para editar a foto real.
         const result = await provider.editImage({ prompt: job.prompt });
         const path = `${job.projectId}/generated/${Date.now()}.png`;
         await env.MEDIA.put(path, base64ToBytes(result.imageBase64), { httpMetadata: { contentType: result.mimeType } });
