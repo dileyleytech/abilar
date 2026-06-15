@@ -11,7 +11,7 @@ import {
   type MilestoneRow,
   type ProjectRow,
 } from '@/lib/data';
-import { api, type QuoteView } from '@/lib/api';
+import { api, type QuoteView, type ProposalView } from '@/lib/api';
 import { QuoteForm } from '@/components/QuoteForm';
 import { ModulesSection } from '@/components/ModulesSection';
 import { Lightbox } from '@/components/Lightbox';
@@ -46,6 +46,7 @@ export default function PedidoDetail() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [concluding, setConcluding] = useState<MilestoneRow | null>(null);
   const [quoteForm, setQuoteForm] = useState(false);
+  const [proposals, setProposals] = useState<ProposalView[]>([]);
   const [renaming, setRenaming] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const [savingTitle, setSavingTitle] = useState(false);
@@ -115,6 +116,8 @@ export default function PedidoDetail() {
     } else {
       setQuotes([]);
     }
+
+    void api.listProposals(id).then((r) => setProposals(r.proposals)).catch(() => setProposals([]));
   }, [id, loadEvidences]);
 
   useFocusEffect(
@@ -320,6 +323,39 @@ export default function PedidoDetail() {
             icon={(p) => <IconAbi {...p} />}
             onPress={() => router.push({ pathname: '/(app)/design', params: { projectId: id } })}
           />
+        )}
+
+        {/* Marceneiro: sugerir mudança no projeto (§8.6) */}
+        {isCarpenter && quotes.length > 0 && (
+          <Button
+            title="Sugerir mudança no projeto"
+            variant="outline"
+            icon={(p) => <IconAbi {...p} />}
+            onPress={() => router.push({ pathname: '/(app)/sugerir', params: { projectId: id } })}
+          />
+        )}
+
+        {/* Cliente: sugestões do marceneiro para aprovar */}
+        {isClient && proposals.some((p) => p.type === 'SUGGESTION') && (
+          <View style={{ gap: space.sm }}>
+            <Text style={styles.section}>Sugestões do marceneiro</Text>
+            {proposals.filter((p) => p.type === 'SUGGESTION').map((p) => (
+              <Card key={p.id} style={{ gap: space.sm }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '600', color: color.text.primary }}>Sugestão</Text>
+                  {p.status === 'PENDING' ? <Badge label="Aguardando você" tone="warn" /> : <Badge label={p.status === 'APPROVED' ? 'Aprovada' : 'Recusada'} tone={p.status === 'APPROVED' ? 'success' : 'neutral'} />}
+                </View>
+                {p.note ? <Text style={{ color: color.text.muted, fontSize: 13 }}>{`“${p.note}”`}</Text> : null}
+                <Text style={{ color: color.text.muted, fontSize: 13 }}>{p.state.modules.map((m) => `${m.widthMm / 10}×${m.heightMm / 10}×${m.depthMm / 10} cm`).join(' · ')}</Text>
+                {p.status === 'PENDING' && (
+                  <View style={{ flexDirection: 'row', gap: space.sm }}>
+                    <Button title="Aprovar e aplicar" onPress={() => act(() => api.decideProposal(id, p.id, 'APPROVED').then(() => {}), p.id)} loading={busyId === p.id} />
+                    <Button title="Recusar" variant="outline" onPress={() => act(() => api.decideProposal(id, p.id, 'REJECTED').then(() => {}), p.id)} loading={busyId === p.id} />
+                  </View>
+                )}
+              </Card>
+            ))}
+          </View>
         )}
 
         {milestones.length > 0 ? (
