@@ -9,12 +9,13 @@ import {
   pickPrimaryModule,
   seedFromModules,
   previewJobSchema,
-  type SeedModule,
+  bytesToBase64,
 } from '@abilar/ai-vision';
 import type { WorkType } from '@abilar/shared';
 import { getDb } from '@/lib/db';
 import { resolveImageStore, base64ToBytes } from '@/lib/ai/image-store';
 import { getBindings } from '@/lib/ai/cf-env';
+import { signedProjectPhotoUrl } from '@/lib/storage';
 import { toSeed } from './queries';
 
 type Result<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -26,8 +27,8 @@ const ROOM_TYPE: Record<string, string> = {
   ESTANTE: 'a living room', OUTRO: 'a Brazilian residential room',
 };
 
-/** Monta o prompt da prévia a partir do estado atual (módulo principal). */
-async function buildPrompt(projectId: string): Promise<{ prompt: string; workType: WorkType | null } | null> {
+/** Monta o prompt da prévia + identifica o módulo principal. */
+async function buildPrompt(projectId: string): Promise<{ prompt: string; primaryModuleId: string } | null> {
   const db = getDb();
   const rows = await db.select().from(modules).where(eq(modules.projectId, projectId));
   if (rows.length === 0) return null;
@@ -36,7 +37,33 @@ async function buildPrompt(projectId: string): Promise<{ prompt: string; workTyp
   if (!primary) return null;
   const workType = (rows.find((r) => r.id === primary.id)?.workType ?? null) as WorkType | null;
   const { prompt } = buildImagePrompt(primary, { roomType: ROOM_TYPE[primary.type], workType: workType ?? undefined });
-  return { prompt, workType };
+  return { prompt, primaryModuleId: primary.id };
+}
+
+/** Caminho da foto base (a parede enviada pelo cliente): preferir a do módulo. */
+async function pickBasePhotoPath(projectId: string, moduleId: string): Promise<string | null> {
+  const db = getDb();
+  const rows = await db
+    .select({ moduleId: projectPhotos.moduleId, kind: projectPhotos.kind, path: projectPhotos.path })
+    .from(projectPhotos)
+    .where(and(eq(projectPhotos.projectId, projectId), eq(projectPhotos.isCurrent, true)));
+  const usable = rows.filter((r) => r.kind !== 'GENERATED');
+  const pick =
+    usable.find((r) => r.moduleId === moduleId) ??
+    usable.find((r) => r.kind === 'ORIGINAL_ROOM') ??
+    usable[0];
+  return pick?.path ?? null;
+}
+
+/** Baixa a foto base do storage e devolve em base64 (para edição inline). */
+async function downloadBase(path: string): Promise<{ base64: string; mimeType: string } | null> {
+  const url = await signedProjectPhotoUrl(path);
+  if (!url) return null;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  const mimeType = res.headers.get('content-type') || (path.endsWith('.png') ? 'image/png' : 'image/jpeg');
+  return { base64: bytesToBase64(bytes), mimeType };
 }
 
 /** Próxima versão da prévia (GENERATED) do projeto. */
@@ -57,9 +84,16 @@ export async function generatePreview(projectId: string): Promise<Result<Preview
   const provider = resolveImageProvider({ GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_IMAGE_MODEL: process.env.GEMINI_IMAGE_MODEL });
   if (provider.name === 'echo') return { ok: false, error: 'Geração de imagem indisponível (configure a GEMINI_API_KEY).' };
 
+  // Edita a FOTO real do cliente (preserva parede/perspectiva, §8.5) quando há base.
+  const basePath = await pickBasePhotoPath(projectId, built.primaryModuleId);
+  const base = basePath ? await downloadBase(basePath) : null;
+  const prompt = base
+    ? `Edit the attached photo of the wall/room. ${built.prompt} Place the furniture on the wall shown in the photo.`
+    : built.prompt;
+
   let result;
   try {
-    result = await provider.editImage({ prompt: built.prompt });
+    result = await provider.editImage({ prompt, imageBase64: base?.base64, mimeType: base?.mimeType });
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Não foi possível gerar a prévia agora.' };
   }
@@ -83,7 +117,8 @@ export async function requestPreview(projectId: string): Promise<Result<PreviewR
   if (bindings?.JOBS) {
     const built = await buildPrompt(projectId);
     if (!built) return { ok: false, error: 'Adicione um móvel ao pedido antes de gerar a prévia.' };
-    const job = previewJobSchema.parse({ projectId, prompt: built.prompt, baseImagePath: null });
+    const baseImagePath = await pickBasePhotoPath(projectId, built.primaryModuleId);
+    const job = previewJobSchema.parse({ projectId, prompt: built.prompt, baseImagePath });
     await bindings.JOBS.send({ type: 'IMAGE_PREVIEW', job });
     return { ok: true, data: { queued: true } };
   }

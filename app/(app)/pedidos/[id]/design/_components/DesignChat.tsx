@@ -175,7 +175,7 @@ function ModuleSummary({ m }: { m: DesignModule }) {
   const dims = `${mmToCm(m.widthMm)}×${mmToCm(m.heightMm)}×${mmToCm(m.depthMm)} cm`;
   return (
     <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
-      <strong className="font-semibold">{TYPE_LABEL[m.type] ?? m.type}</strong>
+      <strong className="font-semibold">{m.label?.trim() || TYPE_LABEL[m.type] || m.type}</strong>
       <span className="text-muted">{dims}</span>
       {m.finish && <Badge tone="primary">{m.finish}</Badge>}
       {m.material && <Badge tone="neutral">{m.material}</Badge>}

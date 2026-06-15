@@ -12,6 +12,8 @@ export type DesignItem = { type: ItemType; qty: number; position?: ItemPosition 
 export type DesignModule = {
   id: string;
   type: Category;
+  /** Rótulo dado pelo cliente (ex.: "Sapateira") — usado no prompt quando type=OUTRO. */
+  label?: string;
   widthMm: number;
   heightMm: number;
   depthMm: number;

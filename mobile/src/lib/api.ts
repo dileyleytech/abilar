@@ -164,6 +164,7 @@ export type DesignItemView = { type: string; qty: number; position?: string };
 export type DesignModuleView = {
   id: string;
   type: string;
+  label?: string;
   widthMm: number;
   heightMm: number;
   depthMm: number;
