@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { mmToCm, type Category } from '@abilar/shared';
 import type { DesignState, DesignModule, Hardware } from '@abilar/ai-vision';
-import { designTurn, restoreDesign } from '@/lib/design/actions';
+import { designTurn, restoreDesign, requestDesignPreview } from '@/lib/design/actions';
 import { Card, Button, Badge, inputClass } from '@/components/ui';
-import { IconEnviar, IconVoltar, IconAbi, IconObra } from '@/components/ui/icons';
+import { IconEnviar, IconVoltar, IconAbi, IconObra, IconFoto } from '@/components/ui/icons';
 
 type Msg = { role: 'USER' | 'ABI'; text: string };
 
@@ -25,8 +25,10 @@ const EXAMPLES = [
   'Fita de LED nas prateleiras',
 ];
 
-export function DesignChat({ projectId, initialState }: { projectId: string; initialState: DesignState }) {
+export function DesignChat({ projectId, initialState, initialPreviewUrl }: { projectId: string; initialState: DesignState; initialPreviewUrl?: string | null }) {
   const [state, setState] = useState<DesignState>(initialState);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(initialPreviewUrl ?? null);
+  const [generating, setGenerating] = useState(false);
   const [history, setHistory] = useState<DesignState[]>([]);
   const [messages, setMessages] = useState<Msg[]>([
     { role: 'ABI', text: 'Oi, eu sou a ABI 👋 Me diga o que quer mudar no seu móvel — a cor, o tamanho, ou adicionar gavetas, por exemplo.' },
@@ -70,8 +72,40 @@ export function DesignChat({ projectId, initialState }: { projectId: string; ini
     });
   };
 
+  const generate = () => {
+    if (generating) return;
+    setGenerating(true);
+    say({ role: 'ABI', text: 'Beleza! Vou gerar uma prévia do seu móvel — leva alguns segundos.' });
+    start(async () => {
+      const r = await requestDesignPreview(projectId);
+      setGenerating(false);
+      if (!r.ok) { say({ role: 'ABI', text: r.error }); return; }
+      if (r.data.queued) { say({ role: 'ABI', text: 'Estou gerando sua prévia — ela aparece aqui em instantes.' }); return; }
+      if (r.data.url) setPreviewUrl(r.data.url);
+      say({ role: 'ABI', text: 'Prontinho! Sua prévia está aí em cima. 🎨' });
+    });
+  };
+
   return (
     <div className="flex flex-col gap-4">
+      {/* Prévia gerada pela ABI */}
+      <Card pad="sm">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-small font-semibold text-muted">Prévia da ABI</p>
+          <Button variant="outline" size="sm" onClick={generate} disabled={generating}>
+            <IconFoto size={16} aria-hidden /> {previewUrl ? 'Atualizar prévia' : 'Gerar prévia'}
+          </Button>
+        </div>
+        {generating ? (
+          <div className="flex aspect-[4/3] items-center justify-center rounded-md bg-deep text-small text-muted">Gerando sua prévia…</div>
+        ) : previewUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={previewUrl} alt="Prévia gerada pela ABI" className="w-full rounded-md" />
+        ) : (
+          <p className="text-small text-muted">Gere uma imagem ilustrativa do seu móvel a partir do que você descreveu. A imagem é só ilustrativa — as medidas reais ficam no pedido.</p>
+        )}
+      </Card>
+
       {/* Estado atual do projeto (módulos = fonte de verdade) */}
       <Card pad="sm">
         <p className="mb-2 text-small font-semibold text-muted">Como está o projeto</p>

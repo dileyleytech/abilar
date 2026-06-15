@@ -16,6 +16,7 @@ export default tseslint.config(
       'next-env.d.ts',
       'cloudflare-env.d.ts',
       'mobile/**',
+      'workers/**',
     ],
   },
   js.configs.recommended,

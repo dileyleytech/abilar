@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { api, type DesignStateView, type DesignModuleView } from '@/lib/api';
 import { Badge, Button, Card, Loading } from '@/components/ui';
-import { IconAbi, IconEnviar, IconVoltar } from '@/components/icons';
+import { IconAbi, IconEnviar, IconVoltar, IconFoto } from '@/components/icons';
 import { color, radius, space } from '@/theme';
 
 type Msg = { role: 'USER' | 'ABI'; text: string };
@@ -19,6 +20,8 @@ const cm = (mm: number) => mm / 10;
 export default function DesignScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
   const [state, setState] = useState<DesignStateView | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
   const [history, setHistory] = useState<DesignStateView[]>([]);
   const [messages, setMessages] = useState<Msg[]>([
     { role: 'ABI', text: 'Oi, eu sou a ABI 👋 Me diga o que quer mudar no seu móvel — a cor, o tamanho, ou adicionar gavetas.' },
@@ -29,8 +32,21 @@ export default function DesignScreen() {
 
   const load = useCallback(async () => {
     if (!projectId) return;
-    try { const r = await api.getDesignState(projectId); setState(r.state); } catch { setState({ modules: [] }); }
+    try { const r = await api.getDesignState(projectId); setState(r.state); setPreviewUrl(r.previewUrl); } catch { setState({ modules: [] }); }
   }, [projectId]);
+
+  const generate = async () => {
+    if (generating || !projectId) return;
+    setGenerating(true);
+    say({ role: 'ABI', text: 'Beleza! Vou gerar uma prévia do seu móvel — leva alguns segundos.' });
+    try {
+      const r = await api.designPreview(projectId);
+      if (r.queued) { say({ role: 'ABI', text: 'Estou gerando sua prévia — ela aparece aqui em instantes.' }); }
+      else { if (r.url) setPreviewUrl(r.url); say({ role: 'ABI', text: 'Prontinho! Sua prévia está aí em cima. 🎨' }); }
+    } catch (e) {
+      say({ role: 'ABI', text: e instanceof Error ? e.message : 'Não consegui gerar a prévia agora.' });
+    } finally { setGenerating(false); }
+  };
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { scroller.current?.scrollToEnd({ animated: true }); }, [messages]);
 
@@ -75,6 +91,20 @@ export default function DesignScreen() {
       <Stack.Screen options={{ title: 'Conversar com a ABI' }} />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView ref={scroller} style={styles.flex} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+          <Card style={{ gap: 8 }}>
+            <View style={styles.previewHead}>
+              <Text style={styles.summaryTitle}>Prévia da ABI</Text>
+              <Button title={previewUrl ? 'Atualizar' : 'Gerar prévia'} variant="outline" icon={(p) => <IconFoto {...p} />} onPress={generate} loading={generating} />
+            </View>
+            {generating ? (
+              <View style={styles.previewPlaceholder}><Text style={styles.muted}>Gerando sua prévia…</Text></View>
+            ) : previewUrl ? (
+              <Image source={{ uri: previewUrl }} style={styles.previewImg} contentFit="cover" />
+            ) : (
+              <Text style={styles.muted}>Gere uma imagem ilustrativa do seu móvel. A imagem é só ilustrativa — as medidas reais ficam no pedido.</Text>
+            )}
+          </Card>
+
           <Card style={{ gap: 6 }}>
             <Text style={styles.summaryTitle}>Como está o projeto</Text>
             {state.modules.map((m) => <ModuleRow key={m.id} m={m} />)}
@@ -146,6 +176,10 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: color.bg.base },
   body: { padding: space.lg, gap: space.md },
   summaryTitle: { fontSize: 13, fontWeight: '600', color: color.text.muted },
+  previewHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  previewImg: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.md, backgroundColor: color.bg.deep },
+  previewPlaceholder: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.md, backgroundColor: color.bg.deep, alignItems: 'center', justifyContent: 'center' },
+  muted: { color: color.text.muted, fontSize: 13 },
   modRow: { gap: 4 },
   modTitle: { fontSize: 15, fontWeight: '600', color: color.text.primary },
   modDims: { fontSize: 13, color: color.text.muted },
