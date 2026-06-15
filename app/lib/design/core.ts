@@ -68,6 +68,21 @@ export async function runDesignTurn(projectId: string, utterance: unknown): Prom
   return { ok: true, data: { command, state: result.state, message: result.message || command.echo } };
 }
 
+/** Interpreta uma fala sobre um estado FORNECIDO, sem carregar nem persistir nada.
+ *  Usado pelo marceneiro ao editar uma CÓPIA do projeto (proposta). Sem auth. */
+export async function runTurnOnState(state: DesignState, utterance: unknown): Promise<Result<DesignTurn>> {
+  const text = typeof utterance === 'string' ? utterance.trim().slice(0, 500) : '';
+  if (!text) return { ok: false, error: 'Diga o que você quer mudar.' };
+  if (!state?.modules?.length) return { ok: false, error: 'Sem móveis para editar.' };
+
+  const provider = resolveNluProvider({ GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_NLU_MODEL: process.env.GEMINI_NLU_MODEL });
+  const command = await provider.interpret({ utterance: text, moduleIds: state.modules.map((m) => m.id) });
+  if (command.intent === 'UNDO') return { ok: true, data: { command, state, message: 'Para voltar, use o botão Desfazer.' } };
+
+  const result = applyCommand(state, command);
+  return { ok: true, data: { command, state: result.state, message: result.message || command.echo } };
+}
+
 /** Restaura um snapshot anterior (UNDO). Valida cada módulo contra o projeto. Sem auth. */
 export async function restoreDesignState(projectId: string, snapshot: unknown): Promise<Result<DesignState>> {
   const snap = snapshot as DesignState | null;
