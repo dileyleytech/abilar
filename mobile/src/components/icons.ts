@@ -44,6 +44,7 @@ export {
   Clock as IconAguardando,
   Lock as IconBloqueado,
   ShieldCheck as IconSeguro,
+  Sparkles as IconAbi,
   Hammer as IconObra,
   HardHat as IconConstrucao,
   Ruler as IconMedidas,

@@ -19,7 +19,7 @@ import { milestoneStatusLabel, PROJECT_STATUS_LABEL } from '@/lib/types';
 import { formatCents, formatDateTime } from '@/lib/format';
 import { Badge, Button, Card, Loading } from '@/components/ui';
 import { EvidenceForm } from '@/components/EvidenceForm';
-import { IconEditar, IconDinheiro, IconConcluido } from '@/components/icons';
+import { IconEditar, IconDinheiro, IconConcluido, IconAbi } from '@/components/icons';
 import { color, radius, space } from '@/theme';
 
 type EvidenceView = { id: string; comment: string | null; urls: string[]; date: string };
@@ -311,6 +311,15 @@ export default function PedidoDetail() {
 
         {milestones.length === 0 && id && (
           <ModulesSection projectId={id} status={project.status} isOwner={isClient} onPublished={() => void load()} autoOpen={novo === '1'} architectProject={project.source_type === 'ARCHITECT_PROJECT'} />
+        )}
+
+        {milestones.length === 0 && id && isClient && project.source_type !== 'ARCHITECT_PROJECT' && (
+          <Button
+            title="Conversar com a ABI"
+            variant="secondary"
+            icon={(p) => <IconAbi {...p} />}
+            onPress={() => router.push({ pathname: '/(app)/design', params: { projectId: id } })}
+          />
         )}
 
         {milestones.length > 0 ? (
