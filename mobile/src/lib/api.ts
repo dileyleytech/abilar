@@ -147,7 +147,33 @@ export const api = {
   acceptExternalQuote: (id: string) => postJson<{ ok: true }>('/api/mobile/external-quotes/accept', { id }),
   setProjectDates: (projectId: string, startDate?: string, endDate?: string) =>
     postJson<{ ok: true }>('/api/mobile/projects/dates', { projectId, startDate, endDate }),
+
+  // Chat de design com a ABI (Fase 6). O servidor faz o NLU (Gemini) e persiste.
+  getDesignState: (projectId: string) =>
+    getJson<{ state: DesignStateView }>(`/api/mobile/design/state?projectId=${encodeURIComponent(projectId)}`),
+  designTurn: (projectId: string, utterance: string) =>
+    postJson<DesignTurnResult>('/api/mobile/design/turn', { projectId, utterance }),
+  designRestore: (projectId: string, snapshot: DesignStateView) =>
+    postJson<DesignStateView>('/api/mobile/design/restore', { projectId, snapshot }),
 };
+
+// Tipos do chat de design (espelham @abilar/ai-vision; o mobile não importa o monorepo).
+export type DesignItemView = { type: string; qty: number; position?: string };
+export type DesignModuleView = {
+  id: string;
+  type: string;
+  widthMm: number;
+  heightMm: number;
+  depthMm: number;
+  material?: string;
+  finish?: string;
+  hardware?: string;
+  lighting?: string;
+  items?: DesignItemView[];
+};
+export type DesignStateView = { modules: DesignModuleView[] };
+export type DesignCommandView = { intent: string; echo: string; clarificationNeeded: boolean };
+export type DesignTurnResult = { command: DesignCommandView; state: DesignStateView; message: string };
 
 export type Pipeline = {
   maxParallel: number;
