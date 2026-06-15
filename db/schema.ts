@@ -38,6 +38,8 @@ import {
   MATERIAL_UNITS,
   CONTRACT_STATUS,
   MILESTONE_STATUS,
+  DESIGN_PROPOSAL_TYPES,
+  DESIGN_PROPOSAL_STATUS,
 } from '@abilar/shared';
 
 // Enums (fonte única dos literais em @abilar/shared/domain).
@@ -57,6 +59,8 @@ export const reportStatusEnum = pgEnum('report_status', REPORT_STATUS);
 export const materialCategoryEnum = pgEnum('material_category', MATERIAL_CATEGORIES);
 export const materialUnitEnum = pgEnum('material_unit', MATERIAL_UNITS);
 export const contractStatusEnum = pgEnum('contract_status', CONTRACT_STATUS);
+export const designProposalTypeEnum = pgEnum('design_proposal_type', DESIGN_PROPOSAL_TYPES);
+export const designProposalStatusEnum = pgEnum('design_proposal_status', DESIGN_PROPOSAL_STATUS);
 export const milestoneStatusEnum = pgEnum('milestone_status', MILESTONE_STATUS);
 
 /** Perfil 1:1 com auth.users (id = auth.uid()). `role` é a fonte de verdade
@@ -560,6 +564,35 @@ export const notifications = pgTable(
   },
   (t) => [index('notifications_user_idx').on(t.userId, t.createdAt)],
 );
+
+/** Proposta de design do marceneiro (§8.6). EDIT entra na proposta dele; SUGGESTION
+ *  volta pro cliente aprovar. `state` = DesignState proposto; atribuída ao autor. */
+export const designProposals = pgTable(
+  'design_proposals',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    carpenterId: uuid('carpenter_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    type: designProposalTypeEnum('type').notNull(),
+    status: designProposalStatusEnum('status').notNull().default('PENDING'),
+    note: text('note'),
+    state: jsonb('state').notNull(), // DesignState proposto (módulos)
+    previewPath: text('preview_path'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('design_proposals_project_idx').on(t.projectId, t.status),
+    index('design_proposals_carpenter_idx').on(t.carpenterId),
+  ],
+);
+
+export type DesignProposal = typeof designProposals.$inferSelect;
+export type NewDesignProposal = typeof designProposals.$inferInsert;
 
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;

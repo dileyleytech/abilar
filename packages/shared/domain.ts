@@ -54,6 +54,16 @@ export const KYC_STATUS = ['PENDING', 'APPROVED', 'REJECTED'] as const;
 export const kycStatusSchema = z.enum(KYC_STATUS);
 export type KycStatus = z.infer<typeof kycStatusSchema>;
 
+// Proposta de design do marceneiro (§8.6): EDIT entra na proposta dele; SUGGESTION
+// volta pro cliente aprovar. Versionada e atribuída ao autor.
+export const DESIGN_PROPOSAL_TYPES = ['EDIT', 'SUGGESTION'] as const;
+export const designProposalTypeSchema = z.enum(DESIGN_PROPOSAL_TYPES);
+export type DesignProposalType = z.infer<typeof designProposalTypeSchema>;
+
+export const DESIGN_PROPOSAL_STATUS = ['PENDING', 'APPROVED', 'REJECTED', 'APPLIED'] as const;
+export const designProposalStatusSchema = z.enum(DESIGN_PROPOSAL_STATUS);
+export type DesignProposalStatus = z.infer<typeof designProposalStatusSchema>;
+
 // Status do orçamento (Quote) — §3.
 export const QUOTE_STATUS = ['SENT', 'PRE_APPROVED', 'ACCEPTED', 'REJECTED', 'EXPIRED', 'PAID'] as const;
 export const quoteStatusSchema = z.enum(QUOTE_STATUS);
