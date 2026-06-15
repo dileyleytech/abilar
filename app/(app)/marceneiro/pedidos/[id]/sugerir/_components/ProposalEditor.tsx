@@ -15,6 +15,7 @@ const TYPE_LABEL: Record<Category, string> = {
   HOME_OFFICE: 'Home office', BANHEIRO: 'Banheiro', LAVANDERIA: 'Lavanderia', OUTRO: 'Móvel',
 };
 const EXAMPLES = ['Troca pra MDF 25mm', 'Gaveteiro de 4 no lugar das portas', 'Acabamento amadeirado', 'Adiciona LED'];
+const WANTS_PREVIEW = /\b(pr[eé]via|foto|imagem|render|gera|gere|gerar|mostra|mostrar|visualiza|como (vai )?fica)\b/i;
 
 export function ProposalEditor({ projectId, initialState }: { projectId: string; initialState: DesignState }) {
   const router = useRouter();
@@ -51,9 +52,12 @@ export function ProposalEditor({ projectId, initialState }: { projectId: string;
       const r = await proposalTurn(projectId, state, u);
       if (!r.ok) return say({ role: 'ABI', text: r.error });
       say({ role: 'ABI', text: r.data.message });
-      if (r.data.command.intent !== 'ASK_HELP' && r.data.command.intent !== 'UNDO') {
+      const changed = r.data.command.intent !== 'ASK_HELP' && r.data.command.intent !== 'UNDO';
+      if (changed) {
         setState(r.data.state);
-        if (previewUrl) regen(r.data.state, false); // atualiza a prévia conforme ajusta
+        regen(r.data.state, false); // toda mudança gera/atualiza a prévia (inclusive a 1ª)
+      } else if (WANTS_PREVIEW.test(u)) {
+        regen(state, true); // pediu a prévia explicitamente no chat
       }
     });
   };

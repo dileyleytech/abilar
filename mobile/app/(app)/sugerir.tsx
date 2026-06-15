@@ -14,6 +14,7 @@ const TYPE_LABEL: Record<string, string> = {
   HOME_OFFICE: 'Home office', BANHEIRO: 'Banheiro', LAVANDERIA: 'Lavanderia', OUTRO: 'Móvel',
 };
 const cm = (mm: number) => mm / 10;
+const WANTS_PREVIEW = /\b(pr[eé]via|foto|imagem|render|gera|gere|gerar|mostra|mostrar|visualiza|como (vai )?fica)\b/i;
 
 export default function SugerirScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
@@ -64,7 +65,8 @@ export default function SugerirScreen() {
       if (changed) setState(r.state);
       say({ role: 'ABI', text: r.message });
       setBusy(false);
-      if (changed && previewUrl) await regen(r.state, false);
+      if (changed) await regen(r.state, false); // toda mudança gera/atualiza a prévia
+      else if (WANTS_PREVIEW.test(u)) await regen(state, true); // pediu a prévia no chat
       return;
     } catch (e) {
       say({ role: 'ABI', text: e instanceof Error ? e.message : 'Não consegui entender agora.' });
