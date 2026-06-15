@@ -99,8 +99,19 @@ export function DesignChat({ projectId, initialState, initialPreviewUrl }: { pro
         {generating ? (
           <div className="flex aspect-[4/3] items-center justify-center rounded-md bg-deep text-small text-muted">Gerando sua prévia…</div>
         ) : previewUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={previewUrl} alt="Prévia gerada pela ABI" className="w-full rounded-md" />
+          <div className="relative overflow-hidden rounded-md">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewUrl} alt="Prévia gerada pela ABI" className="w-full" />
+            {/* Overlay de cotas (§8.3) — a verdade são as medidas, não a imagem. */}
+            <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-center gap-1.5 bg-charcoal/65 px-2 py-1.5">
+              <span className="text-caption font-medium text-white/70">Medidas reais (L×A×P):</span>
+              {state.modules.map((m) => (
+                <span key={m.id} className="rounded bg-white/15 px-1.5 py-0.5 text-caption font-medium text-white">
+                  {(m.label?.trim() || TYPE_LABEL[m.type] || 'Móvel')}: {mmToCm(m.widthMm)}×{mmToCm(m.heightMm)}×{mmToCm(m.depthMm)} cm
+                </span>
+              ))}
+            </div>
+          </div>
         ) : (
           <p className="text-small text-muted">Gere uma imagem ilustrativa do seu móvel a partir do que você descreveu. A imagem é só ilustrativa — as medidas reais ficam no pedido.</p>
         )}
