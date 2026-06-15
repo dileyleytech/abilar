@@ -99,7 +99,18 @@ export default function DesignScreen() {
             {generating ? (
               <View style={styles.previewPlaceholder}><Text style={styles.muted}>Gerando sua prévia…</Text></View>
             ) : previewUrl ? (
-              <Image source={{ uri: previewUrl }} style={styles.previewImg} contentFit="cover" />
+              <View>
+                <Image source={{ uri: previewUrl }} style={styles.previewImg} contentFit="cover" />
+                {/* Overlay de cotas (§8.3) — a verdade são as medidas, não a imagem. */}
+                <View style={styles.cotas}>
+                  <Text style={styles.cotasLabel}>Medidas (L×A×P):</Text>
+                  {state.modules.map((m) => (
+                    <Text key={m.id} style={styles.cotaChip}>
+                      {(m.label?.trim() || TYPE_LABEL[m.type] || 'Móvel')}: {m.widthMm / 10}×{m.heightMm / 10}×{m.depthMm / 10} cm
+                    </Text>
+                  ))}
+                </View>
+              </View>
             ) : (
               <Text style={styles.muted}>Gere uma imagem ilustrativa do seu móvel. A imagem é só ilustrativa — as medidas reais ficam no pedido.</Text>
             )}
@@ -180,6 +191,9 @@ const styles = StyleSheet.create({
   previewImg: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.md, backgroundColor: color.bg.deep },
   previewPlaceholder: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.md, backgroundColor: color.bg.deep, alignItems: 'center', justifyContent: 'center' },
   muted: { color: color.text.muted, fontSize: 13 },
+  cotas: { position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 4, backgroundColor: 'rgba(31,36,33,0.65)', paddingHorizontal: 8, paddingVertical: 6, borderBottomLeftRadius: radius.md, borderBottomRightRadius: radius.md },
+  cotasLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '500' },
+  cotaChip: { color: '#fff', fontSize: 11, fontWeight: '500', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
   modRow: { gap: 4 },
   modTitle: { fontSize: 15, fontWeight: '600', color: color.text.primary },
   modDims: { fontSize: 13, color: color.text.muted },
