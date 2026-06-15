@@ -170,8 +170,10 @@ export default async function CarpenterPedidoPage({
                       <IconAvulsos size={20} aria-hidden /> PDF
                     </a>
                   ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img key={p.id} src={p.url} alt="" className="aspect-square w-full rounded-xl border border-subtle object-cover" />
+                    <a key={p.id} href={p.url} target="_blank" rel="noreferrer" title="Abrir foto" className="block aspect-square overflow-hidden rounded-xl border border-subtle">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={p.url} alt="Foto do pedido" className="h-full w-full object-cover transition hover:opacity-90" />
+                    </a>
                   )
                 ) : null,
               )}
@@ -187,14 +189,16 @@ export default async function CarpenterPedidoPage({
                     const url = modulePhoto.get(m.id) ?? null;
                     return (
                       <div key={m.id} className="flex gap-3 rounded-xl border border-subtle p-3">
-                        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-deep text-2xl">
-                          {url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={url} alt="" className="h-full w-full object-cover" />
-                          ) : (
+                        {url ? (
+                          <a href={url} target="_blank" rel="noreferrer" title="Abrir foto" className="flex h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-deep">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={url} alt={m.label ?? m.type} className="h-full w-full object-cover transition hover:opacity-90" />
+                          </a>
+                        ) : (
+                          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-deep text-2xl">
                             <span aria-hidden>{CATEGORY_EMOJI[m.type as Category] ?? '🪵'}</span>
-                          )}
-                        </div>
+                          </div>
+                        )}
                         <div className="min-w-0">
                           <p className="font-semibold text-charcoal">
                             {m.label ?? CATEGORY_LABELS[m.type as Category] ?? m.type}

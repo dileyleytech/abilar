@@ -7,7 +7,6 @@ import {
   getProject,
   listEvidences,
   listMilestones,
-  listProjectPhotos,
   type MilestoneRow,
   type ProjectRow,
 } from '@/lib/data';
@@ -97,7 +96,7 @@ export default function PedidoDetail() {
     setPhotosLoading(true);
     void (async () => {
       try {
-        const paths = await listProjectPhotos(id);
+        const { paths } = await api.projectPhotos(id); // via rota autorizada (marceneiro também)
         setPhotos(paths.length ? (await api.signedUrls(paths, { projectId: id })).urls : []);
       } catch {
         setPhotos([]);
