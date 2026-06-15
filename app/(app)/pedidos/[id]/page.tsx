@@ -10,7 +10,7 @@ import { ObraBoard } from '@/components/ObraBoard';
 import { Page, buttonVariants } from '@/components/ui';
 import { getProjectMilestones } from '@/lib/obra/queries';
 import { backFrom } from '@/lib/nav';
-import { IconVoltar, IconDinheiro, IconContrato, IconImprimir } from '@/components/ui/icons';
+import { IconVoltar, IconDinheiro, IconContrato, IconImprimir, IconAbi } from '@/components/ui/icons';
 import { ProjectActions } from './_components/ProjectActions';
 import { ProjectTitle } from './_components/ProjectTitle';
 import { ModulesSection, type ModuleView } from './_components/ModulesSection';
@@ -180,6 +180,11 @@ export default async function PedidoDetailPage({
         ) : (
           <section className="py-6 first:pt-2">
             <ModulesSection projectId={project.id} modules={moduleViews} editable={editable} autoOpen={novo === '1'} />
+            {editable && moduleViews.length > 0 && (
+              <Link href={`/pedidos/${project.id}/design`} className={`${buttonVariants({ variant: 'secondary' })} mt-4`}>
+                <IconAbi size={18} aria-hidden /> Conversar com a ABI
+              </Link>
+            )}
           </section>
         )}
 
