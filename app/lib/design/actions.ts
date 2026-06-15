@@ -5,7 +5,7 @@ import type { DesignState } from '@abilar/ai-vision';
 import { getUserId } from '@/lib/auth/session';
 import type { DesignProposalType } from '@abilar/shared';
 import { ownsProject, runDesignTurn, runTurnOnState, restoreDesignState, type Result, type DesignTurn } from './core';
-import { requestPreview, type PreviewResult } from './preview';
+import { requestPreview, proposalDraftPreview, type PreviewResult } from './preview';
 import { carpenterCanPropose, clientOwnsProject, createProposal, decideProposal } from './proposals';
 
 /** Um turno do chat de design (web). Auth por sessão; delega ao core. */
@@ -47,6 +47,14 @@ export async function proposalTurn(projectId: string, state: DesignState, uttera
   if (!userId) return { ok: false, error: 'Faça login.' };
   if (!(await carpenterCanPropose(projectId, userId))) return { ok: false, error: 'Você precisa ter um orçamento neste pedido.' };
   return runTurnOnState(state, utterance);
+}
+
+/** Marceneiro gera a prévia do rascunho (estado em edição) para ir ajustando. */
+export async function proposalPreview(projectId: string, state: DesignState): Promise<Result<{ url: string | null }>> {
+  const userId = await getUserId();
+  if (!userId) return { ok: false, error: 'Faça login.' };
+  if (!(await carpenterCanPropose(projectId, userId))) return { ok: false, error: 'Você precisa ter um orçamento neste pedido.' };
+  return proposalDraftPreview(projectId, userId, state);
 }
 
 /** Marceneiro propõe um design (EDIT ou SUGGESTION) para o projeto que orça. */

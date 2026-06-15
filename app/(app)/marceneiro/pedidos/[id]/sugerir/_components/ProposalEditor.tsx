@@ -4,9 +4,9 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { mmToCm, type Category } from '@abilar/shared';
 import type { DesignState, DesignModule } from '@abilar/ai-vision';
-import { proposalTurn, proposeDesign } from '@/lib/design/actions';
-import { Card, Button, Badge, inputClass } from '@/components/ui';
-import { IconEnviar, IconAbi } from '@/components/ui/icons';
+import { proposalTurn, proposeDesign, proposalPreview } from '@/lib/design/actions';
+import { Card, Button, Badge, inputClass, PhotoButton } from '@/components/ui';
+import { IconEnviar, IconAbi, IconFoto } from '@/components/ui/icons';
 
 type Msg = { role: 'USER' | 'ABI'; text: string };
 
@@ -24,19 +24,37 @@ export function ProposalEditor({ projectId, initialState }: { projectId: string;
   ]);
   const [text, setText] = useState('');
   const [note, setNote] = useState('');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
   const [pending, start] = useTransition();
   const say = (m: Msg) => setMessages((p) => [...p, m]);
 
+  const regen = (st: DesignState, announce: boolean) => {
+    if (generating) return;
+    setGenerating(true);
+    if (announce) say({ role: 'ABI', text: 'Gerando uma prévia do que você ajustou…' });
+    start(async () => {
+      const r = await proposalPreview(projectId, st);
+      setGenerating(false);
+      if (!r.ok) { say({ role: 'ABI', text: r.error }); return; }
+      if (r.data.url) setPreviewUrl(r.data.url);
+      say({ role: 'ABI', text: announce ? 'Prévia pronta — ajuste até ficar do jeito certo e envie ao cliente.' : 'Atualizei a prévia. 🎨' });
+    });
+  };
+
   const send = (raw: string) => {
     const u = raw.trim();
-    if (!u || pending) return;
+    if (!u || pending || generating) return;
     setText('');
     say({ role: 'USER', text: u });
     start(async () => {
       const r = await proposalTurn(projectId, state, u);
       if (!r.ok) return say({ role: 'ABI', text: r.error });
-      if (r.data.command.intent !== 'ASK_HELP') setState(r.data.state);
       say({ role: 'ABI', text: r.data.message });
+      if (r.data.command.intent !== 'ASK_HELP' && r.data.command.intent !== 'UNDO') {
+        setState(r.data.state);
+        if (previewUrl) regen(r.data.state, false); // atualiza a prévia conforme ajusta
+      }
     });
   };
 
@@ -51,6 +69,22 @@ export function ProposalEditor({ projectId, initialState }: { projectId: string;
 
   return (
     <div className="flex flex-col gap-4">
+      <Card pad="sm">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-small font-semibold text-muted">Prévia da proposta</p>
+          <Button variant="outline" size="sm" onClick={() => regen(state, true)} disabled={generating || pending}>
+            <IconFoto size={16} aria-hidden /> {previewUrl ? 'Atualizar prévia' : 'Gerar prévia'}
+          </Button>
+        </div>
+        {generating ? (
+          <div className="flex aspect-[4/3] items-center justify-center rounded-md bg-deep text-small text-muted">Gerando prévia…</div>
+        ) : previewUrl ? (
+          <PhotoButton url={previewUrl} alt="Prévia da proposta" className="w-full rounded-md" imgClassName="object-contain" />
+        ) : (
+          <p className="text-small text-muted">Gere uma prévia pra ver como fica e ir ajustando antes de enviar ao cliente.</p>
+        )}
+      </Card>
+
       <Card pad="sm">
         <p className="mb-2 text-small font-semibold text-muted">Projeto proposto</p>
         <ul className="flex flex-col gap-2">

@@ -12,3 +12,4 @@ export { Badge } from './Badge';
 export type { BadgeTone } from './Badge';
 export { Stat } from './Stat';
 export { Field, Input, inputClass } from './Field';
+export { Lightbox, PhotoButton } from './Lightbox';
