@@ -35,18 +35,19 @@ export default function DesignScreen() {
     try { const r = await api.getDesignState(projectId); setState(r.state); setPreviewUrl(r.previewUrl); } catch { setState({ modules: [] }); }
   }, [projectId]);
 
-  const generate = async () => {
+  const regen = async (announce: boolean) => {
     if (generating || !projectId) return;
     setGenerating(true);
-    say({ role: 'ABI', text: 'Beleza! Vou gerar uma prévia do seu móvel — leva alguns segundos.' });
+    if (announce) say({ role: 'ABI', text: 'Beleza! Vou gerar uma prévia do seu móvel — leva alguns segundos.' });
     try {
       const r = await api.designPreview(projectId);
       if (r.queued) { say({ role: 'ABI', text: 'Estou gerando sua prévia — ela aparece aqui em instantes.' }); }
-      else { if (r.url) setPreviewUrl(r.url); say({ role: 'ABI', text: 'Prontinho! Sua prévia está aí em cima. 🎨' }); }
+      else { if (r.url) setPreviewUrl(r.url); say({ role: 'ABI', text: announce ? 'Prontinho! Sua prévia está aí em cima. 🎨' : 'Atualizei a prévia com a mudança. 🎨' }); }
     } catch (e) {
       say({ role: 'ABI', text: e instanceof Error ? e.message : 'Não consegui gerar a prévia agora.' });
     } finally { setGenerating(false); }
   };
+  const generate = () => regen(true);
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { scroller.current?.scrollToEnd({ animated: true }); }, [messages]);
 
@@ -76,9 +77,13 @@ export default function DesignScreen() {
     try {
       const r = await api.designTurn(projectId, utterance);
       if (r.command.intent === 'UNDO') { setBusy(false); await doUndo(); return; }
-      if (r.command.intent !== 'ASK_HELP' && before) setHistory((h) => [...h, before]);
+      const changed = r.command.intent !== 'ASK_HELP';
+      if (changed && before) setHistory((h) => [...h, before]);
       setState(r.state);
       say({ role: 'ABI', text: r.message });
+      setBusy(false);
+      if (changed && previewUrl) await regen(false); // reflete a mudança na prévia
+      return;
     } catch (e) {
       say({ role: 'ABI', text: e instanceof Error ? e.message : 'Não consegui entender agora.' });
     } finally { setBusy(false); }

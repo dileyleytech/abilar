@@ -41,6 +41,22 @@ export function DesignChat({ projectId, initialState, initialPreviewUrl }: { pro
 
   const say = (m: Msg) => setMessages((prev) => [...prev, m]);
 
+  // Gera/atualiza a prévia. `announce`=false quando é automático (após uma mudança).
+  const regen = (announce: boolean) => {
+    if (generating) return;
+    setGenerating(true);
+    if (announce) say({ role: 'ABI', text: 'Beleza! Vou gerar uma prévia do seu móvel — leva alguns segundos.' });
+    start(async () => {
+      const r = await requestDesignPreview(projectId);
+      setGenerating(false);
+      if (!r.ok) { say({ role: 'ABI', text: r.error }); return; }
+      if (r.data.queued) { say({ role: 'ABI', text: 'Estou gerando sua prévia — ela aparece aqui em instantes.' }); return; }
+      if (r.data.url) setPreviewUrl(r.data.url);
+      say({ role: 'ABI', text: announce ? 'Prontinho! Sua prévia está aí em cima. 🎨' : 'Atualizei a prévia com a mudança. 🎨' });
+    });
+  };
+  const generate = () => regen(true);
+
   const doUndo = () => {
     if (history.length === 0) { say({ role: 'ABI', text: 'Não há nada para desfazer.' }); return; }
     const prev = history[history.length - 1]!;
@@ -50,6 +66,7 @@ export function DesignChat({ projectId, initialState, initialPreviewUrl }: { pro
       setState(prev);
       setHistory((h) => h.slice(0, -1));
       say({ role: 'ABI', text: 'Pronto, desfiz a última alteração.' });
+      if (previewUrl) regen(false); // reflete o desfazer na prévia
     });
   };
 
@@ -64,25 +81,12 @@ export function DesignChat({ projectId, initialState, initialPreviewUrl }: { pro
       if (!r.ok) { say({ role: 'ABI', text: r.error }); return; }
       const { command, state: next, message } = r.data;
       if (command.intent === 'UNDO') { doUndo(); return; }
+      say({ role: 'ABI', text: message });
       if (command.intent !== 'ASK_HELP') {
         setHistory((h) => [...h, before]);
         setState(next);
+        if (previewUrl) regen(false); // atualiza a prévia automaticamente após a mudança
       }
-      say({ role: 'ABI', text: message });
-    });
-  };
-
-  const generate = () => {
-    if (generating) return;
-    setGenerating(true);
-    say({ role: 'ABI', text: 'Beleza! Vou gerar uma prévia do seu móvel — leva alguns segundos.' });
-    start(async () => {
-      const r = await requestDesignPreview(projectId);
-      setGenerating(false);
-      if (!r.ok) { say({ role: 'ABI', text: r.error }); return; }
-      if (r.data.queued) { say({ role: 'ABI', text: 'Estou gerando sua prévia — ela aparece aqui em instantes.' }); return; }
-      if (r.data.url) setPreviewUrl(r.data.url);
-      say({ role: 'ABI', text: 'Prontinho! Sua prévia está aí em cima. 🎨' });
     });
   };
 

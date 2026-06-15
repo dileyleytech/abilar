@@ -76,3 +76,28 @@ export type DesignCommand = z.infer<typeof designCommandSchema>;
 export function parseDesignCommand(input: unknown): DesignCommand {
   return designCommandSchema.parse(input);
 }
+
+/** Item de comando dentro de um lote (sem echo/confidence — esses são do lote). */
+export const commandItemSchema = z.object({
+  intent: designIntentSchema,
+  targetModuleId: commandTargetSchema.default(null),
+  params: commandParamsSchema.default({}),
+});
+export type CommandItem = z.infer<typeof commandItemSchema>;
+
+/**
+ * Lote de comandos: uma fala pode conter VÁRIAS mudanças (ex.: "aumenta pra
+ * 80x120x35 e remove o espelho" = 3 RESIZE + 1 REMOVE_ITEM). O NLU devolve a lista
+ * + um único `echo` ("o que entendi") para o usuário.
+ */
+export const designBatchSchema = z.object({
+  commands: z.array(commandItemSchema).default([]),
+  confidence: z.number().min(0).max(1).default(0),
+  clarificationNeeded: z.boolean().default(false),
+  echo: z.string().default(''),
+});
+export type DesignBatch = z.infer<typeof designBatchSchema>;
+
+export function parseDesignBatch(input: unknown): DesignBatch {
+  return designBatchSchema.parse(input);
+}
