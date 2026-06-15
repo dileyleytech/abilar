@@ -11,6 +11,8 @@ import { Page, buttonVariants } from '@/components/ui';
 import { getProjectMilestones } from '@/lib/obra/queries';
 import { backFrom } from '@/lib/nav';
 import { IconVoltar, IconDinheiro, IconContrato, IconImprimir, IconAbi } from '@/components/ui/icons';
+import { listProposals } from '@/lib/design/proposals';
+import { ProposalsForClient } from './_components/ProposalsForClient';
 import { ProjectActions } from './_components/ProjectActions';
 import { ProjectTitle } from './_components/ProjectTitle';
 import { ModulesSection, type ModuleView } from './_components/ModulesSection';
@@ -35,11 +37,14 @@ export default async function PedidoDetailPage({
 
   // Tudo que não depende um do outro carrega EM PARALELO (assinatura de fotos,
   // orçamentos e obra) — evita encadear as esperas.
-  const [signed, quotes, obra] = await Promise.all([
+  const [signed, quotes, obra, allProposals] = await Promise.all([
     Promise.all(photos.map(async (p) => ({ ...p, url: await signedProjectPhotoUrl(p.path) }))),
     getReceivedQuotes(id),
     getProjectMilestones(id, userId),
+    listProposals(id),
   ]);
+  // Cliente vê as SUGESTÕES do marceneiro (EDIT é interno da proposta dele).
+  const suggestions = allProposals.filter((p) => p.type === 'SUGGESTION');
   const roomPhotos = signed.filter((p) => !p.moduleId);
   const modulePhoto = new Map<string, string | null>();
   for (const p of signed) if (p.moduleId) modulePhoto.set(p.moduleId, p.url);
@@ -166,6 +171,14 @@ export default async function PedidoDetailPage({
                 })}
               </ul>
             )}
+          </section>
+        )}
+
+        {/* Sugestões de design do marceneiro (§8.6) */}
+        {suggestions.length > 0 && (
+          <section className="py-6">
+            <SectionHead title="Sugestões do marceneiro" />
+            <ProposalsForClient projectId={project.id} proposals={suggestions} />
           </section>
         )}
 

@@ -13,7 +13,7 @@ import { getContractForQuote } from '@/lib/contracts/queries';
 import { getProjectMilestones } from '@/lib/obra/queries';
 import { ObraBoard } from '@/components/ObraBoard';
 import { CATEGORY_LABELS, CATEGORY_EMOJI } from '@/lib/labels';
-import { IconVoltar, IconLocal, IconConversas, IconContrato, IconImprimir, IconAvulsos } from '@/components/ui/icons';
+import { IconVoltar, IconLocal, IconConversas, IconContrato, IconImprimir, IconAvulsos, IconAbi } from '@/components/ui/icons';
 import { StatusBadge } from '@/components/StatusBadge';
 import { backFrom } from '@/lib/nav';
 import { QuoteForm, type QuoteInitial, type MaterialOption } from './_components/QuoteForm';
@@ -134,6 +134,14 @@ export default async function CarpenterPedidoPage({
               className="flex flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-brand-primary px-5 py-4 text-lg font-semibold text-brand-primary transition hover:bg-deep"
             >
               <IconImprimir size={22} aria-hidden /> Baixar orçamento (PDF)
+            </Link>
+          )}
+          {existing && (
+            <Link
+              href={`/marceneiro/pedidos/${id}/sugerir`}
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-subtle px-5 py-4 text-lg font-semibold text-charcoal transition hover:bg-deep"
+            >
+              <IconAbi size={22} aria-hidden /> Sugerir mudança no projeto
             </Link>
           )}
         </div>

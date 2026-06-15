@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import type { DesignState } from '@abilar/ai-vision';
 import { getUserId } from '@/lib/auth/session';
 import type { DesignProposalType } from '@abilar/shared';
-import { ownsProject, runDesignTurn, restoreDesignState, type Result, type DesignTurn } from './core';
+import { ownsProject, runDesignTurn, runTurnOnState, restoreDesignState, type Result, type DesignTurn } from './core';
 import { requestPreview, type PreviewResult } from './preview';
 import { carpenterCanPropose, clientOwnsProject, createProposal, decideProposal } from './proposals';
 
@@ -39,6 +39,14 @@ export async function requestDesignPreview(projectId: string): Promise<Result<Pr
   const r = await requestPreview(projectId);
   if (r.ok) revalidatePath(`/pedidos/${projectId}`);
   return r;
+}
+
+/** Marceneiro edita uma CÓPIA do projeto (não persiste) — turno do editor de proposta. */
+export async function proposalTurn(projectId: string, state: DesignState, utterance: unknown): Promise<Result<DesignTurn>> {
+  const userId = await getUserId();
+  if (!userId) return { ok: false, error: 'Faça login.' };
+  if (!(await carpenterCanPropose(projectId, userId))) return { ok: false, error: 'Você precisa ter um orçamento neste pedido.' };
+  return runTurnOnState(state, utterance);
 }
 
 /** Marceneiro propõe um design (EDIT ou SUGGESTION) para o projeto que orça. */
