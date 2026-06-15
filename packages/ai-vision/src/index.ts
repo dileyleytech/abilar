@@ -18,28 +18,30 @@ export interface ImageEditProvider {
 }
 
 export interface ImageEditInput {
-  /** URL assinada/curta da imagem base no R2. */
-  sourceImageUrl: string;
   /** Prompt de imagem montado a partir da DSL (§8.4/§8.5) — NUNCA medidas. */
   prompt: string;
+  /** Imagem base inline (bytes em base64) para edição local; ausente = geração do zero. */
+  imageBase64?: string;
+  /** MIME da imagem base (ex.: 'image/jpeg'). */
+  mimeType?: string;
   /** Semente para reprodutibilidade (opcional). */
   seed?: number;
 }
 
 export interface ImageEditResult {
-  /** URL da imagem gerada (R2). */
-  imageUrl: string;
+  /** Imagem gerada em base64 — o chamador persiste em R2/Storage e versiona. */
+  imageBase64: string;
+  mimeType: string;
   provider: string;
 }
 
-// TODO(Fase 6 — §8): GeminiProvider (Nano Banana 2) default + FluxProvider fallback;
-// NLU com Gemini 3.1 Flash-Lite (function calling) -> DSL de comandos (§8.4);
-// rodar em consumer de Cloudflare Queue; versionamento de imagens no R2.
-
-/** Provider de eco para testes/CI (não chama rede). */
+/** Provider de eco para testes/CI (não chama rede) — devolve a imagem base. */
 export const echoProvider: ImageEditProvider = {
   name: 'echo',
   async editImage(input) {
-    return { imageUrl: input.sourceImageUrl, provider: 'echo' };
+    return { imageBase64: input.imageBase64 ?? '', mimeType: input.mimeType ?? 'image/png', provider: 'echo' };
   },
 };
+
+export { createGeminiImageProvider, resolveImageProvider, DEFAULT_IMAGE_MODEL } from './gemini-image';
+export type { GeminiImageOptions } from './gemini-image';
