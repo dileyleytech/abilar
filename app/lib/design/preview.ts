@@ -95,19 +95,41 @@ async function nextVersion(projectId: string): Promise<number> {
   return (row?.v ?? 0) + 1;
 }
 
-/** Renderiza a imagem (grounded na foto do cliente quando há) a partir de um prompt. */
+/** Caminho da prévia GENERATED atual (para edição multi-turno — §8.5). */
+async function currentGeneratedPath(projectId: string): Promise<string | null> {
+  const db = getDb();
+  const [row] = await db
+    .select({ path: projectPhotos.path })
+    .from(projectPhotos)
+    .where(and(eq(projectPhotos.projectId, projectId), eq(projectPhotos.kind, 'GENERATED'), eq(projectPhotos.isCurrent, true)))
+    .orderBy(desc(projectPhotos.version))
+    .limit(1);
+  return row?.path ?? null;
+}
+
+/**
+ * Renderiza a imagem. Para CONSISTÊNCIA (§8.5), edita a partir da ÚLTIMA imagem
+ * gerada quando ela existe (`preferBasePath`) — aplicando só a mudança pedida e
+ * preservando o resto. No 1º passo, usa a foto real da parede do cliente.
+ */
 async function renderImage(
   projectId: string,
   primaryModuleId: string,
   basePrompt: string,
+  preferBasePath?: string | null,
 ): Promise<{ imageBase64: string; mimeType: string } | { error: string }> {
   const provider = resolveImageProvider({ GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_IMAGE_MODEL: process.env.GEMINI_IMAGE_MODEL });
   if (provider.name === 'echo') return { error: 'Geração de imagem indisponível (configure a GEMINI_API_KEY).' };
 
-  const basePath = await pickBasePhotoPath(projectId, primaryModuleId);
-  const base = basePath ? await downloadBase(basePath) : null;
+  // Base: a última prévia (multi-turno) > a foto da parede do cliente.
+  let base = preferBasePath ? await downloadBase(preferBasePath) : null;
+  const iterating = !!base;
+  if (!base) {
+    const wall = await pickBasePhotoPath(projectId, primaryModuleId);
+    base = wall ? await downloadBase(wall) : null;
+  }
   const prompt = base
-    ? `Edit the attached photo of the wall/room. ${basePrompt} Place the furniture on the wall shown in the photo.`
+    ? `Edit the attached image. ${basePrompt} Apply ONLY the requested change to the furniture and keep EVERY other element of the attached image (walls, floor, lighting, framing${iterating ? ', and the rest of the furniture' : ''}) exactly the same.`
     : basePrompt;
   try {
     const r = await provider.editImage({ prompt, imageBase64: base?.base64, mimeType: base?.mimeType });
@@ -122,7 +144,8 @@ export async function generatePreview(projectId: string): Promise<Result<Preview
   const built = await buildPrompt(projectId);
   if (!built) return { ok: false, error: 'Adicione um móvel ao pedido antes de gerar a prévia.' };
 
-  const result = await renderImage(projectId, built.primaryModuleId, built.prompt);
+  // Consistência: parte da última prévia gerada, se houver (§8.5).
+  const result = await renderImage(projectId, built.primaryModuleId, built.prompt, await currentGeneratedPath(projectId));
   if ('error' in result) return { ok: false, error: result.error };
 
   const version = await nextVersion(projectId);
@@ -175,10 +198,11 @@ export async function proposalDraftPreview(projectId: string, carpenterId: strin
   const primary = pickPrimaryModule(state);
   if (!primary) return { ok: false, error: 'Adicione um móvel antes de gerar a prévia.' };
   const { prompt } = buildImagePrompt(primary, { roomType: ROOM_TYPE[primary.type] });
-  const result = await renderImage(projectId, primary.id, prompt);
+  const path = `${projectId}/proposals/draft-${carpenterId}.png`;
+  // Consistência: itera a partir do próprio rascunho anterior (se já existir).
+  const result = await renderImage(projectId, primary.id, prompt, path);
   if ('error' in result) return { ok: false, error: result.error };
 
-  const path = `${projectId}/proposals/draft-${carpenterId}.png`;
   const store = resolveImageStore(getBindings() ?? undefined);
   await store.put(path, base64ToBytes(result.imageBase64), result.mimeType);
   return { ok: true, data: { url: await store.signedUrl(path) } };
