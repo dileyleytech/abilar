@@ -159,7 +159,7 @@ export const api = {
   designRestore: (projectId: string, snapshot: DesignStateView) =>
     postJson<DesignStateView>('/api/mobile/design/restore', { projectId, snapshot }),
   designPreview: (projectId: string) =>
-    postJson<{ queued: boolean; url?: string | null }>('/api/mobile/design/preview', { projectId }),
+    postJson<{ queued: boolean; url?: string | null; cached?: boolean }>('/api/mobile/design/preview', { projectId }),
 
   // Propostas do marceneiro (§8.6).
   proposalTurn: (projectId: string, state: DesignStateView, utterance: string) =>

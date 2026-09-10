@@ -24,6 +24,23 @@ describe('preview — contrato do job de geração e escolha do módulo', () => 
     expect(() => previewJobSchema.parse({ projectId: '11111111-1111-1111-1111-111111111111', prompt: '' })).toThrow();
   });
 
+  it('o job carrega a chave de cache e a versão a gravar (o consumidor precisa das duas)', () => {
+    const job = previewJobSchema.parse({
+      projectId: '11111111-1111-1111-1111-111111111111',
+      prompt: 'x',
+      cacheKey: 'abc-123-4',
+      version: 3,
+    });
+    expect(job.cacheKey).toBe('abc-123-4');
+    expect(job.version).toBe(3);
+  });
+
+  it('job sem cacheKey/version continua válido (default seguro)', () => {
+    const job = previewJobSchema.parse({ projectId: '11111111-1111-1111-1111-111111111111', prompt: 'x' });
+    expect(job.cacheKey).toBeNull();
+    expect(job.version).toBe(1);
+  });
+
   it('pickPrimaryModule devolve o primeiro módulo (ou null se vazio)', () => {
     const state: DesignState = { modules: [
       { id: 'a', type: 'COZINHA', widthMm: 2000, heightMm: 700, depthMm: 600, items: [] },

@@ -24,13 +24,33 @@ export function cacheKey(baseImageRef: string, cmd: DesignCommand): string {
   return `${baseImageRef}::${stableStringify(determinant)}`;
 }
 
+/**
+ * Chave de cache da PRÉVIA: (imagem base + prompt final) → §8.7. Guardada junto da
+ * foto gerada; se a mesma dupla voltar, reaproveitamos a imagem em vez de pagar
+ * outra geração. Hash FNV-1a (rápido, sem dependência, roda em Node e em Workers) —
+ * é chave de cache, não hash criptográfico.
+ */
+export function previewCacheKey(baseImageRef: string | null, prompt: string): string {
+  return `${fnv1a(baseImageRef ?? '<sem-base>')}-${fnv1a(prompt)}-${prompt.length}`;
+}
+
+function fnv1a(text: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+
 export type RegenCheck = { allowed: boolean; remaining: number; message?: string };
 
 /** Verifica se ainda há regenerações disponíveis na sessão. */
 export function checkRegenLimit(used: number, limit: number = DEFAULT_REGEN_LIMIT): RegenCheck {
   const remaining = Math.max(0, limit - used);
   if (remaining <= 0) {
-    return { allowed: false, remaining: 0, message: `Você atingiu o limite de ${limit} prévias nesta sessão. Aguarde ou fale com o suporte.` };
+    // O limite é por PEDIDO (contamos as prévias já geradas nele), não por sessão.
+    return { allowed: false, remaining: 0, message: `Você atingiu o limite de ${limit} prévias neste pedido. Fale com o suporte se precisar de mais.` };
   }
   return { allowed: true, remaining };
 }

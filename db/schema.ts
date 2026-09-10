@@ -210,9 +210,14 @@ export const projectPhotos = pgTable(
     path: text('path').notNull(),
     version: integer('version').notNull().default(1),
     isCurrent: boolean('is_current').notNull().default(true),
+    /** Cache de geração (§8.7): (imagem base + prompt) que produziu esta prévia. */
+    cacheKey: text('cache_key'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('project_photos_project_idx').on(t.projectId)],
+  (t) => [
+    index('project_photos_project_idx').on(t.projectId),
+    index('project_photos_cache_idx').on(t.projectId, t.cacheKey),
+  ],
 );
 
 // ── Fase 3: configuração de pricing (taxas/promoções) ───────────────────────

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cacheKey, checkRegenLimit, DEFAULT_REGEN_LIMIT } from './guardrails';
+import { cacheKey, previewCacheKey, checkRegenLimit, DEFAULT_REGEN_LIMIT } from './guardrails';
 import { parseDesignCommand } from './dsl';
 
 describe('guardrails — cache e limite de custo (§8.7)', () => {
@@ -22,6 +22,29 @@ describe('guardrails — cache e limite de custo (§8.7)', () => {
     expect(cacheKey('r2://base.png', a)).toBe(cacheKey('r2://base.png', b));
   });
 
+  it('previewCacheKey: mesma base + mesmo prompt = mesma chave (não regenera o que já existe)', () => {
+    const a = previewCacheKey('proj/foto.jpg', 'Interior photo of a kitchen. Install a wardrobe.');
+    const b = previewCacheKey('proj/foto.jpg', 'Interior photo of a kitchen. Install a wardrobe.');
+    expect(a).toBe(b);
+    expect(a.length).toBeGreaterThan(8);
+  });
+
+  it('previewCacheKey muda quando muda o prompt OU a imagem base', () => {
+    const base = previewCacheKey('proj/foto.jpg', 'prompt A');
+    expect(previewCacheKey('proj/foto.jpg', 'prompt B')).not.toBe(base);
+    expect(previewCacheKey('proj/outra.jpg', 'prompt A')).not.toBe(base);
+  });
+
+  it('previewCacheKey trata "sem imagem base" (geração do zero) sem colidir', () => {
+    expect(previewCacheKey(null, 'prompt A')).toBe(previewCacheKey(null, 'prompt A'));
+    expect(previewCacheKey(null, 'prompt A')).not.toBe(previewCacheKey('proj/foto.jpg', 'prompt A'));
+  });
+
+  it('previewCacheKey cabe numa coluna de texto curta (é um hash, não o prompt inteiro)', () => {
+    const longo = 'x'.repeat(5000);
+    expect(previewCacheKey('base', longo).length).toBeLessThanOrEqual(64);
+  });
+
   it('checkRegenLimit libera abaixo do limite e bloqueia ao atingir', () => {
     const ok = checkRegenLimit(0, 3);
     expect(ok.allowed).toBe(true);
@@ -34,7 +57,8 @@ describe('guardrails — cache e limite de custo (§8.7)', () => {
     const blocked = checkRegenLimit(3, 3);
     expect(blocked.allowed).toBe(false);
     expect(blocked.remaining).toBe(0);
-    expect(blocked.message).toMatch(/limite|aguarde|máximo/i);
+    expect(blocked.message).toMatch(/limite/i);
+    expect(blocked.message).not.toMatch(/sess[ãa]o/i); // o limite é por PEDIDO, e a mensagem precisa dizer isso
   });
 
   it('usa um limite padrão sensato quando não informado', () => {
