@@ -36,12 +36,13 @@ export default function DesignScreen() {
     try { const r = await api.getDesignState(projectId); setState(r.state); setPreviewUrl(r.previewUrl); } catch { setState({ modules: [] }); }
   }, [projectId]);
 
-  const regen = async (announce: boolean) => {
+  // `intent` define o escopo da edição (cor preserva a forma; estrutura redesenha).
+  const regen = async (announce: boolean, intent?: string) => {
     if (generating || !projectId) return;
     setGenerating(true);
     if (announce) say({ role: 'ABI', text: 'Beleza! Vou gerar uma prévia do seu móvel — leva alguns segundos.' });
     try {
-      const r = await api.designPreview(projectId);
+      const r = await api.designPreview(projectId, intent);
       if (r.queued) { say({ role: 'ABI', text: 'Estou gerando sua prévia — ela aparece aqui em instantes.' }); }
       else {
         if (r.url) setPreviewUrl(r.url);
@@ -90,7 +91,7 @@ export default function DesignScreen() {
       setState(r.state);
       say({ role: 'ABI', text: r.message });
       setBusy(false);
-      if (changed) await regen(false); // toda mudança gera/atualiza a prévia (inclusive a 1ª)
+      if (changed) await regen(false, r.command.intent); // toda mudança gera/atualiza a prévia (inclusive a 1ª)
       else if (WANTS_PREVIEW.test(utterance)) await regen(true); // pediu a prévia no chat
       return;
     } catch (e) {
@@ -192,6 +193,8 @@ function ModuleRow({ m }: { m: DesignModuleView }) {
         {m.hardware ? <Badge label={HARDWARE_LABEL[m.hardware] ?? m.hardware} tone="neutral" /> : null}
         {m.lighting ? <Badge label="LED" tone="success" /> : null}
         {m.items?.map((it, k) => <Badge key={k} label={`${it.qty}× ${it.type.toLowerCase()}`} tone="neutral" />)}
+        {m.grid ? <Badge label={`${m.grid.rows}×${m.grid.columns} nichos`} tone="primary" /> : null}
+        {m.openFront ? <Badge label="sem portas" tone="success" /> : null}
         {m.layout ? <Badge label={m.layout} tone="neutral" /> : null}
       </View>
     </View>

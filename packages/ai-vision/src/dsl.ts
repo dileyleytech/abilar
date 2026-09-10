@@ -22,7 +22,9 @@ export const DIMENSION_AXES = ['WIDTH', 'HEIGHT', 'DEPTH'] as const;
 export const dimensionAxisSchema = z.enum(DIMENSION_AXES);
 export type DimensionAxis = z.infer<typeof dimensionAxisSchema>;
 
-export const ITEM_TYPES = ['GAVETA', 'PORTA', 'PRATELEIRA', 'CABIDEIRO'] as const;
+// NICHO = compartimento aberto (a "colmeia" de sapateira). Sem ele, o NLU era
+// obrigado a encaixar "nicho" em PORTA/PRATELEIRA — e desenhava porta.
+export const ITEM_TYPES = ['GAVETA', 'PORTA', 'PRATELEIRA', 'CABIDEIRO', 'NICHO'] as const;
 export const itemTypeSchema = z.enum(ITEM_TYPES);
 export type ItemType = z.infer<typeof itemTypeSchema>;
 
@@ -51,6 +53,19 @@ export const itemParamSchema = z.object({
   position: itemPositionSchema.optional(),
 });
 
+/**
+ * Arranjo interno (CHANGE_LAYOUT). `description` é a fala do cliente; `rows`/`columns`
+ * descrevem uma GRADE de nichos (ex.: 3 andares × 3 colunas); `openFront` = sem portas.
+ * A medida de cada nicho NÃO vive aqui — dimensão é sempre RESIZE, em mm (§8.3).
+ */
+export const layoutParamSchema = z.object({
+  description: z.string().min(1).max(160).optional(),
+  rows: z.number().int().min(1).max(20).optional(),
+  columns: z.number().int().min(1).max(20).optional(),
+  openFront: z.boolean().optional(),
+});
+export type LayoutParam = z.infer<typeof layoutParamSchema>;
+
 export const commandParamsSchema = z.object({
   finish: z.string().min(1).optional(),
   material: z.string().min(1).optional(),
@@ -58,9 +73,7 @@ export const commandParamsSchema = z.object({
   item: itemParamSchema.optional(),
   hardware: hardwareSchema.optional(),
   lighting: z.string().min(1).optional(),
-  /** Arranjo interno em texto livre (CHANGE_LAYOUT): "gavetas embaixo, portas em cima".
-   *  Curto de propósito — vira instrução de imagem, não medida (§8.3). */
-  layout: z.string().min(1).max(160).optional(),
+  layout: layoutParamSchema.optional(),
 });
 export type CommandParams = z.infer<typeof commandParamsSchema>;
 

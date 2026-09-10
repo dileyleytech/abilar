@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { mmToCm, type Category } from '@abilar/shared';
-import type { DesignState, DesignModule, Hardware } from '@abilar/ai-vision';
+import type { DesignState, DesignModule, Hardware, DesignIntent } from '@abilar/ai-vision';
 import { designTurn, restoreDesign, requestDesignPreview } from '@/lib/design/actions';
 import { Card, Button, Badge, inputClass, PhotoButton } from '@/components/ui';
 import { IconEnviar, IconVoltar, IconAbi, IconObra, IconFoto } from '@/components/ui/icons';
@@ -42,12 +42,14 @@ export function DesignChat({ projectId, initialState, initialPreviewUrl }: { pro
   const say = (m: Msg) => setMessages((prev) => [...prev, m]);
 
   // Gera/atualiza a prévia. `announce`=false quando é automático (após uma mudança).
-  const regen = (announce: boolean) => {
+  // `intent` = o que acabou de ser pedido: define se a edição preserva a forma
+  // (cor/material) ou redesenha o móvel (estrutura) — §8.5.
+  const regen = (announce: boolean, intent?: DesignIntent) => {
     if (generating) return;
     setGenerating(true);
     if (announce) say({ role: 'ABI', text: 'Beleza! Vou gerar uma prévia do seu móvel — leva alguns segundos.' });
     start(async () => {
-      const r = await requestDesignPreview(projectId);
+      const r = await requestDesignPreview(projectId, intent);
       setGenerating(false);
       if (!r.ok) { say({ role: 'ABI', text: r.error }); return; }
       if (r.data.queued) { say({ role: 'ABI', text: 'Estou gerando sua prévia — ela aparece aqui em instantes.' }); return; }
@@ -89,7 +91,7 @@ export function DesignChat({ projectId, initialState, initialPreviewUrl }: { pro
       if (command.intent !== 'ASK_HELP') {
         setHistory((h) => [...h, before]);
         setState(next);
-        regen(false); // toda mudança gera/atualiza a prévia (inclusive a 1ª)
+        regen(false, command.intent); // toda mudança gera/atualiza a prévia (inclusive a 1ª)
       } else if (/\b(pr[eé]via|foto|imagem|render|gera|gere|gerar|mostra|mostrar|visualiza|como (vai )?fica)\b/i.test(utterance)) {
         regen(true); // pediu a prévia explicitamente no chat
       }
@@ -204,6 +206,8 @@ function ModuleSummary({ m }: { m: DesignModule }) {
       {m.items?.map((it, k) => (
         <Badge key={k} tone="neutral">{it.qty}× {it.type.toLowerCase()}</Badge>
       ))}
+      {m.grid && <Badge tone="primary">{m.grid.rows}×{m.grid.columns} nichos</Badge>}
+      {m.openFront && <Badge tone="success">sem portas</Badge>}
       {m.layout && <Badge tone="neutral">{m.layout}</Badge>}
     </span>
   );

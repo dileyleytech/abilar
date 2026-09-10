@@ -6,6 +6,9 @@ import { modules, projectPhotos, and, eq, desc, sql } from '@abilar/db';
 import {
   resolveImageProvider,
   buildImagePrompt,
+  buildEditInstruction,
+  scopeForIntent,
+  emphasisForIntent,
   pickPrimaryModule,
   seedFromModules,
   previewJobSchema,
@@ -14,6 +17,7 @@ import {
   previewCacheKey,
   DEFAULT_REGEN_LIMIT,
   type DesignState,
+  type DesignIntent,
 } from '@abilar/ai-vision';
 import type { WorkType } from '@abilar/shared';
 import { getDb } from '@/lib/db';
@@ -39,7 +43,7 @@ const ROOM_TYPE: Record<string, string> = {
 };
 
 /** Monta o prompt da prévia + identifica o módulo principal. */
-async function buildPrompt(projectId: string): Promise<{ prompt: string; primaryModuleId: string } | null> {
+async function buildPrompt(projectId: string, intent?: DesignIntent): Promise<{ prompt: string; primaryModuleId: string } | null> {
   const db = getDb();
   const rows = await db.select().from(modules).where(eq(modules.projectId, projectId));
   if (rows.length === 0) return null;
@@ -47,7 +51,11 @@ async function buildPrompt(projectId: string): Promise<{ prompt: string; primary
   const primary = pickPrimaryModule(state.state);
   if (!primary) return null;
   const workType = (rows.find((r) => r.id === primary.id)?.workType ?? null) as WorkType | null;
-  const { prompt } = buildImagePrompt(primary, { roomType: ROOM_TYPE[primary.type], workType: workType ?? undefined });
+  const { prompt } = buildImagePrompt(primary, {
+    roomType: ROOM_TYPE[primary.type],
+    workType: workType ?? undefined,
+    emphasize: intent ? emphasisForIntent(intent) : undefined,
+  });
   return { prompt, primaryModuleId: primary.id };
 }
 
@@ -138,14 +146,16 @@ async function resolveBase(
 async function renderImage(
   basePrompt: string,
   base: ResolvedBase | null,
+  scope: 'local' | 'global' = 'global',
 ): Promise<{ imageBase64: string; mimeType: string } | { error: string }> {
   const provider = resolveImageProvider({ GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_IMAGE_MODEL: process.env.GEMINI_IMAGE_MODEL });
   if (provider.name === 'echo') return { error: 'Geração de imagem indisponível (configure a GEMINI_API_KEY).' };
 
-  const iterating = base?.iterating ?? false;
-  const prompt = base
-    ? `Edit the attached image. ${basePrompt} Apply ONLY the requested change to the furniture and keep EVERY other element of the attached image (walls, floor, lighting, framing${iterating ? ', and the rest of the furniture' : ''}) exactly the same.`
-    : basePrompt;
+  const prompt = buildEditInstruction(basePrompt, {
+    scope,
+    iterating: base?.iterating ?? false,
+    hasBase: !!base,
+  });
   try {
     const r = await provider.editImage({ prompt, imageBase64: base?.base64, mimeType: base?.mimeType });
     return { imageBase64: r.imageBase64, mimeType: r.mimeType };
@@ -174,9 +184,15 @@ async function makeCurrent(projectId: string, photoId: string) {
 }
 
 /** Gera a prévia SINCRONAMENTE (caminho local) e guarda. */
-export async function generatePreview(projectId: string): Promise<Result<PreviewResult>> {
-  const built = await buildPrompt(projectId);
+export async function generatePreview(projectId: string, intent?: DesignIntent): Promise<Result<PreviewResult>> {
+  const built = await buildPrompt(projectId, intent);
   if (!built) return { ok: false, error: 'Adicione um móvel ao pedido antes de gerar a prévia.' };
+
+  // ESCOPO (§8.5): trocar cor/material preserva a forma e vale iterar sobre a
+  // última prévia. Mudança ESTRUTURAL (nichos, portas, medidas) precisa voltar à
+  // foto original e redesenhar — iterar com "mantenha tudo igual" devolvia a mesma
+  // imagem, e era por isso que "tira as portas" não tirava porta nenhuma.
+  const scope = intent ? scopeForIntent(intent) : 'global';
 
   // CACHE (§8.7): a imagem é função da foto do cliente + do prompt (que descreve o
   // estado INTEIRO, não só a última mudança). Ancoramos a chave na foto da parede —
@@ -192,8 +208,8 @@ export async function generatePreview(projectId: string): Promise<Result<Preview
     return { ok: true, data: { queued: false, cached: true, path: hit.path, version: hit.version, url: await store.signedUrl(hit.path, PREVIEW_URL_TTL_SEC) } };
   }
 
-  const base = await resolveBase(projectId, built.primaryModuleId, await currentGeneratedPath(projectId));
-  const result = await renderImage(built.prompt, base);
+  const base = await resolveBase(projectId, built.primaryModuleId, scope === 'local' ? await currentGeneratedPath(projectId) : null);
+  const result = await renderImage(built.prompt, base, scope);
   if ('error' in result) return { ok: false, error: result.error };
 
   const version = await nextVersion(projectId);
@@ -209,14 +225,14 @@ export async function generatePreview(projectId: string): Promise<Result<Preview
 }
 
 /** Decide o caminho: enfileira (produção) ou gera já (local). */
-export async function requestPreview(projectId: string): Promise<Result<PreviewResult>> {
+export async function requestPreview(projectId: string, intent?: DesignIntent): Promise<Result<PreviewResult>> {
   // Guardrail de custo (§8.7): limite de regenerações por projeto.
   const limit = checkRegenLimit(await regenUsed(projectId), previewLimit());
   if (!limit.allowed) return { ok: false, error: limit.message ?? 'Você atingiu o limite de prévias.' };
 
   const bindings = getBindings();
   if (bindings?.JOBS) {
-    const built = await buildPrompt(projectId);
+    const built = await buildPrompt(projectId, intent);
     if (!built) return { ok: false, error: 'Adicione um móvel ao pedido antes de gerar a prévia.' };
 
     const wallPath = await pickBasePhotoPath(projectId, built.primaryModuleId);
@@ -229,13 +245,14 @@ export async function requestPreview(projectId: string): Promise<Result<PreviewR
       return { ok: true, data: { queued: false, cached: true, path: hit.path, version: hit.version, url: await store.signedUrl(hit.path, PREVIEW_URL_TTL_SEC) } };
     }
 
-    // Edita a partir da última prévia (§8.5); no 1º passo, a foto da parede.
-    const baseImagePath = (await currentGeneratedPath(projectId)) ?? wallPath;
+    // Só a mudança LOCAL parte da última prévia; estrutura volta à foto original.
+    const localScope = intent ? scopeForIntent(intent) === 'local' : false;
+    const baseImagePath = (localScope ? await currentGeneratedPath(projectId) : null) ?? wallPath;
     const job = previewJobSchema.parse({ projectId, prompt: built.prompt, baseImagePath, cacheKey: key, version: await nextVersion(projectId) });
     await bindings.JOBS.send({ type: 'IMAGE_PREVIEW', job });
     return { ok: true, data: { queued: true } };
   }
-  return generatePreview(projectId);
+  return generatePreview(projectId, intent);
 }
 
 /** Validade da URL assinada da prévia. Mais folgada que o padrão (120 s) porque a
@@ -257,13 +274,14 @@ export async function currentPreviewUrl(projectId: string): Promise<string | nul
 
 /** Prévia do RASCUNHO da proposta do marceneiro (estado em edição, não persistido).
  *  Gera a partir do estado fornecido e guarda num caminho de rascunho por marceneiro. */
-export async function proposalDraftPreview(projectId: string, carpenterId: string, state: DesignState): Promise<Result<{ url: string | null }>> {
+export async function proposalDraftPreview(projectId: string, carpenterId: string, state: DesignState, intent?: DesignIntent): Promise<Result<{ url: string | null }>> {
   const primary = pickPrimaryModule(state);
   if (!primary) return { ok: false, error: 'Adicione um móvel antes de gerar a prévia.' };
-  const { prompt } = buildImagePrompt(primary, { roomType: ROOM_TYPE[primary.type] });
+  const { prompt } = buildImagePrompt(primary, { roomType: ROOM_TYPE[primary.type], emphasize: intent ? emphasisForIntent(intent) : undefined });
   const path = `${projectId}/proposals/draft-${carpenterId}.png`;
-  // Consistência: itera a partir do próprio rascunho anterior (se já existir).
-  const result = await renderImage(prompt, await resolveBase(projectId, primary.id, path));
+  const scope = intent ? scopeForIntent(intent) : 'global';
+  // Local itera sobre o próprio rascunho; estrutural redesenha a partir da foto.
+  const result = await renderImage(prompt, await resolveBase(projectId, primary.id, scope === 'local' ? path : null), scope);
   if ('error' in result) return { ok: false, error: result.error };
 
   const store = resolveImageStore(getBindings() ?? undefined);

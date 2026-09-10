@@ -31,6 +31,7 @@ const ITEM_LABEL: Record<string, [string, string]> = {
   PORTA: ['door', 'doors'],
   PRATELEIRA: ['shelf', 'shelves'],
   CABIDEIRO: ['hanging rail', 'hanging rails'],
+  NICHO: ['open cubby', 'open cubbies'],
 };
 
 const POSITION_LABEL: Record<string, string> = {
@@ -68,11 +69,16 @@ export function sanitizeLayout(layout: string): string {
 export type EditScope = 'local' | 'global';
 
 /**
- * Decide se a edição é local (inpainting na região do móvel, preservando o resto)
- * ou global (muda o estilo geral). §8.5.
+ * Decide se a edição é local (troca um atributo, preservando a forma) ou global
+ * (mexe na estrutura e o móvel precisa ser redesenhado). §8.5.
  */
 export function editScope(cmd: DesignCommand): EditScope {
-  switch (cmd.intent) {
+  return scopeForIntent(cmd.intent);
+}
+
+/** Mesmo que `editScope`, a partir só da intenção (o que o pipeline tem em mãos). */
+export function scopeForIntent(intent: DesignCommand['intent']): EditScope {
+  switch (intent) {
     case 'CHANGE_FINISH':
     case 'CHANGE_MATERIAL':
     case 'CHANGE_HARDWARE':
@@ -83,7 +89,17 @@ export function editScope(cmd: DesignCommand): EditScope {
   }
 }
 
-export type PromptContext = { roomType?: string; workType?: WorkType };
+/** O que enfatizar no prompt a partir do que o cliente acabou de pedir. */
+export function emphasisForIntent(intent: DesignCommand['intent']): Emphasis | undefined {
+  if (intent === 'CHANGE_FINISH') return 'FINISH';
+  if (intent === 'CHANGE_MATERIAL') return 'MATERIAL';
+  return scopeForIntent(intent) === 'global' ? 'STRUCTURE' : undefined;
+}
+
+/** O que o cliente ACABOU de pedir — o prompt afirma isso com mais força. */
+export type Emphasis = 'FINISH' | 'MATERIAL' | 'STRUCTURE';
+
+export type PromptContext = { roomType?: string; workType?: WorkType; emphasize?: Emphasis };
 
 /** Monta o prompt de edição de imagem a partir do estado (sem medidas). */
 export function buildImagePrompt(module: DesignModule, ctx: PromptContext = {}): { prompt: string } {
@@ -103,6 +119,26 @@ export function buildImagePrompt(module: DesignModule, ctx: PromptContext = {}):
   const itemsText = describeItems(module.items ?? []);
   const layoutText = module.layout ? sanitizeLayout(module.layout) : '';
 
+  // Grade de nichos (a "colmeia" de sapateira): o modelo precisa da contagem.
+  const gridText = module.grid
+    ? `Its front is an open grid of ${module.grid.rows} rows and ${module.grid.columns} columns of square cubbies, all open at the front.`
+    : '';
+
+  // NEGATIVAS: sem isso o modelo desenha um armário fechado por padrão — era por
+  // isso que "tira as portas" não tirava porta nenhuma.
+  const openText = module.openFront
+    ? 'The unit is completely open at the front: NO doors, no drawer fronts, no handles, no glass — every compartment is visible and open.'
+    : '';
+
+  // A cor some quando a edição parte de uma imagem anterior; quando o pedido FOI a
+  // cor, afirmamos sobre todas as superfícies.
+  const emphasisText =
+    ctx.emphasize === 'FINISH' && module.finish
+      ? `The entire unit must be finished in ${module.finish} — every panel, door front and side; it must NOT look wood-toned unless ${module.finish} is a wood tone.`
+      : ctx.emphasize === 'MATERIAL' && module.material
+        ? `The whole unit is built in ${module.material}, on all surfaces.`
+        : '';
+
   const verb = ctx.workType === 'REPLACE_EXISTING'
     ? `Replace the existing furniture with a ${unit}`
     : `Install a ${unit}`;
@@ -112,13 +148,52 @@ export function buildImagePrompt(module: DesignModule, ctx: PromptContext = {}):
     `${verb}${specsText ? `, ${specsText}` : ''}.`,
     // Itens e arranjo: o que o cliente pediu no chat precisa aparecer na prévia.
     itemsText ? `It has ${itemsText}.` : '',
+    gridText,
+    openText,
     layoutText ? `Internal arrangement, as described by the client: ${layoutText}.` : '',
+    emphasisText,
     // Mantém a IDENTIDADE e a PROPORÇÃO do móvel — evita virar "painel gigante".
-    `It must stay a single ${unit} with realistic, modest residential proportions; do not change its type, do not enlarge it into a full-wall built-in unit, and add nothing that was not requested.`,
+    `It must stay a single ${unit} with realistic, modest residential proportions; do not change its type, do not enlarge it into a full-wall built-in unit, and add nothing that was not requested${module.openFront ? ' (in particular, do NOT add doors)' : ''}.`,
     `Keep the room's walls, floor, lighting and perspective unchanged.`,
     `Photorealistic, natural lighting, Brazilian residential style.`,
     `Modify ONLY the furniture area.`,
   ].filter(Boolean).join(' ');
 
   return { prompt };
+}
+
+export type EditContext = {
+  /** local = troca um atributo (cor/material); global = mexe na ESTRUTURA. */
+  scope: EditScope;
+  /** true quando a base é uma prévia anterior (e não a foto original do cliente). */
+  iterating: boolean;
+  /** false = não há imagem base; o prompt vai puro (geração do zero). */
+  hasBase?: boolean;
+};
+
+/**
+ * Embrulha o prompt na instrução de EDIÇÃO da imagem (§8.5). O erro clássico aqui é
+ * mandar "mantenha todo o resto exatamente igual" para uma mudança ESTRUTURAL: o
+ * modelo obedece e devolve a mesma imagem (portas continuam lá, cor não muda).
+ * Por isso a instrução varia com o escopo — e o ambiente é preservado nos dois casos.
+ */
+export function buildEditInstruction(basePrompt: string, ctx: EditContext): string {
+  if (ctx.hasBase === false) return basePrompt;
+
+  const ambiente = "Keep the room's walls, floor, lighting, framing and perspective exactly the same.";
+  if (ctx.scope === 'local') {
+    return [
+      'Edit the attached image.',
+      basePrompt,
+      `Keep the same furniture shape, position and structure${ctx.iterating ? ' as in the attached image' : ''} — change only what was asked.`,
+      ambiente,
+    ].join(' ');
+  }
+  return [
+    'Edit the attached image.',
+    'Replace the furniture with the unit described below, redrawing it from scratch in the same place.',
+    basePrompt,
+    'The new furniture must match this description even where it differs from what is in the attached image.',
+    ambiente,
+  ].join(' ');
 }

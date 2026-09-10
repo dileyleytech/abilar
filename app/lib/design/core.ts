@@ -65,7 +65,13 @@ async function persistState(projectId: string, state: DesignState) {
           heightMm: m.heightMm,
           depthMm: m.depthMm,
           // `hardware` é o jsonb de atributos visuais do módulo (ferragem, luz, arranjo).
-          hardware: { kind: m.hardware ?? null, lighting: m.lighting ?? null, layout: m.layout ?? null },
+          hardware: {
+            kind: m.hardware ?? null,
+            lighting: m.lighting ?? null,
+            layout: m.layout ?? null,
+            grid: m.grid ?? null,
+            openFront: m.openFront ?? null,
+          },
           items: m.items ?? [],
         })
         .where(and(eq(modules.id, m.id), eq(modules.projectId, projectId))),

@@ -7,7 +7,10 @@ type ModuleRow = typeof modules.$inferSelect;
 /** DB → SeedModule (lê hardware/lighting do jsonb `hardware` e os itens de `items`). */
 export function toSeed(rows: ModuleRow[]): SeedModule[] {
   return rows.map((r) => {
-    const hw = (r.hardware ?? {}) as { kind?: string; lighting?: string; layout?: string };
+    const hw = (r.hardware ?? {}) as {
+      kind?: string; lighting?: string; layout?: string;
+      grid?: { rows: number; columns: number }; openFront?: boolean;
+    };
     return {
       id: r.id,
       type: r.type as SeedModule['type'],
@@ -20,6 +23,8 @@ export function toSeed(rows: ModuleRow[]): SeedModule[] {
       hardware: (hw.kind as SeedModule['hardware']) ?? null,
       lighting: hw.lighting ?? null,
       layout: hw.layout ?? null,
+      grid: hw.grid ?? null,
+      openFront: hw.openFront ?? null,
       items: Array.isArray(r.items) ? (r.items as SeedModule['items']) : [],
     };
   });
