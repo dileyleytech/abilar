@@ -197,6 +197,8 @@ export type DesignModuleView = {
   finish?: string;
   hardware?: string;
   lighting?: string;
+  /** Arranjo interno pedido no chat ("gavetas embaixo e portas em cima"). */
+  layout?: string;
   items?: DesignItemView[];
 };
 export type DesignStateView = { modules: DesignModuleView[] };

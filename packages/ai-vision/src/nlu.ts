@@ -45,6 +45,12 @@ function interpretMock(input: NluInput): DesignBatch {
   if (/push/.test(t)) return one('CHANGE_HARDWARE', { hardware: 'PUSH' }, 'Troquei para abertura por toque (push).', 0.85);
   if (/puxador|cava/.test(t)) return one('CHANGE_HARDWARE', { hardware: 'PUXADOR_CAVA' }, 'Troquei para puxador cava.', 0.85);
 
+  // Arranjo interno ("organiza com gavetas embaixo e portas em cima") = CHANGE_LAYOUT.
+  // Só quando a fala pede organização/divisão — "coloca 2 gavetas" segue ADD_ITEM.
+  if (/(organiz|layout|divis|dividi|reparti|distribu|arranj|disposi)/.test(t)) {
+    return one('CHANGE_LAYOUT', { layout: input.utterance.trim().slice(0, 160) }, 'Reorganizei o móvel como você pediu.', 0.7);
+  }
+
   const itemType = /gaveta/.test(t) ? 'GAVETA' : /porta/.test(t) ? 'PORTA' : /prateleira/.test(t) ? 'PRATELEIRA' : /cabideiro/.test(t) ? 'CABIDEIRO' : null;
   if (itemType && remove) return one('REMOVE_ITEM', { item: { type: itemType, qty: 1, position: pos } }, `Removi ${itemType.toLowerCase()}.`);
   if (itemType && add) {
@@ -99,6 +105,8 @@ const SYSTEM_PROMPT = [
   'preenchendo a lista "commands" com UM comando para CADA mudança entendida.',
   'Medidas: o cliente fala em cm; converta para MILÍMETROS (cm × 10) em absoluteMm/deltaMm.',
   'Se ele der as 3 medidas (ex.: "80x120x35"), emita TRÊS comandos RESIZE: WIDTH=800, HEIGHT=1200, DEPTH=350 (absoluteMm).',
+  'Como o móvel é ORGANIZADO por dentro (o que fica embaixo/em cima, quantas divisões) = CHANGE_LAYOUT,',
+  'com params.layout descrevendo o arranjo em PT-BR, curto e SEM medidas (medida é RESIZE).',
   'Remover algo (espelho, porta, gaveta) = REMOVE_ITEM. "Toda fechada"/portas = ADD_ITEM PORTA. "Sem metal/ferragem aparente" = CHANGE_HARDWARE.',
   'Preencha "echo" em PT-BR com um resumo gentil do que entendeu (uma frase).',
   'Emita SOMENTE as mudanças pedidas EXPLICITAMENTE; não invente alterações, não troque o TIPO do móvel e não mexa no que não foi mencionado.',
@@ -133,6 +141,7 @@ const COMMAND_ITEM = {
         },
         hardware: { type: 'STRING', enum: [...HARDWARE] },
         lighting: { type: 'STRING' },
+        layout: { type: 'STRING', description: 'arranjo interno em PT-BR, sem medidas (ex.: "gavetas embaixo e portas em cima")' },
       },
     },
   },

@@ -200,6 +200,7 @@ function ModuleSummary({ m }: { m: DesignModule }) {
       {m.items?.map((it, k) => (
         <Badge key={k} tone="neutral">{it.qty}× {it.type.toLowerCase()}</Badge>
       ))}
+      {m.layout && <Badge tone="neutral">{m.layout}</Badge>}
     </span>
   );
 }

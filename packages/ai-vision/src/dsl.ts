@@ -58,6 +58,9 @@ export const commandParamsSchema = z.object({
   item: itemParamSchema.optional(),
   hardware: hardwareSchema.optional(),
   lighting: z.string().min(1).optional(),
+  /** Arranjo interno em texto livre (CHANGE_LAYOUT): "gavetas embaixo, portas em cima".
+   *  Curto de propósito — vira instrução de imagem, não medida (§8.3). */
+  layout: z.string().min(1).max(160).optional(),
 });
 export type CommandParams = z.infer<typeof commandParamsSchema>;
 

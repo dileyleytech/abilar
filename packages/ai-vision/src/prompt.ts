@@ -3,7 +3,7 @@
 // a verdade é o estado estruturado. O builder só usa material/acabamento/ferragem/luz.
 import type { WorkType } from '@abilar/shared';
 import type { DesignCommand } from './dsl';
-import type { DesignModule } from './state';
+import type { DesignItem, DesignModule } from './state';
 
 const MODULE_LABEL: Record<string, string> = {
   GUARDA_ROUPA: 'wardrobe',
@@ -25,6 +25,45 @@ const HARDWARE_LABEL: Record<string, string> = {
 const LIGHTING_LABEL: Record<string, string> = {
   FITA_LED_PRATELEIRAS: 'LED strip lighting on the shelves',
 };
+
+const ITEM_LABEL: Record<string, [string, string]> = {
+  GAVETA: ['drawer', 'drawers'],
+  PORTA: ['door', 'doors'],
+  PRATELEIRA: ['shelf', 'shelves'],
+  CABIDEIRO: ['hanging rail', 'hanging rails'],
+};
+
+const POSITION_LABEL: Record<string, string> = {
+  INFERIOR: 'at the bottom',
+  SUPERIOR: 'at the top',
+  ESQUERDA: 'on the left',
+  DIREITA: 'on the right',
+};
+
+/** Itens do módulo em texto ("3 drawers at the bottom, 2 doors") — sem medidas. */
+function describeItems(items: DesignItem[]): string {
+  return items
+    .filter((i) => i.qty > 0)
+    .map((i) => {
+      const [one, many] = ITEM_LABEL[i.type] ?? ['unit', 'units'];
+      const pos = i.position ? ` ${POSITION_LABEL[i.position] ?? ''}`.trimEnd() : '';
+      return `${i.qty} ${i.qty > 1 ? many : one}${pos}`;
+    })
+    .join(', ');
+}
+
+/**
+ * REGRA DE OURO (§8.3): medida NÃO entra no prompt. O layout é texto livre do
+ * cliente, então pode vir com "gaveta de 40 cm" — tiramos o número (e a unidade)
+ * antes de mandar pro modelo. A medida real segue nos campos em mm.
+ */
+export function sanitizeLayout(layout: string): string {
+  return layout
+    .replace(/\d+([.,]\d+)?\s*(cm|mm|m|metros?|centi?metros?|milimetros?|milímetros?|centímetros?)?/gi, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([,.])/g, '$1')
+    .trim();
+}
 
 export type EditScope = 'local' | 'global';
 
@@ -61,6 +100,9 @@ export function buildImagePrompt(module: DesignModule, ctx: PromptContext = {}):
   if (module.lighting) specs.push(LIGHTING_LABEL[module.lighting] ?? '');
   const specsText = specs.filter(Boolean).join(', ');
 
+  const itemsText = describeItems(module.items ?? []);
+  const layoutText = module.layout ? sanitizeLayout(module.layout) : '';
+
   const verb = ctx.workType === 'REPLACE_EXISTING'
     ? `Replace the existing furniture with a ${unit}`
     : `Install a ${unit}`;
@@ -68,12 +110,15 @@ export function buildImagePrompt(module: DesignModule, ctx: PromptContext = {}):
   const prompt = [
     `Interior photo of ${room}.`,
     `${verb}${specsText ? `, ${specsText}` : ''}.`,
+    // Itens e arranjo: o que o cliente pediu no chat precisa aparecer na prévia.
+    itemsText ? `It has ${itemsText}.` : '',
+    layoutText ? `Internal arrangement, as described by the client: ${layoutText}.` : '',
     // Mantém a IDENTIDADE e a PROPORÇÃO do móvel — evita virar "painel gigante".
     `It must stay a single ${unit} with realistic, modest residential proportions; do not change its type, do not enlarge it into a full-wall built-in unit, and add nothing that was not requested.`,
     `Keep the room's walls, floor, lighting and perspective unchanged.`,
     `Photorealistic, natural lighting, Brazilian residential style.`,
     `Modify ONLY the furniture area.`,
-  ].join(' ');
+  ].filter(Boolean).join(' ');
 
   return { prompt };
 }

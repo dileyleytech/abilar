@@ -92,6 +92,31 @@ describe('applyCommand — estado estruturado é a fonte de verdade (§8.3)', ()
     expect(input.modules[0]!.finish).toBe('Branco TX');
   });
 
+  it('CHANGE_LAYOUT grava o arranjo interno pedido (deixa de ser no-op)', () => {
+    const r = applyCommand(
+      baseState(),
+      parseDesignCommand({ intent: 'CHANGE_LAYOUT', targetModuleId: M, params: { layout: 'gavetas embaixo e portas em cima' } }),
+    );
+    expect(r.ok).toBe(true);
+    expect(r.state.modules[0]!.layout).toBe('gavetas embaixo e portas em cima');
+    expect(r.state.modules[0]!.finish).toBe('Branco TX'); // não mexe no resto
+  });
+
+  it('CHANGE_LAYOUT sem descrição é rejeitado (não confirma o que não fez)', () => {
+    const r = applyCommand(baseState(), parseDesignCommand({ intent: 'CHANGE_LAYOUT', targetModuleId: M, params: {} }));
+    expect(r.ok).toBe(false);
+    expect(r.state.modules[0]!.layout).toBeUndefined();
+    expect(r.message).toMatch(/organiz|arranj|divid|como/i);
+  });
+
+  it("CHANGE_LAYOUT com 'ALL' aplica em todos os módulos", () => {
+    const state: DesignState = {
+      modules: [baseState().modules[0]!, { ...baseState().modules[0]!, id: '22222222-2222-2222-2222-222222222222' }],
+    };
+    const r = applyCommand(state, parseDesignCommand({ intent: 'CHANGE_LAYOUT', targetModuleId: 'ALL', params: { layout: 'tudo em prateleiras abertas' } }));
+    expect(r.state.modules.every((m) => m.layout === 'tudo em prateleiras abertas')).toBe(true);
+  });
+
   it('UNDO/ASK_HELP não alteram o estado (tratados na camada de sessão)', () => {
     const r = applyCommand(baseState(), parseDesignCommand({ intent: 'ASK_HELP' }));
     expect(r.ok).toBe(true);

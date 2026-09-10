@@ -185,6 +185,7 @@ function ModuleRow({ m }: { m: DesignModuleView }) {
         {m.hardware ? <Badge label={HARDWARE_LABEL[m.hardware] ?? m.hardware} tone="neutral" /> : null}
         {m.lighting ? <Badge label="LED" tone="success" /> : null}
         {m.items?.map((it, k) => <Badge key={k} label={`${it.qty}× ${it.type.toLowerCase()}`} tone="neutral" />)}
+        {m.layout ? <Badge label={m.layout} tone="neutral" /> : null}
       </View>
     </View>
   );
