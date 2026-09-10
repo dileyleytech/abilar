@@ -26,6 +26,10 @@ export interface ImageEditInput {
   imageBase64?: string;
   /** MIME da imagem base (ex.: 'image/jpeg'). */
   mimeType?: string;
+  /** Imagens de REFERÊNCIA enviadas pelo cliente ("quero parecido com isso").
+   *  Vão depois da base e servem de inspiração de estilo/estrutura — o ambiente
+   *  continua sendo o da foto do cliente. */
+  references?: { base64: string; mimeType?: string }[];
   /** Semente para reprodutibilidade (opcional). */
   seed?: number;
 }

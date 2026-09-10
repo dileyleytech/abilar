@@ -169,6 +169,8 @@ export type EditContext = {
   iterating: boolean;
   /** false = não há imagem base; o prompt vai puro (geração do zero). */
   hasBase?: boolean;
+  /** Quantas imagens de referência do cliente seguem a base. */
+  references?: number;
 };
 
 /**
@@ -181,12 +183,16 @@ export function buildEditInstruction(basePrompt: string, ctx: EditContext): stri
   if (ctx.hasBase === false) return basePrompt;
 
   const ambiente = "Keep the room's walls, floor, lighting, framing and perspective exactly the same.";
+  // Referência é inspiração, não colagem: o ambiente continua sendo o do cliente.
+  const refs = ctx.references
+    ? ` The first attached image is the client's room — that is the scene to edit. The ${ctx.references === 1 ? 'other attached image is a reference' : `other ${ctx.references} attached images are references`} chosen by the client: follow their style, structure and proportions for the furniture, but do NOT copy their room, background, objects or framing.`
+    : '';
   if (ctx.scope === 'local') {
     return [
       'Edit the attached image.',
       basePrompt,
       `Keep the same furniture shape, position and structure${ctx.iterating ? ' as in the attached image' : ''} — change only what was asked.`,
-      ambiente,
+      ambiente + refs,
     ].join(' ');
   }
   return [
@@ -194,6 +200,6 @@ export function buildEditInstruction(basePrompt: string, ctx: EditContext): stri
     'Replace the furniture with the unit described below, redrawing it from scratch in the same place.',
     basePrompt,
     'The new furniture must match this description even where it differs from what is in the attached image.',
-    ambiente,
+    ambiente + refs,
   ].join(' ');
 }

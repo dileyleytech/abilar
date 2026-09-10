@@ -142,6 +142,13 @@ describe('buildEditInstruction — como pedir a edição da imagem (§8.5)', () 
     expect(t).toMatch(/wall|floor|perspective/);
   });
 
+  it('com referências, explica o papel delas (inspirar, não copiar o ambiente)', () => {
+    const t = buildEditInstruction(base, { scope: 'global', iterating: false, references: 2 }).toLowerCase();
+    expect(t).toMatch(/reference/);
+    expect(t).toMatch(/do not copy|not copy their|ignore their (room|background)/);
+    expect(t).toMatch(/first (attached )?image|photo of the room/);
+  });
+
   it('sem imagem base, devolve o prompt puro (geração do zero)', () => {
     expect(buildEditInstruction(base, { scope: 'global', iterating: false, hasBase: false })).toBe(base);
   });

@@ -153,7 +153,10 @@ export const api = {
 
   // Chat de design com a ABI (Fase 6). O servidor faz o NLU (Gemini) e persiste.
   getDesignState: (projectId: string) =>
-    getJson<{ state: DesignStateView; previewUrl: string | null }>(`/api/mobile/design/state?projectId=${encodeURIComponent(projectId)}`),
+    getJson<{ state: DesignStateView; previewUrl: string | null; references: string[] }>(`/api/mobile/design/state?projectId=${encodeURIComponent(projectId)}`),
+  /** Imagem de referência de estilo do cliente ("quero parecido com isso"). */
+  designReference: (projectId: string, photo: Photo) =>
+    postForm<{ ok: true; references: string[] }>('/api/mobile/design/reference', { projectId }, [photo], 'photo'),
   designTurn: (projectId: string, utterance: string) =>
     postJson<DesignTurnResult>('/api/mobile/design/turn', { projectId, utterance }),
   designRestore: (projectId: string, snapshot: DesignStateView) =>

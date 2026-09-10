@@ -2,7 +2,7 @@
 // autoriza). Dois caminhos, escolhidos por ambiente:
 //  • LOCAL (sem binding JOBS): geração SÍNCRONA + guarda no Supabase.
 //  • PRODUÇÃO (binding JOBS): enfileira o job; o worker consumer gera + guarda no R2.
-import { modules, projectPhotos, and, eq, desc, sql } from '@abilar/db';
+import { modules, projectPhotos, and, eq, desc, sql, isNull } from '@abilar/db';
 import {
   resolveImageProvider,
   buildImagePrompt,
@@ -72,6 +72,32 @@ async function pickBasePhotoPath(projectId: string, moduleId: string): Promise<s
     usable.find((r) => r.kind === 'ORIGINAL_ROOM') ??
     usable[0];
   return pick?.path ?? null;
+}
+
+/**
+ * Fotos de REFERÊNCIA de estilo ("quero parecido com isso"). Atenção: a foto do
+ * MÓVEL também é gravada com kind=REFERENCE, mas com `moduleId` — essa é a base a
+ * editar, não inspiração. Referência de estilo é a que NÃO tem módulo.
+ * Limitadas por custo (cada uma é mais um anexo em toda geração).
+ */
+const MAX_REFERENCES = 3;
+
+async function loadReferences(projectId: string): Promise<{ base64: string; mimeType: string }[]> {
+  const db = getDb();
+  const rows = await db
+    .select({ path: projectPhotos.path })
+    .from(projectPhotos)
+    .where(and(
+      eq(projectPhotos.projectId, projectId),
+      eq(projectPhotos.kind, 'REFERENCE'),
+      isNull(projectPhotos.moduleId),
+      eq(projectPhotos.isCurrent, true),
+    ))
+    .orderBy(desc(projectPhotos.createdAt))
+    .limit(MAX_REFERENCES);
+
+  const baixadas = await Promise.all(rows.map((r) => downloadBase(r.path)));
+  return baixadas.filter((b): b is { base64: string; mimeType: string } => !!b);
 }
 
 /** Baixa a foto base do storage e devolve em base64 (para edição inline). */
@@ -147,6 +173,7 @@ async function renderImage(
   basePrompt: string,
   base: ResolvedBase | null,
   scope: 'local' | 'global' = 'global',
+  references: { base64: string; mimeType: string }[] = [],
 ): Promise<{ imageBase64: string; mimeType: string } | { error: string }> {
   const provider = resolveImageProvider({ GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_IMAGE_MODEL: process.env.GEMINI_IMAGE_MODEL });
   if (provider.name === 'echo') return { error: 'Geração de imagem indisponível (configure a GEMINI_API_KEY).' };
@@ -155,9 +182,10 @@ async function renderImage(
     scope,
     iterating: base?.iterating ?? false,
     hasBase: !!base,
+    references: references.length,
   });
   try {
-    const r = await provider.editImage({ prompt, imageBase64: base?.base64, mimeType: base?.mimeType });
+    const r = await provider.editImage({ prompt, imageBase64: base?.base64, mimeType: base?.mimeType, references });
     return { imageBase64: r.imageBase64, mimeType: r.mimeType };
   } catch (e) {
     return { error: e instanceof Error ? e.message : 'Não foi possível gerar a prévia agora.' };
@@ -199,7 +227,9 @@ export async function generatePreview(projectId: string, intent?: DesignIntent):
   // assim "gerar de novo sem mudar nada" e "voltar pro verde" reaproveitam em vez
   // de pagar outra geração. A base de EDIÇÃO continua sendo a última prévia (§8.5).
   const wallPath = await pickBasePhotoPath(projectId, built.primaryModuleId);
-  const key = previewCacheKey(wallPath, built.prompt);
+  const references = await loadReferences(projectId);
+  // As referências entram na chave: mandar uma foto nova é pedir uma prévia nova.
+  const key = previewCacheKey(wallPath, `${built.prompt}::refs=${references.length}`);
   const store = resolveImageStore(getBindings() ?? undefined);
 
   const hit = await findCached(projectId, key);
@@ -209,7 +239,7 @@ export async function generatePreview(projectId: string, intent?: DesignIntent):
   }
 
   const base = await resolveBase(projectId, built.primaryModuleId, scope === 'local' ? await currentGeneratedPath(projectId) : null);
-  const result = await renderImage(built.prompt, base, scope);
+  const result = await renderImage(built.prompt, base, scope, references);
   if ('error' in result) return { ok: false, error: result.error };
 
   const version = await nextVersion(projectId);
@@ -272,6 +302,25 @@ export async function currentPreviewUrl(projectId: string): Promise<string | nul
   return resolveImageStore(getBindings() ?? undefined).signedUrl(row.path, PREVIEW_URL_TTL_SEC);
 }
 
+/** URLs assinadas das referências de estilo já enviadas (para mostrar no chat). */
+export async function referenceUrls(projectId: string): Promise<string[]> {
+  const db = getDb();
+  const rows = await db
+    .select({ path: projectPhotos.path })
+    .from(projectPhotos)
+    .where(and(
+      eq(projectPhotos.projectId, projectId),
+      eq(projectPhotos.kind, 'REFERENCE'),
+      isNull(projectPhotos.moduleId),
+      eq(projectPhotos.isCurrent, true),
+    ))
+    .orderBy(desc(projectPhotos.createdAt))
+    .limit(MAX_REFERENCES);
+  const store = resolveImageStore(getBindings() ?? undefined);
+  const urls = await Promise.all(rows.map((r) => store.signedUrl(r.path, PREVIEW_URL_TTL_SEC)));
+  return urls.filter((u): u is string => !!u);
+}
+
 /** Prévia do RASCUNHO da proposta do marceneiro (estado em edição, não persistido).
  *  Gera a partir do estado fornecido e guarda num caminho de rascunho por marceneiro. */
 export async function proposalDraftPreview(projectId: string, carpenterId: string, state: DesignState, intent?: DesignIntent): Promise<Result<{ url: string | null }>> {
@@ -281,7 +330,7 @@ export async function proposalDraftPreview(projectId: string, carpenterId: strin
   const path = `${projectId}/proposals/draft-${carpenterId}.png`;
   const scope = intent ? scopeForIntent(intent) : 'global';
   // Local itera sobre o próprio rascunho; estrutural redesenha a partir da foto.
-  const result = await renderImage(prompt, await resolveBase(projectId, primary.id, scope === 'local' ? path : null), scope);
+  const result = await renderImage(prompt, await resolveBase(projectId, primary.id, scope === 'local' ? path : null), scope, await loadReferences(projectId));
   if ('error' in result) return { ok: false, error: result.error };
 
   const store = resolveImageStore(getBindings() ?? undefined);

@@ -50,3 +50,34 @@ describe('resolveImageProvider — trocável (só Gemini)', () => {
     expect(resolveImageProvider({ GEMINI_API_KEY: 'k' }).name).toBe('gemini');
   });
 });
+
+describe('GeminiImageProvider — imagens de REFERÊNCIA do cliente', () => {
+  it('manda a base e as referências como partes separadas, na ordem', async () => {
+    let body: { contents: { parts: { text?: string; inlineData?: { data: string } }[] }[] } = { contents: [] };
+    const fake = (async (_u: string, init: { body: string }) => {
+      body = JSON.parse(init.body);
+      return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: 'out' } }] } }] }) };
+    }) as unknown as typeof fetch;
+
+    const p = createGeminiImageProvider({ apiKey: 'k', fetchImpl: fake });
+    await p.editImage({
+      prompt: 'x',
+      imageBase64: 'base',
+      mimeType: 'image/jpeg',
+      references: [{ base64: 'ref1', mimeType: 'image/png' }, { base64: 'ref2', mimeType: 'image/jpeg' }],
+    });
+
+    const imagens = body.contents[0]!.parts.filter((p) => p.inlineData).map((p) => p.inlineData!.data);
+    expect(imagens).toEqual(['base', 'ref1', 'ref2']);
+  });
+
+  it('sem referências, o corpo não muda (compatível com o que já existia)', async () => {
+    let body: { contents: { parts: unknown[] }[] } = { contents: [] };
+    const fake = (async (_u: string, init: { body: string }) => {
+      body = JSON.parse(init.body);
+      return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: 'out' } }] } }] }) };
+    }) as unknown as typeof fetch;
+    await createGeminiImageProvider({ apiKey: 'k', fetchImpl: fake }).editImage({ prompt: 'x', imageBase64: 'base' });
+    expect(body.contents[0]!.parts).toHaveLength(2); // texto + 1 imagem
+  });
+});

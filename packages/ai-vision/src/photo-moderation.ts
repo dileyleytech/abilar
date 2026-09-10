@@ -2,9 +2,12 @@
 // não sejam de um cômodo/parede onde caiba o móvel. Gemini (vision). FAIL-OPEN:
 // se a API falhar, NÃO bloqueia o upload (relevant=true) — não punir por erro nosso.
 
+/** Para que serve a foto: o ambiente a editar, ou uma referência de estilo. */
+export type PhotoPurpose = 'ROOM' | 'REFERENCE';
+
 export interface PhotoModerator {
   readonly name: string;
-  check(imageBase64: string, mimeType: string): Promise<{ relevant: boolean; reason?: string }>;
+  check(imageBase64: string, mimeType: string, purpose?: PhotoPurpose): Promise<{ relevant: boolean; reason?: string }>;
 }
 
 const DEFAULT_MODEL = 'gemini-flash-lite-latest';
@@ -25,10 +28,18 @@ const FN = {
   },
 } as const;
 
-const PROMPT =
+const PROMPT_ROOM =
   'Você modera fotos para um app de marcenaria. Diga se a foto serve para projetar um móvel: ' +
   'deve mostrar um CÔMODO, PAREDE ou AMBIENTE residencial. Rejeite selfies, documentos, prints de tela, ' +
   'fotos borradas/escuras demais ou sem relação. Chame a função report_photo.';
+
+// Referência é o "quero parecido com isso": foto de catálogo, print do Pinterest,
+// móvel em loja. Exigir cômodo aqui reprovaria justamente o que o cliente quer mandar.
+const PROMPT_REFERENCE =
+  'Você modera fotos de REFERÊNCIA para um app de marcenaria: o cliente manda um exemplo do móvel que quer. ' +
+  'Aceite qualquer imagem que mostre um MÓVEL, marcenaria, ambiente decorado ou desenho/render de móvel — ' +
+  'inclusive foto de catálogo, print de site ou de rede social. Rejeite só o que não tem relação nenhuma ' +
+  '(selfie, documento, pessoas, conteúdo impróprio) ou está ilegível. Chame a função report_photo.';
 
 export function createGeminiPhotoModerator(opts: PhotoModeratorOptions | string): PhotoModerator {
   const o: PhotoModeratorOptions = typeof opts === 'string' ? { apiKey: opts } : opts;
@@ -38,13 +49,14 @@ export function createGeminiPhotoModerator(opts: PhotoModeratorOptions | string)
 
   return {
     name: 'gemini',
-    async check(imageBase64, mimeType) {
+    async check(imageBase64, mimeType, purpose: PhotoPurpose = 'ROOM') {
+      const prompt = purpose === 'REFERENCE' ? PROMPT_REFERENCE : PROMPT_ROOM;
       try {
         const res = await doFetch(`${baseUrl}/models/${model}:generateContent?key=${o.apiKey}`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: PROMPT }, { inlineData: { mimeType, data: imageBase64 } }] }],
+            contents: [{ role: 'user', parts: [{ text: prompt }, { inlineData: { mimeType, data: imageBase64 } }] }],
             tools: [{ functionDeclarations: [FN] }],
             toolConfig: { functionCallingConfig: { mode: 'ANY', allowedFunctionNames: ['report_photo'] } },
           }),

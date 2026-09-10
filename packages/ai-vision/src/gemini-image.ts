@@ -33,6 +33,10 @@ export function createGeminiImageProvider(opts: GeminiImageOptions | string): Im
     async editImage(input: ImageEditInput): Promise<ImageEditResult> {
       const parts: GenPart[] = [{ text: input.prompt }];
       if (input.imageBase64) parts.push({ inlineData: { mimeType: input.mimeType || 'image/jpeg', data: input.imageBase64 } });
+      // Referências vêm DEPOIS da base: a 1ª imagem é sempre o ambiente a editar.
+      for (const ref of input.references ?? []) {
+        parts.push({ inlineData: { mimeType: ref.mimeType || 'image/jpeg', data: ref.base64 } });
+      }
 
       const res = await doFetch(`${baseUrl}/models/${model}:generateContent?key=${o.apiKey}`, {
         method: 'POST',

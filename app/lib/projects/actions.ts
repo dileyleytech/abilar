@@ -259,10 +259,14 @@ export async function registerProjectPhoto(
     if (res?.ok) {
       const bytes = new Uint8Array(await res.arrayBuffer());
       const mime = res.headers.get('content-type') || 'image/jpeg';
-      const mod = await resolvePhotoModerator({ GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_MODERATION_MODEL: process.env.GEMINI_MODERATION_MODEL }).check(bytesToBase64(bytes), mime);
+      // Referência de ESTILO (sem módulo) é foto de catálogo/print: não exigir cômodo.
+      const purpose = kind.data === 'REFERENCE' && !input.moduleId ? 'REFERENCE' : 'ROOM';
+      const mod = await resolvePhotoModerator({ GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_MODERATION_MODEL: process.env.GEMINI_MODERATION_MODEL }).check(bytesToBase64(bytes), mime, purpose);
       if (!mod.relevant) {
         await createSupabaseAdminClient().storage.from(PROJECT_PHOTOS_BUCKET).remove([input.path]).catch(() => {});
-        return { ok: false, error: mod.reason ?? 'Essa foto não parece ser do cômodo. Envie a parede onde o móvel vai ficar.' };
+        return { ok: false, error: mod.reason ?? (purpose === 'REFERENCE'
+          ? 'Essa imagem não parece um móvel. Envie a foto do móvel que serve de exemplo.'
+          : 'Essa foto não parece ser do cômodo. Envie a parede onde o móvel vai ficar.') };
       }
     }
   }
