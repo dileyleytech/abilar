@@ -16,7 +16,6 @@ export default tseslint.config(
       'next-env.d.ts',
       'cloudflare-env.d.ts',
       'mobile/**',
-      'workers/**',
     ],
   },
   js.configs.recommended,
@@ -29,6 +28,11 @@ export default tseslint.config(
       ...nextPlugin.configs.recommended.rules,
       ...nextPlugin.configs['core-web-vitals'].rules,
     },
+  },
+  // Consumers de Cloudflare Queues: ambiente Worker (sem DOM, sem Node completo).
+  {
+    files: ['workers/**/*.ts'],
+    languageOptions: { globals: { ...globals.worker } },
   },
   {
     languageOptions: {
