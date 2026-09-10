@@ -2,8 +2,11 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { mmToCm, type Category } from '@abilar/shared';
-import type { DesignState, DesignModule, Hardware } from '@abilar/ai-vision';
+import type { DesignState, DesignModule, Hardware, DesignIntent } from '@abilar/ai-vision';
 import { designTurn, restoreDesign, requestDesignPreview } from '@/lib/design/actions';
+import { registerProjectPhoto } from '@/lib/projects/actions';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { downscaleImage } from '@/lib/image';
 import { Card, Button, Badge, inputClass, PhotoButton } from '@/components/ui';
 import { IconEnviar, IconVoltar, IconAbi, IconObra, IconFoto } from '@/components/ui/icons';
 
@@ -25,7 +28,19 @@ const EXAMPLES = [
   'Fita de LED nas prateleiras',
 ];
 
-export function DesignChat({ projectId, initialState, initialPreviewUrl }: { projectId: string; initialState: DesignState; initialPreviewUrl?: string | null }) {
+/** Sobe uma imagem de REFERÊNCIA de estilo (sem módulo — a do módulo é a base). */
+async function uploadReference(projectId: string, file: File): Promise<string | null> {
+  const toUpload = await downscaleImage(file);
+  const supabase = createSupabaseBrowserClient();
+  const safe = toUpload.name.replace(/[^\w.-]/g, '_');
+  const path = `${projectId}/referencias/${Date.now()}-${safe}`;
+  const up = await supabase.storage.from('project-photos').upload(path, toUpload, { upsert: true });
+  if (up.error) return 'Não consegui enviar a imagem. Tente de novo.';
+  const r = await registerProjectPhoto(projectId, { kind: 'REFERENCE', path });
+  return r.ok ? null : r.error;
+}
+
+export function DesignChat({ projectId, initialState, initialPreviewUrl, initialReferences = [] }: { projectId: string; initialState: DesignState; initialPreviewUrl?: string | null; initialReferences?: string[] }) {
   const [state, setState] = useState<DesignState>(initialState);
   const [previewUrl, setPreviewUrl] = useState<string | null>(initialPreviewUrl ?? null);
   const [generating, setGenerating] = useState(false);
@@ -34,6 +49,9 @@ export function DesignChat({ projectId, initialState, initialPreviewUrl }: { pro
     { role: 'ABI', text: 'Oi, eu sou a ABI 👋 Me diga o que quer mudar no seu móvel — a cor, o tamanho, ou adicionar gavetas, por exemplo.' },
   ]);
   const [text, setText] = useState('');
+  const [references, setReferences] = useState<string[]>(initialReferences);
+  const [uploading, setUploading] = useState(false);
+  const refInput = useRef<HTMLInputElement>(null);
   const [pending, start] = useTransition();
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -42,12 +60,14 @@ export function DesignChat({ projectId, initialState, initialPreviewUrl }: { pro
   const say = (m: Msg) => setMessages((prev) => [...prev, m]);
 
   // Gera/atualiza a prévia. `announce`=false quando é automático (após uma mudança).
-  const regen = (announce: boolean) => {
+  // `intent` = o que acabou de ser pedido: define se a edição preserva a forma
+  // (cor/material) ou redesenha o móvel (estrutura) — §8.5.
+  const regen = (announce: boolean, intent?: DesignIntent) => {
     if (generating) return;
     setGenerating(true);
     if (announce) say({ role: 'ABI', text: 'Beleza! Vou gerar uma prévia do seu móvel — leva alguns segundos.' });
     start(async () => {
-      const r = await requestDesignPreview(projectId);
+      const r = await requestDesignPreview(projectId, intent);
       setGenerating(false);
       if (!r.ok) { say({ role: 'ABI', text: r.error }); return; }
       if (r.data.queued) { say({ role: 'ABI', text: 'Estou gerando sua prévia — ela aparece aqui em instantes.' }); return; }
@@ -60,6 +80,18 @@ export function DesignChat({ projectId, initialState, initialPreviewUrl }: { pro
     });
   };
   const generate = () => regen(true);
+
+  // Referência visual: "quero parecido com isso". Entra como anexo extra na geração.
+  const sendReference = async (file: File) => {
+    setUploading(true);
+    const preview = URL.createObjectURL(file);
+    const erro = await uploadReference(projectId, file);
+    setUploading(false);
+    if (erro) { say({ role: 'ABI', text: erro }); return; }
+    setReferences((r) => [...r, preview]);
+    say({ role: 'ABI', text: 'Guardei sua referência — vou usar como inspiração na próxima prévia. 📌' });
+    regen(true, 'CHANGE_LAYOUT'); // referência nova = prévia nova, redesenhando o móvel
+  };
 
   const doUndo = () => {
     if (history.length === 0) { say({ role: 'ABI', text: 'Não há nada para desfazer.' }); return; }
@@ -89,7 +121,7 @@ export function DesignChat({ projectId, initialState, initialPreviewUrl }: { pro
       if (command.intent !== 'ASK_HELP') {
         setHistory((h) => [...h, before]);
         setState(next);
-        regen(false); // toda mudança gera/atualiza a prévia (inclusive a 1ª)
+        regen(false, command.intent); // toda mudança gera/atualiza a prévia (inclusive a 1ª)
       } else if (/\b(pr[eé]via|foto|imagem|render|gera|gere|gerar|mostra|mostrar|visualiza|como (vai )?fica)\b/i.test(utterance)) {
         regen(true); // pediu a prévia explicitamente no chat
       }
@@ -124,6 +156,35 @@ export function DesignChat({ projectId, initialState, initialPreviewUrl }: { pro
         ) : (
           <p className="text-small text-muted">Gere uma imagem ilustrativa do seu móvel a partir do que você descreveu. A imagem é só ilustrativa — as medidas reais ficam no pedido.</p>
         )}
+
+        {/* Referências visuais do cliente: descrever é difícil, mostrar é fácil. */}
+        <div className="mt-3 border-t border-subtle pt-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-small font-semibold text-muted">Suas referências</p>
+            <Button variant="ghost" size="sm" onClick={() => refInput.current?.click()} disabled={uploading || generating}>
+              <IconFoto size={16} aria-hidden /> {uploading ? 'Enviando…' : 'Enviar exemplo'}
+            </Button>
+          </div>
+          <input
+            ref={refInput}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void sendReference(f); }}
+          />
+          {references.length > 0 ? (
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {references.map((url, i) => (
+                <li key={i}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt={`Referência ${i + 1}`} className="h-16 w-16 rounded-md object-cover" />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1 text-caption text-muted">Achou uma foto parecida com o que você quer? Envie — a ABI usa como inspiração (o ambiente continua sendo o seu).</p>
+          )}
+        </div>
       </Card>
 
       {/* Estado atual do projeto (módulos = fonte de verdade) */}
@@ -204,6 +265,8 @@ function ModuleSummary({ m }: { m: DesignModule }) {
       {m.items?.map((it, k) => (
         <Badge key={k} tone="neutral">{it.qty}× {it.type.toLowerCase()}</Badge>
       ))}
+      {m.grid && <Badge tone="primary">{m.grid.rows}×{m.grid.columns} nichos</Badge>}
+      {m.openFront && <Badge tone="success">sem portas</Badge>}
       {m.layout && <Badge tone="neutral">{m.layout}</Badge>}
     </span>
   );

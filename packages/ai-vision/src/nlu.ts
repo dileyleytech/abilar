@@ -5,6 +5,10 @@ import {
   parseDesignBatch, type DesignBatch, type CommandItem,
   DESIGN_INTENTS, DIMENSION_AXES, ITEM_TYPES, ITEM_POSITIONS, HARDWARE,
 } from './dsl';
+import {
+  GLOSSARY_FOR_PROMPT, NLU_EXAMPLES, detectGrid, detectHardware, detectItemType,
+  mentionsNiche, mentionsTop, normalizeFinish, wantsOpenFront,
+} from './lexicon';
 
 export type NluInput = {
   /** Texto livre do usuário (ou transcrição de áudio). */
@@ -18,11 +22,6 @@ export interface NluProvider {
   interpret(input: NluInput): Promise<DesignBatch>;
 }
 
-const FINISH_WORDS: Record<string, string> = {
-  verde: 'Verde', branco: 'Branco TX', preto: 'Preto Fosco', carvalho: 'Carvalho Hanover',
-  cinza: 'Cinza', amadeirado: 'Amadeirado',
-};
-
 function num(text: string): number | null {
   const m = text.match(/(\d+(?:[.,]\d+)?)/);
   return m ? Number(m[1]!.replace(',', '.')) : null;
@@ -33,52 +32,111 @@ function one(intent: CommandItem['intent'], params: CommandItem['params'], echo:
   return parseDesignBatch({ commands: [{ intent, targetModuleId: null, params }], echo, confidence });
 }
 
-/** Parser heurístico determinístico (sem rede). Cobre os comandos mais comuns. */
+function batch(commands: CommandItem[], echo: string, confidence = 0.8): DesignBatch {
+  return parseDesignBatch({ commands, echo, confidence });
+}
+
+/**
+ * Parser determinístico (sem rede), apoiado no léxico PT-BR. É o fallback de CI e
+ * de dev sem chave — em produção quem interpreta é o Gemini, com o MESMO glossário
+ * no system prompt. Cobre os pedidos mais comuns, incluindo estrutura (nichos,
+ * colmeia, frente aberta, grade linhas × colunas).
+ */
 function interpretMock(input: NluInput): DesignBatch {
-  const t = input.utterance.toLowerCase();
-  const add = /(adicion|coloc|p[õo]e|bota|mais|inclu)/.test(t);
-  const remove = /(remov|tira|exclu|sem )/.test(t);
-  const pos = /embaixo|inferior/.test(t) ? 'INFERIOR' : /em cima|superior/.test(t) ? 'SUPERIOR' : undefined;
+  const raw = input.utterance.trim();
+  const t = raw.toLowerCase();
+  const add = /(adicion|coloc|p[õo]e|bota|mais|inclu|quero|gostaria|faz|cria)/.test(t);
+  const remove = /(remov|tira|exclu|sem |nada de|n[ãa]o quero)/.test(t);
+  const pos = /embaixo|inferior|base/.test(t) ? 'INFERIOR' : /em cima|superior|topo/.test(t) ? 'SUPERIOR' : undefined;
 
-  if (/(led|ilumina|luz)/.test(t)) return one('ADD_LIGHTING', { lighting: 'FITA_LED_PRATELEIRAS' }, 'Adicionei iluminação em LED.');
-  if (/soft.?close/.test(t)) return one('CHANGE_HARDWARE', { hardware: 'SOFT_CLOSE' }, 'Troquei a ferragem para soft-close.', 0.85);
-  if (/push/.test(t)) return one('CHANGE_HARDWARE', { hardware: 'PUSH' }, 'Troquei para abertura por toque (push).', 0.85);
-  if (/puxador|cava/.test(t)) return one('CHANGE_HARDWARE', { hardware: 'PUXADOR_CAVA' }, 'Troquei para puxador cava.', 0.85);
+  const grid = detectGrid(raw);
+  const nicho = mentionsNiche(raw);
+  const aberto = wantsOpenFront(raw);
+  const cor = normalizeFinish(raw);
+  const temMaterial = /mdf|mdp|compensad|melamina|laminad/.test(t);
 
-  // Arranjo interno ("organiza com gavetas embaixo e portas em cima") = CHANGE_LAYOUT.
-  // Só quando a fala pede organização/divisão — "coloca 2 gavetas" segue ADD_ITEM.
-  if (/(organiz|layout|divis|dividi|reparti|distribu|arranj|disposi)/.test(t)) {
-    return one('CHANGE_LAYOUT', { layout: input.utterance.trim().slice(0, 160) }, 'Reorganizei o móvel como você pediu.', 0.7);
+  // "organiza/divide/reparte assim" = arranjo, mesmo sem falar em nicho.
+  const organiza = /(organiz|layout|divis|dividi|reparti|distribu|arranj|disposi)/.test(t);
+
+  // ── Estrutura: nichos / colmeia / frente aberta / grade ────────────────────
+  if (grid || nicho || aberto || organiza) {
+    const partes: string[] = [];
+    if (nicho) partes.push('nichos abertos');
+    if (grid) partes.push(`em grade de ${grid.rows} por ${grid.columns}`);
+    if (mentionsTop(raw)) partes.push('com bancada lisa no topo');
+    if (aberto && !nicho) partes.push('frente aberta, sem portas');
+    if (organiza && partes.length === 0) partes.push(raw);
+
+    const cmds: CommandItem[] = [{
+      intent: 'CHANGE_LAYOUT',
+      targetModuleId: null,
+      params: {
+        layout: {
+          description: (partes.join(', ') || raw).slice(0, 160),
+          ...(grid ?? {}),
+          // "organiza assim" sozinho não diz nada sobre porta: não mexe na frente.
+          ...(aberto || nicho || grid ? { openFront: true } : {}),
+        },
+      },
+    }];
+    // "em MDF cinza escuro" no mesmo pedido: material e cor são comandos próprios.
+    if (temMaterial) cmds.push({ intent: 'CHANGE_MATERIAL', targetModuleId: null, params: { material: materialFrom(t) } });
+    if (cor) cmds.push({ intent: 'CHANGE_FINISH', targetModuleId: null, params: { finish: cor } });
+
+    const echo = grid
+      ? `Deixei a frente aberta, com ${grid.rows} andares de ${grid.columns} nichos.`
+      : nicho ? 'Troquei para nichos abertos.'
+      : aberto ? 'Removi as portas: a frente fica aberta.'
+      : 'Reorganizei o móvel como você pediu.';
+    return batch(cmds, echo, 0.85);
   }
 
-  const itemType = /gaveta/.test(t) ? 'GAVETA' : /porta/.test(t) ? 'PORTA' : /prateleira/.test(t) ? 'PRATELEIRA' : /cabideiro/.test(t) ? 'CABIDEIRO' : null;
-  if (itemType && remove) return one('REMOVE_ITEM', { item: { type: itemType, qty: 1, position: pos } }, `Removi ${itemType.toLowerCase()}.`);
+  // ── Ferragem ──────────────────────────────────────────────────────────────
+  const ferragem = detectHardware(raw);
+  if (ferragem) {
+    const label = ferragem === 'SOFT_CLOSE' ? 'soft-close' : ferragem === 'PUSH' ? 'abertura por toque (push)' : 'puxador cava';
+    return one('CHANGE_HARDWARE', { hardware: ferragem as 'PUSH' }, `Troquei a ferragem para ${label}.`, 0.85);
+  }
+
+  if (/(led|ilumina|luz|fita)/.test(t)) return one('ADD_LIGHTING', { lighting: 'FITA_LED_PRATELEIRAS' }, 'Adicionei iluminação em LED.');
+
+  // ── Itens ─────────────────────────────────────────────────────────────────
+  const itemType = detectItemType(raw);
+  if (itemType && remove) return one('REMOVE_ITEM', { item: { type: itemType as 'GAVETA', qty: 1, position: pos } }, `Removi ${itemType.toLowerCase()}.`);
   if (itemType && add) {
     const qty = num(t) ?? 1;
-    return one('ADD_ITEM', { item: { type: itemType, qty, position: pos } }, `Adicionei ${qty} ${itemType.toLowerCase()}.`);
+    return one('ADD_ITEM', { item: { type: itemType as 'GAVETA', qty, position: pos } }, `Adicionei ${qty} ${itemType.toLowerCase()}.`);
   }
 
-  if (/(aument|estend|along|maior|diminu|menor|reduz|encolh|altura|largura|profund)/.test(t) && num(t) != null) {
+  // ── Medidas ───────────────────────────────────────────────────────────────
+  if (/(aument|estend|along|maior|diminu|menor|reduz|encolh|altura|largura|profund|fundo)/.test(t) && num(t) != null) {
     const axis = /largura|largo/.test(t) ? 'WIDTH' : /profund|fundo/.test(t) ? 'DEPTH' : 'HEIGHT';
     const cm = num(t)!;
     const signed = /(diminu|menor|reduz|encolh)/.test(t) ? -cm : cm;
     return one('RESIZE', { dimension: { axis, deltaMm: Math.round(signed * 10) } }, `Ajustei ${axis === 'WIDTH' ? 'a largura' : axis === 'DEPTH' ? 'a profundidade' : 'a altura'} em ${cm} cm.`, 0.75);
   }
 
-  if (/material|mdf|compensad|mff|melamina/.test(t)) {
-    const mat = t.match(/mdf\s*\d+\s*mm/)?.[0]?.toUpperCase().replace(/\s+/g, ' ') ?? 'MDF 18mm';
-    return one('CHANGE_MATERIAL', { material: mat }, `Troquei o material para ${mat}.`, 0.7);
+  // ── Material e cor ────────────────────────────────────────────────────────
+  if (temMaterial && cor) {
+    return batch([
+      { intent: 'CHANGE_MATERIAL', targetModuleId: null, params: { material: materialFrom(t) } },
+      { intent: 'CHANGE_FINISH', targetModuleId: null, params: { finish: cor } },
+    ], `Troquei para ${materialFrom(t)} em ${cor}.`, 0.8);
   }
-
-  const finishKey = Object.keys(FINISH_WORDS).find((k) => t.includes(k));
-  if (finishKey || /acabamento|cor|tom/.test(t)) {
-    const finish = finishKey ? FINISH_WORDS[finishKey]! : 'Carvalho Hanover';
-    return one('CHANGE_FINISH', { finish }, `Troquei o acabamento para ${finish}.`, 0.7);
-  }
+  if (temMaterial) return one('CHANGE_MATERIAL', { material: materialFrom(t) }, `Troquei o material para ${materialFrom(t)}.`, 0.7);
+  if (cor) return one('CHANGE_FINISH', { finish: cor }, `Troquei o acabamento para ${cor}.`, 0.75);
 
   if (/desfaz|desfa[çz]|volta|undo|cancela/.test(t)) return one('UNDO', {}, 'Desfiz a última alteração.', 0.9);
 
-  return parseDesignBatch({ commands: [], confidence: 0.2, clarificationNeeded: true, echo: 'Não entendi bem — você quer mudar a cor, o tamanho, ou adicionar algo?' });
+  return parseDesignBatch({ commands: [], confidence: 0.2, clarificationNeeded: true, echo: 'Não entendi bem — você quer mudar a cor, o tamanho, ou como o móvel é dividido por dentro?' });
+}
+
+function materialFrom(t: string): string {
+  const m = t.match(/mdf\s*\d+\s*mm/)?.[0]?.toUpperCase().replace(/\s+/g, ' ');
+  if (m) return m;
+  if (/mdp/.test(t)) return 'MDP 18mm';
+  if (/compensad/.test(t)) return 'Compensado 18mm';
+  return 'MDF 18mm';
 }
 
 export const mockNluProvider: NluProvider = {
@@ -111,7 +169,8 @@ const SYSTEM_PROMPT = [
   'Preencha "echo" em PT-BR com um resumo gentil do que entendeu (uma frase).',
   'Emita SOMENTE as mudanças pedidas EXPLICITAMENTE; não invente alterações, não troque o TIPO do móvel e não mexa no que não foi mencionado.',
   'Se for ambíguo ou nada acionável, deixe commands vazio e clarificationNeeded=true.',
-].join(' ');
+  'NUNCA confirme uma mudança que você não emitiu como comando.',
+].join(' ') + '\n\n' + GLOSSARY_FOR_PROMPT + '\n\n' + NLU_EXAMPLES;
 
 const COMMAND_ITEM = {
   type: 'OBJECT',
@@ -141,7 +200,16 @@ const COMMAND_ITEM = {
         },
         hardware: { type: 'STRING', enum: [...HARDWARE] },
         lighting: { type: 'STRING' },
-        layout: { type: 'STRING', description: 'arranjo interno em PT-BR, sem medidas (ex.: "gavetas embaixo e portas em cima")' },
+        layout: {
+          type: 'OBJECT',
+          description: 'arranjo interno do móvel (CHANGE_LAYOUT)',
+          properties: {
+            description: { type: 'STRING', description: 'o arranjo em PT-BR, curto e SEM medidas' },
+            rows: { type: 'INTEGER', description: 'linhas/andares da grade de nichos' },
+            columns: { type: 'INTEGER', description: 'colunas da grade de nichos' },
+            openFront: { type: 'BOOLEAN', description: 'true = frente aberta, sem portas' },
+          },
+        },
       },
     },
   },

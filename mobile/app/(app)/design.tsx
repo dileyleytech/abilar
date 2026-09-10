@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { api, type DesignStateView, type DesignModuleView } from '@/lib/api';
+import { chooseAndPick } from '@/lib/pickImages';
 import { Badge, Button, Card, Loading } from '@/components/ui';
 import { IconAbi, IconEnviar, IconVoltar, IconFoto } from '@/components/icons';
 import { color, radius, space } from '@/theme';
@@ -23,6 +24,8 @@ export default function DesignScreen() {
   const [state, setState] = useState<DesignStateView | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [references, setReferences] = useState<string[]>([]);
+  const [uploadingRef, setUploadingRef] = useState(false);
   const [history, setHistory] = useState<DesignStateView[]>([]);
   const [messages, setMessages] = useState<Msg[]>([
     { role: 'ABI', text: 'Oi, eu sou a ABI 👋 Me diga o que quer mudar no seu móvel — a cor, o tamanho, ou adicionar gavetas.' },
@@ -33,15 +36,21 @@ export default function DesignScreen() {
 
   const load = useCallback(async () => {
     if (!projectId) return;
-    try { const r = await api.getDesignState(projectId); setState(r.state); setPreviewUrl(r.previewUrl); } catch { setState({ modules: [] }); }
+    try {
+      const r = await api.getDesignState(projectId);
+      setState(r.state);
+      setPreviewUrl(r.previewUrl);
+      setReferences(r.references ?? []);
+    } catch { setState({ modules: [] }); }
   }, [projectId]);
 
-  const regen = async (announce: boolean) => {
+  // `intent` define o escopo da edição (cor preserva a forma; estrutura redesenha).
+  const regen = async (announce: boolean, intent?: string) => {
     if (generating || !projectId) return;
     setGenerating(true);
     if (announce) say({ role: 'ABI', text: 'Beleza! Vou gerar uma prévia do seu móvel — leva alguns segundos.' });
     try {
-      const r = await api.designPreview(projectId);
+      const r = await api.designPreview(projectId, intent);
       if (r.queued) { say({ role: 'ABI', text: 'Estou gerando sua prévia — ela aparece aqui em instantes.' }); }
       else {
         if (r.url) setPreviewUrl(r.url);
@@ -56,6 +65,23 @@ export default function DesignScreen() {
     } finally { setGenerating(false); }
   };
   const generate = () => regen(true);
+
+  // Referência visual: "quero parecido com isso". Vira anexo extra na geração.
+  const sendReference = async () => {
+    if (!projectId || uploadingRef) return;
+    const fotos = await chooseAndPick(1);
+    if (fotos.length === 0) return;
+    setUploadingRef(true);
+    try {
+      const r = await api.designReference(projectId, fotos[0]!);
+      setReferences(r.references ?? []);
+      say({ role: 'ABI', text: 'Guardei sua referência — vou usar como inspiração na próxima prévia. 📌' });
+      setUploadingRef(false);
+      await regen(true, 'CHANGE_LAYOUT'); // referência nova = prévia nova
+    } catch (e) {
+      say({ role: 'ABI', text: e instanceof Error ? e.message : 'Não consegui enviar a imagem.' });
+    } finally { setUploadingRef(false); }
+  };
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { scroller.current?.scrollToEnd({ animated: true }); }, [messages]);
 
@@ -90,7 +116,7 @@ export default function DesignScreen() {
       setState(r.state);
       say({ role: 'ABI', text: r.message });
       setBusy(false);
-      if (changed) await regen(false); // toda mudança gera/atualiza a prévia (inclusive a 1ª)
+      if (changed) await regen(false, r.command.intent); // toda mudança gera/atualiza a prévia (inclusive a 1ª)
       else if (WANTS_PREVIEW.test(utterance)) await regen(true); // pediu a prévia no chat
       return;
     } catch (e) {
@@ -128,6 +154,21 @@ export default function DesignScreen() {
             ) : (
               <Text style={styles.muted}>Gere uma imagem ilustrativa do seu móvel. A imagem é só ilustrativa — as medidas reais ficam no pedido.</Text>
             )}
+
+            {/* Referências visuais: descrever é difícil, mostrar é fácil. */}
+            <View style={styles.refBlock}>
+              <View style={styles.previewHead}>
+                <Text style={styles.summaryTitle}>Suas referências</Text>
+                <Button title={uploadingRef ? 'Enviando…' : 'Enviar exemplo'} variant="ghost" icon={(p) => <IconFoto {...p} />} onPress={sendReference} loading={uploadingRef} />
+              </View>
+              {references.length > 0 ? (
+                <View style={styles.refRow}>
+                  {references.map((url, i) => <Image key={i} source={{ uri: url }} style={styles.refThumb} contentFit="cover" />)}
+                </View>
+              ) : (
+                <Text style={styles.muted}>Achou uma foto parecida com o que você quer? Envie — a ABI usa como inspiração (o ambiente continua sendo o seu).</Text>
+              )}
+            </View>
           </Card>
 
           <Card style={{ gap: 6 }}>
@@ -192,6 +233,8 @@ function ModuleRow({ m }: { m: DesignModuleView }) {
         {m.hardware ? <Badge label={HARDWARE_LABEL[m.hardware] ?? m.hardware} tone="neutral" /> : null}
         {m.lighting ? <Badge label="LED" tone="success" /> : null}
         {m.items?.map((it, k) => <Badge key={k} label={`${it.qty}× ${it.type.toLowerCase()}`} tone="neutral" />)}
+        {m.grid ? <Badge label={`${m.grid.rows}×${m.grid.columns} nichos`} tone="primary" /> : null}
+        {m.openFront ? <Badge label="sem portas" tone="success" /> : null}
         {m.layout ? <Badge label={m.layout} tone="neutral" /> : null}
       </View>
     </View>
@@ -204,6 +247,9 @@ const styles = StyleSheet.create({
   summaryTitle: { fontSize: 13, fontWeight: '600', color: color.text.muted },
   previewHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   previewImg: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.md, backgroundColor: color.bg.deep },
+  refBlock: { borderTopWidth: 1, borderTopColor: color.border.subtle, paddingTop: space.md, gap: 6 },
+  refRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  refThumb: { width: 64, height: 64, borderRadius: radius.sm, backgroundColor: color.bg.deep },
   previewPlaceholder: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.md, backgroundColor: color.bg.deep, alignItems: 'center', justifyContent: 'center' },
   muted: { color: color.text.muted, fontSize: 13 },
   cotas: { position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 4, backgroundColor: 'rgba(31,36,33,0.65)', paddingHorizontal: 8, paddingVertical: 6, borderBottomLeftRadius: radius.md, borderBottomRightRadius: radius.md },

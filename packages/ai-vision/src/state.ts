@@ -24,6 +24,11 @@ export type DesignModule = {
   /** Arranjo interno pedido pelo cliente (CHANGE_LAYOUT), em PT-BR. Entra no prompt
    *  da imagem já higienizado; NUNCA carrega medida (a medida vive nos campos mm). */
   layout?: string;
+  /** Grade de nichos (ex.: 3 andares × 3 colunas) — a "colmeia" da sapateira. */
+  grid?: { rows: number; columns: number };
+  /** Frente aberta: o móvel NÃO tem portas. Precisa ser explícito porque o modelo
+   *  de imagem desenha um armário fechado quando ninguém diz o contrário. */
+  openFront?: boolean;
   items: DesignItem[];
 };
 
@@ -50,10 +55,22 @@ export function applyCommand(state: DesignState, cmd: DesignCommand): ApplyResul
     return { ok: false, state, message: 'Não encontrei o móvel para alterar.' };
   }
 
-  // CHANGE_LAYOUT sem descrição não muda nada: melhor avisar do que ecoar um "pronto!"
-  // por cima de uma imagem idêntica.
-  if (cmd.intent === 'CHANGE_LAYOUT' && !cmd.params.layout?.trim()) {
-    return { ok: false, state, message: 'Como você quer organizar o móvel? Ex.: "gavetas embaixo e portas em cima".' };
+  // CHANGE_LAYOUT sem nada dentro não muda nada: melhor perguntar do que ecoar
+  // um "pronto!" por cima de uma imagem idêntica.
+  const layout = cmd.params.layout;
+  const layoutVazio = !layout || (!layout.description?.trim() && !layout.rows && !layout.columns && layout.openFront === undefined);
+  if (cmd.intent === 'CHANGE_LAYOUT' && layoutVazio) {
+    return { ok: false, state, message: 'Como você quer organizar o móvel? Ex.: "3 andares de nichos com 3 colunas".' };
+  }
+
+  // Remover o que o móvel não tem: avisar, nunca confirmar em falso.
+  if (cmd.intent === 'REMOVE_ITEM' && cmd.params.item) {
+    const tipo = cmd.params.item.type;
+    const temAlgum = targets.some((m) => m.items.some((i) => i.type === tipo));
+    const abriria = tipo === 'PORTA' && targets.some((m) => !m.openFront);
+    if (!temAlgum && !abriria) {
+      return { ok: false, state, message: `Esse móvel já não tem ${LABEL_PT[tipo] ?? tipo.toLowerCase()}.` };
+    }
   }
 
   // RESIZE precisa validar ANTES de aplicar para não corromper o estado.
@@ -71,8 +88,18 @@ export function applyCommand(state: DesignState, cmd: DesignCommand): ApplyResul
 
   const ids = new Set(targets.map((m) => m.id));
   const modules = state.modules.map((m) => (ids.has(m.id) ? mutate(m, cmd) : m));
+
+  // Comando que não mudou NADA não pode virar "pronto!": era assim que a ABI
+  // confirmava mudanças que a imagem nunca refletia.
+  if (JSON.stringify(modules) === JSON.stringify(state.modules)) {
+    return { ok: false, state, message: 'Esse móvel já está assim — me diga o que mudar que eu ajusto.' };
+  }
   return { ok: true, state: { ...state, modules }, message: cmd.echo };
 }
+
+const LABEL_PT: Record<string, string> = {
+  GAVETA: 'gavetas', PORTA: 'portas', PRATELEIRA: 'prateleiras', CABIDEIRO: 'cabideiro', NICHO: 'nichos',
+};
 
 function selectTargets(state: DesignState, target: string | null): DesignModule[] {
   if (target === 'ALL') return state.modules;
@@ -97,14 +124,32 @@ function mutate(m: DesignModule, cmd: DesignCommand): DesignModule {
       const next = dim.absoluteMm ?? m[field] + (dim.deltaMm ?? 0);
       return { ...m, [field]: next };
     }
-    case 'ADD_ITEM':
-      return p.item ? { ...m, items: addItem(m.items, p.item) } : m;
-    case 'REMOVE_ITEM':
-      return p.item ? { ...m, items: m.items.filter((i) => !(i.type === p.item!.type && i.position === p.item!.position)) } : m;
-    case 'CHANGE_LAYOUT':
-      // Não vira campo estruturado (não há taxonomia de arranjo): fica no módulo e
-      // é o prompt de imagem que o traduz. As medidas seguem nos campos mm.
-      return p.layout ? { ...m, layout: p.layout.trim() } : m;
+    case 'ADD_ITEM': {
+      if (!p.item) return m;
+      const comItem = { ...m, items: addItem(m.items, p.item) };
+      // Pôr porta de volta fecha a frente.
+      return p.item.type === 'PORTA' ? { ...comItem, openFront: false } : comItem;
+    }
+    case 'REMOVE_ITEM': {
+      if (!p.item) return m;
+      const semItem = { ...m, items: m.items.filter((i) => !(i.type === p.item!.type && i.position === p.item!.position)) };
+      // "tira as portas" quer dizer frente ABERTA — não só apagar da lista.
+      return p.item.type === 'PORTA' ? { ...semItem, openFront: true } : semItem;
+    }
+    case 'CHANGE_LAYOUT': {
+      if (!p.layout) return m;
+      const { description, rows, columns, openFront } = p.layout;
+      const next: DesignModule = { ...m };
+      if (description?.trim()) next.layout = description.trim();
+      if (rows && columns) next.grid = { rows, columns };
+      if (openFront !== undefined) next.openFront = openFront;
+      // Grade de nichos é aberta por definição: sem portas na frente.
+      if (next.grid && next.openFront !== false) {
+        next.openFront = true;
+        next.items = next.items.filter((i) => i.type !== 'PORTA');
+      }
+      return next;
+    }
     default:
       return m;
   }

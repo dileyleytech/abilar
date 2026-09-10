@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildImagePrompt, editScope } from './prompt';
+import { buildImagePrompt, editScope, buildEditInstruction } from './prompt';
 import type { DesignModule } from './state';
 import { parseDesignCommand } from './dsl';
 
@@ -85,11 +85,71 @@ describe('buildImagePrompt — §8.5 (a imagem é ilustrativa; medidas NÃO entr
     expect(prompt.toLowerCase()).toContain('gaveta'); // o resto do pedido sobrevive
   });
 
+  it('frente ABERTA vira negativa explícita no prompt (o modelo desenha porta por padrão)', () => {
+    const aberto: DesignModule = { ...mod, openFront: true, items: [] };
+    const low = buildImagePrompt(aberto, { roomType: 'hall' }).prompt.toLowerCase();
+    expect(low).toMatch(/no doors|without doors/);
+    expect(low).toContain('open');
+    expect(low).toMatch(/no handles|no drawer fronts/);
+  });
+
+  it('grade de nichos entra no prompt como linhas × colunas', () => {
+    const sapateira: DesignModule = { ...mod, type: 'OUTRO', label: 'Sapateira', openFront: true, grid: { rows: 3, columns: 3 }, items: [] };
+    const { prompt } = buildImagePrompt(sapateira, { roomType: 'hall' });
+    expect(prompt).toMatch(/3 rows/i);
+    expect(prompt).toMatch(/3 columns/i);
+    expect(prompt.toLowerCase()).toMatch(/cubb|niche|compartment/);
+  });
+
+  it('a cor pedida é afirmada com força (não some na edição)', () => {
+    const cinza: DesignModule = { ...mod, finish: 'Cinza Escuro' };
+    const { prompt } = buildImagePrompt(cinza, { roomType: 'hall', emphasize: 'FINISH' });
+    expect(prompt).toContain('Cinza Escuro');
+    expect(prompt.toLowerCase()).toMatch(/entire|whole|all surfaces/);
+  });
+
+  it('editScope: mudança estrutural NÃO é local (não dá para "manter tudo igual")', () => {
+    expect(editScope(parseDesignCommand({ intent: 'CHANGE_LAYOUT' }))).toBe('global');
+    expect(editScope(parseDesignCommand({ intent: 'REMOVE_ITEM' }))).toBe('global');
+    expect(editScope(parseDesignCommand({ intent: 'ADD_ITEM' }))).toBe('global');
+    expect(editScope(parseDesignCommand({ intent: 'RESIZE' }))).toBe('global');
+    expect(editScope(parseDesignCommand({ intent: 'CHANGE_FINISH' }))).toBe('local');
+  });
+
   it('editScope: cor/material/ferragem = local (inpainting); layout = global', () => {
     expect(editScope(parseDesignCommand({ intent: 'CHANGE_FINISH' }))).toBe('local');
     expect(editScope(parseDesignCommand({ intent: 'CHANGE_MATERIAL' }))).toBe('local');
     expect(editScope(parseDesignCommand({ intent: 'CHANGE_HARDWARE' }))).toBe('local');
     expect(editScope(parseDesignCommand({ intent: 'CHANGE_LAYOUT' }))).toBe('global');
     expect(editScope(parseDesignCommand({ intent: 'ADD_ITEM' }))).toBe('global');
+  });
+});
+
+describe('buildEditInstruction — como pedir a edição da imagem (§8.5)', () => {
+  const base = 'Interior photo of a hall. Install a Sapateira.';
+
+  it('mudança LOCAL sobre a prévia anterior: preserva a forma, troca o atributo', () => {
+    const t = buildEditInstruction(base, { scope: 'local', iterating: true }).toLowerCase();
+    expect(t).toContain('edit the attached image');
+    expect(t).toMatch(/same (shape|furniture)|keep the (shape|structure)/);
+  });
+
+  it('mudança ESTRUTURAL não manda preservar o móvel (senão a mudança não acontece)', () => {
+    const t = buildEditInstruction(base, { scope: 'global', iterating: false }).toLowerCase();
+    expect(t).toMatch(/replace|rebuild|redraw|new furniture/);
+    expect(t).not.toMatch(/rest of the furniture.*exactly the same/);
+    // o ambiente continua preservado
+    expect(t).toMatch(/wall|floor|perspective/);
+  });
+
+  it('com referências, explica o papel delas (inspirar, não copiar o ambiente)', () => {
+    const t = buildEditInstruction(base, { scope: 'global', iterating: false, references: 2 }).toLowerCase();
+    expect(t).toMatch(/reference/);
+    expect(t).toMatch(/do not copy|not copy their|ignore their (room|background)/);
+    expect(t).toMatch(/first (attached )?image|photo of the room/);
+  });
+
+  it('sem imagem base, devolve o prompt puro (geração do zero)', () => {
+    expect(buildEditInstruction(base, { scope: 'global', iterating: false, hasBase: false })).toBe(base);
   });
 });

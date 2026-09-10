@@ -4,7 +4,7 @@ import { projects, and, eq } from '@abilar/db';
 import { requireUserId } from '@/lib/auth/session';
 import { getDb } from '@/lib/db';
 import { loadDesignState } from '@/lib/design/queries';
-import { currentPreviewUrl } from '@/lib/design/preview';
+import { currentPreviewUrl, referenceUrls } from '@/lib/design/preview';
 import { Page, PageHeader, buttonVariants } from '@/components/ui';
 import { IconVoltar } from '@/components/ui/icons';
 import { DesignChat } from './_components/DesignChat';
@@ -23,7 +23,7 @@ export default async function DesignPage({ params }: { params: Promise<{ id: str
     .limit(1);
   if (!project) notFound();
 
-  const [state, previewUrl] = await Promise.all([loadDesignState(id), currentPreviewUrl(id)]);
+  const [state, previewUrl, references] = await Promise.all([loadDesignState(id), currentPreviewUrl(id), referenceUrls(id)]);
 
   return (
     <Page width="md">
@@ -36,7 +36,7 @@ export default async function DesignPage({ params }: { params: Promise<{ id: str
           </Link>
         }
       />
-      <DesignChat projectId={id} initialState={state} initialPreviewUrl={previewUrl} />
+      <DesignChat projectId={id} initialState={state} initialPreviewUrl={previewUrl} initialReferences={references} />
     </Page>
   );
 }

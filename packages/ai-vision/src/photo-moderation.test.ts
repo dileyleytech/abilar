@@ -39,3 +39,28 @@ describe('moderação de foto (Gemini vision) — §8.7', () => {
     expect(resolvePhotoModerator({ GEMINI_API_KEY: 'k' }).name).toBe('gemini');
   });
 });
+
+describe('moderação por PROPÓSITO — foto de referência não é foto de parede', () => {
+  it('REFERENCE aceita foto de móvel/catálogo (não exige cômodo)', async () => {
+    let enviado = '';
+    const fake = (async (_u: string, init: { body: string }) => {
+      enviado = JSON.parse(init.body).contents[0].parts[0].text;
+      return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ functionCall: { args: { relevant: true } } }] } }] }) };
+    }) as unknown as typeof fetch;
+    const mod = createGeminiPhotoModerator({ apiKey: 'k', fetchImpl: fake });
+    const r = await mod.check('abc', 'image/jpeg', 'REFERENCE');
+    expect(r.relevant).toBe(true);
+    expect(enviado.toLowerCase()).toMatch(/refer[êe]ncia|m[óo]vel|marcenaria/);
+    expect(enviado.toLowerCase()).not.toMatch(/deve mostrar um c[ôo]modo/i);
+  });
+
+  it('ROOM continua exigindo cômodo/parede (default)', async () => {
+    let enviado = '';
+    const fake = (async (_u: string, init: { body: string }) => {
+      enviado = JSON.parse(init.body).contents[0].parts[0].text;
+      return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ functionCall: { args: { relevant: true } } }] } }] }) };
+    }) as unknown as typeof fetch;
+    await createGeminiPhotoModerator({ apiKey: 'k', fetchImpl: fake }).check('abc', 'image/jpeg');
+    expect(enviado.toUpperCase()).toMatch(/C[ÔO]MODO|PAREDE/);
+  });
+});

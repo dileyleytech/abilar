@@ -34,7 +34,7 @@ describe('mockNluProvider — NLU determinístico (lote) para CI/dev sem chave',
   it('"organiza com gavetas embaixo e portas em cima" → CHANGE_LAYOUT com a descrição', async () => {
     const b = await run('organiza com gavetas embaixo e portas em cima');
     expect(b.commands[0]!.intent).toBe('CHANGE_LAYOUT');
-    expect(b.commands[0]!.params.layout).toMatch(/gavetas embaixo/i);
+    expect(b.commands[0]!.params.layout?.description).toMatch(/gavetas embaixo/i);
   });
 
   it('pedido simples de item continua ADD_ITEM (layout não sequestra a intenção)', async () => {

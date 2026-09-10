@@ -32,6 +32,8 @@ export type SeedModule = {
   hardware?: Hardware | null;
   lighting?: string | null;
   layout?: string | null;
+  grid?: { rows: number; columns: number } | null;
+  openFront?: boolean | null;
   items?: DesignItem[] | null;
 };
 
@@ -51,6 +53,8 @@ export function seedFromModules(modules: SeedModule[]): DesignSession {
         hardware: m.hardware ?? undefined,
         lighting: m.lighting ?? undefined,
         layout: m.layout ?? undefined,
+        grid: m.grid ?? undefined,
+        openFront: m.openFront ?? undefined,
         items: m.items ?? [],
       } satisfies DesignModule)),
     },

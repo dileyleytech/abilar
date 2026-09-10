@@ -153,19 +153,23 @@ export const api = {
 
   // Chat de design com a ABI (Fase 6). O servidor faz o NLU (Gemini) e persiste.
   getDesignState: (projectId: string) =>
-    getJson<{ state: DesignStateView; previewUrl: string | null }>(`/api/mobile/design/state?projectId=${encodeURIComponent(projectId)}`),
+    getJson<{ state: DesignStateView; previewUrl: string | null; references: string[] }>(`/api/mobile/design/state?projectId=${encodeURIComponent(projectId)}`),
+  /** Imagem de referência de estilo do cliente ("quero parecido com isso"). */
+  designReference: (projectId: string, photo: Photo) =>
+    postForm<{ ok: true; references: string[] }>('/api/mobile/design/reference', { projectId }, [photo], 'photo'),
   designTurn: (projectId: string, utterance: string) =>
     postJson<DesignTurnResult>('/api/mobile/design/turn', { projectId, utterance }),
   designRestore: (projectId: string, snapshot: DesignStateView) =>
     postJson<DesignStateView>('/api/mobile/design/restore', { projectId, snapshot }),
-  designPreview: (projectId: string) =>
-    postJson<{ queued: boolean; url?: string | null; cached?: boolean }>('/api/mobile/design/preview', { projectId }),
+  /** `intent` = o que o cliente acabou de pedir; define o escopo da edição (§8.5). */
+  designPreview: (projectId: string, intent?: string) =>
+    postJson<{ queued: boolean; url?: string | null; cached?: boolean }>('/api/mobile/design/preview', { projectId, intent }),
 
   // Propostas do marceneiro (§8.6).
   proposalTurn: (projectId: string, state: DesignStateView, utterance: string) =>
     postJson<DesignTurnResult>('/api/mobile/design/proposal-turn', { projectId, state, utterance }),
-  proposalPreview: (projectId: string, state: DesignStateView) =>
-    postJson<{ url: string | null }>('/api/mobile/design/proposal-preview', { projectId, state }),
+  proposalPreview: (projectId: string, state: DesignStateView, intent?: string) =>
+    postJson<{ url: string | null }>('/api/mobile/design/proposal-preview', { projectId, state, intent }),
   createProposal: (projectId: string, type: 'EDIT' | 'SUGGESTION', note: string | undefined, state: DesignStateView) =>
     postJson<{ id: string }>('/api/mobile/design/proposals', { projectId, type, note, state }),
   listProposals: (projectId: string) =>
@@ -199,6 +203,10 @@ export type DesignModuleView = {
   lighting?: string;
   /** Arranjo interno pedido no chat ("gavetas embaixo e portas em cima"). */
   layout?: string;
+  /** Grade de nichos (a "colmeia"): linhas × colunas. */
+  grid?: { rows: number; columns: number };
+  /** Frente aberta (sem portas). */
+  openFront?: boolean;
   items?: DesignItemView[];
 };
 export type DesignStateView = { modules: DesignModuleView[] };

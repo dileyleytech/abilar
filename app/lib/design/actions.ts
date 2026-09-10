@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import type { DesignState } from '@abilar/ai-vision';
+import type { DesignState, DesignIntent } from '@abilar/ai-vision';
 import { getUserId } from '@/lib/auth/session';
 import type { DesignProposalType } from '@abilar/shared';
 import { ownsProject, runDesignTurn, runTurnOnState, restoreDesignState, type Result, type DesignTurn } from './core';
@@ -31,12 +31,12 @@ export async function restoreDesign(projectId: string, snapshot: unknown): Promi
 }
 
 /** Gera (ou enfileira) uma prévia de imagem do projeto — web. */
-export async function requestDesignPreview(projectId: string): Promise<Result<PreviewResult>> {
+export async function requestDesignPreview(projectId: string, intent?: DesignIntent): Promise<Result<PreviewResult>> {
   const userId = await getUserId();
   if (!userId) return { ok: false, error: 'Faça login.' };
   if (!(await ownsProject(projectId, userId))) return { ok: false, error: 'Pedido não encontrado.' };
 
-  const r = await requestPreview(projectId);
+  const r = await requestPreview(projectId, intent);
   if (r.ok) revalidatePath(`/pedidos/${projectId}`);
   return r;
 }
@@ -50,11 +50,11 @@ export async function proposalTurn(projectId: string, state: DesignState, uttera
 }
 
 /** Marceneiro gera a prévia do rascunho (estado em edição) para ir ajustando. */
-export async function proposalPreview(projectId: string, state: DesignState): Promise<Result<{ url: string | null }>> {
+export async function proposalPreview(projectId: string, state: DesignState, intent?: DesignIntent): Promise<Result<{ url: string | null }>> {
   const userId = await getUserId();
   if (!userId) return { ok: false, error: 'Faça login.' };
   if (!(await carpenterCanPropose(projectId, userId))) return { ok: false, error: 'Você precisa ter um orçamento neste pedido.' };
-  return proposalDraftPreview(projectId, userId, state);
+  return proposalDraftPreview(projectId, userId, state, intent);
 }
 
 /** Marceneiro propõe um design (EDIT ou SUGGESTION) para o projeto que orça. */
