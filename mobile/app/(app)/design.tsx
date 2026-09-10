@@ -43,7 +43,14 @@ export default function DesignScreen() {
     try {
       const r = await api.designPreview(projectId);
       if (r.queued) { say({ role: 'ABI', text: 'Estou gerando sua prévia — ela aparece aqui em instantes.' }); }
-      else { if (r.url) setPreviewUrl(r.url); say({ role: 'ABI', text: announce ? 'Prontinho! Sua prévia está aí em cima. 🎨' : 'Atualizei a prévia com a mudança. 🎨' }); }
+      else {
+        if (r.url) setPreviewUrl(r.url);
+        // Cache (§8.7): nada mudou desde essa imagem — não vale gerar de novo.
+        const done = r.cached
+          ? 'Essa já é a prévia deste projeto — mude alguma coisa e eu gero outra. 🎨'
+          : announce ? 'Prontinho! Sua prévia está aí em cima. 🎨' : 'Atualizei a prévia com a mudança. 🎨';
+        say({ role: 'ABI', text: done });
+      }
     } catch (e) {
       say({ role: 'ABI', text: e instanceof Error ? e.message : 'Não consegui gerar a prévia agora.' });
     } finally { setGenerating(false); }
@@ -185,6 +192,7 @@ function ModuleRow({ m }: { m: DesignModuleView }) {
         {m.hardware ? <Badge label={HARDWARE_LABEL[m.hardware] ?? m.hardware} tone="neutral" /> : null}
         {m.lighting ? <Badge label="LED" tone="success" /> : null}
         {m.items?.map((it, k) => <Badge key={k} label={`${it.qty}× ${it.type.toLowerCase()}`} tone="neutral" />)}
+        {m.layout ? <Badge label={m.layout} tone="neutral" /> : null}
       </View>
     </View>
   );

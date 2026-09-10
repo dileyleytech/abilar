@@ -52,7 +52,11 @@ export function DesignChat({ projectId, initialState, initialPreviewUrl }: { pro
       if (!r.ok) { say({ role: 'ABI', text: r.error }); return; }
       if (r.data.queued) { say({ role: 'ABI', text: 'Estou gerando sua prévia — ela aparece aqui em instantes.' }); return; }
       if (r.data.url) setPreviewUrl(r.data.url);
-      say({ role: 'ABI', text: announce ? 'Prontinho! Sua prévia está aí em cima. 🎨' : 'Atualizei a prévia com a mudança. 🎨' });
+      // Cache (§8.7): nada mudou desde essa imagem — não vale gerar de novo.
+      const done = r.data.cached
+        ? 'Essa já é a prévia deste projeto — mude alguma coisa e eu gero outra. 🎨'
+        : announce ? 'Prontinho! Sua prévia está aí em cima. 🎨' : 'Atualizei a prévia com a mudança. 🎨';
+      say({ role: 'ABI', text: done });
     });
   };
   const generate = () => regen(true);
@@ -200,6 +204,7 @@ function ModuleSummary({ m }: { m: DesignModule }) {
       {m.items?.map((it, k) => (
         <Badge key={k} tone="neutral">{it.qty}× {it.type.toLowerCase()}</Badge>
       ))}
+      {m.layout && <Badge tone="neutral">{m.layout}</Badge>}
     </span>
   );
 }

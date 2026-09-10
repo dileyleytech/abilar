@@ -31,6 +31,7 @@ export type SeedModule = {
   finish?: string | null;
   hardware?: Hardware | null;
   lighting?: string | null;
+  layout?: string | null;
   items?: DesignItem[] | null;
 };
 
@@ -49,6 +50,7 @@ export function seedFromModules(modules: SeedModule[]): DesignSession {
         finish: m.finish ?? undefined,
         hardware: m.hardware ?? undefined,
         lighting: m.lighting ?? undefined,
+        layout: m.layout ?? undefined,
         items: m.items ?? [],
       } satisfies DesignModule)),
     },

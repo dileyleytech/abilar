@@ -21,6 +21,9 @@ export type DesignModule = {
   finish?: string;
   hardware?: Hardware;
   lighting?: string;
+  /** Arranjo interno pedido pelo cliente (CHANGE_LAYOUT), em PT-BR. Entra no prompt
+   *  da imagem já higienizado; NUNCA carrega medida (a medida vive nos campos mm). */
+  layout?: string;
   items: DesignItem[];
 };
 
@@ -45,6 +48,12 @@ export function applyCommand(state: DesignState, cmd: DesignCommand): ApplyResul
   const targets = selectTargets(state, cmd.targetModuleId);
   if (targets.length === 0) {
     return { ok: false, state, message: 'Não encontrei o móvel para alterar.' };
+  }
+
+  // CHANGE_LAYOUT sem descrição não muda nada: melhor avisar do que ecoar um "pronto!"
+  // por cima de uma imagem idêntica.
+  if (cmd.intent === 'CHANGE_LAYOUT' && !cmd.params.layout?.trim()) {
+    return { ok: false, state, message: 'Como você quer organizar o móvel? Ex.: "gavetas embaixo e portas em cima".' };
   }
 
   // RESIZE precisa validar ANTES de aplicar para não corromper o estado.
@@ -92,8 +101,12 @@ function mutate(m: DesignModule, cmd: DesignCommand): DesignModule {
       return p.item ? { ...m, items: addItem(m.items, p.item) } : m;
     case 'REMOVE_ITEM':
       return p.item ? { ...m, items: m.items.filter((i) => !(i.type === p.item!.type && i.position === p.item!.position)) } : m;
+    case 'CHANGE_LAYOUT':
+      // Não vira campo estruturado (não há taxonomia de arranjo): fica no módulo e
+      // é o prompt de imagem que o traduz. As medidas seguem nos campos mm.
+      return p.layout ? { ...m, layout: p.layout.trim() } : m;
     default:
-      return m; // CHANGE_LAYOUT: sem efeito estrutural por enquanto (afeta só o prompt)
+      return m;
   }
 }
 

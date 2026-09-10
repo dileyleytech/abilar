@@ -31,6 +31,17 @@ describe('mockNluProvider — NLU determinístico (lote) para CI/dev sem chave',
     expect(b.commands[0]!.params.hardware).toBe('SOFT_CLOSE');
   });
 
+  it('"organiza com gavetas embaixo e portas em cima" → CHANGE_LAYOUT com a descrição', async () => {
+    const b = await run('organiza com gavetas embaixo e portas em cima');
+    expect(b.commands[0]!.intent).toBe('CHANGE_LAYOUT');
+    expect(b.commands[0]!.params.layout).toMatch(/gavetas embaixo/i);
+  });
+
+  it('pedido simples de item continua ADD_ITEM (layout não sequestra a intenção)', async () => {
+    const b = await run('adiciona 2 gavetas embaixo');
+    expect(b.commands[0]!.intent).toBe('ADD_ITEM');
+  });
+
   it('frase ambígua → lote vazio + clarificationNeeded', async () => {
     const b = await run('sei lá, faz aí bonito');
     expect(b.commands).toHaveLength(0);

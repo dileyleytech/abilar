@@ -15,7 +15,7 @@
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit && pnpm -r --filter=./packages/* --filter=./db run typecheck",
+    "typecheck": "tsc --noEmit && tsc -p workers/tsconfig.json && pnpm -r --filter=./packages/* --filter=./db run typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "pnpm --filter @abilar/db run generate",

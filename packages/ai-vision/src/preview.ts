@@ -10,6 +10,10 @@ export const previewJobSchema = z.object({
   /** Caminho da imagem base no storage (null = gera do zero). */
   baseImagePath: z.string().nullable().default(null),
   mimeType: z.string().default('image/jpeg'),
+  /** Chave de cache (§8.7) a gravar junto da imagem — o consumidor não recalcula. */
+  cacheKey: z.string().nullable().default(null),
+  /** Versão da prévia reservada pelo produtor (project_photos.version). */
+  version: z.number().int().positive().default(1),
 });
 export type PreviewJob = z.infer<typeof previewJobSchema>;
 

@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "WebWorker"],
+    "types": [],
+    "noEmit": true,
+    "paths": {
+      "@abilar/shared": ["../packages/shared/index.ts"],
+      "@abilar/shared/*": ["../packages/shared/*"],
+      "@abilar/ai-vision": ["../packages/ai-vision/src/index.ts"],
+      "@abilar/db": ["../db/index.ts"],
+      "@abilar/db/*": ["../db/*"]
+    }
+  },
+  "include": ["**/*.ts"]
+}

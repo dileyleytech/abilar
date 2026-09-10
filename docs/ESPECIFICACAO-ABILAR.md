@@ -621,45 +621,46 @@ O marceneiro acessa o mesmo motor: pode (a) **editar** o estado estruturado e ge
 ### Fase 3 — Motor de pricing (`packages/pricing`)  ⚠️ crítico
 - [x] Implementar `quotePricing` (§5.4) + `PricingConfig` (incl. diluição `s` do marceneiro, promo overrides). Função pura, em centavos, sem I/O.
 - [x] **Testes (TDD)** cobrindo o exemplo de §5.3 (à vista + 10x, valores exatos) e bordas: promo zera taxa, margem negativa rejeitada, `s` no mín/máx, n sem taxa, proteção de custo, conservação de centavos. (14 testes.)
-- [ ] CRUD admin de taxas/promoções (tabela `PricingConfig` + telas admin) — próximo passo da fase.
+- [x] CRUD admin de taxas/promoções (tabela `PricingConfig` + telas admin), com incentivo de parcelamento.
 
 ### Fase 4 — Matching, cotações, pré-aprovação e chat
-- [ ] **Matching** por cidade + categoria + CEP→raio; feed de pedidos elegíveis (real-time).
-- [ ] **Catálogo de custo** + **construtor de orçamento** + **verificador de completude** (§7.6).
-- [ ] Marceneiro envia Quote (V, itens, parcelas, **diluição `s`**) → cliente vê valor com taxa embutida; **PDF**. Orçamentos EXTERNAL + relatórios. QuoteEdit versionado.
-- [ ] **Pré-aprovação** (`PRE_APPROVED`) cria `Conversation`; **chat** cliente↔marceneiro (Realtime) com **mascaramento de contato**, moderação, denúncia/bloqueio (§7.8).
+- [x] **Matching** por cidade + categoria + CEP→raio; feed de pedidos elegíveis (real-time). Onboarding do marceneiro com CEP automático + mapa do raio.
+- [x] **Catálogo de custo** + **construtor de orçamento** + **verificador de completude** (§7.6). Completude é heurística (`@abilar/shared/completeness`); versão Gemini na Fase 11.
+- [x] Marceneiro envia Quote (V, itens, parcelas, **diluição `s`**) → cliente vê valor com taxa embutida; **PDF** (hoje `window.print` na web e `expo-print` no app — Browser Rendering na Fase 11). Orçamentos EXTERNAL + relatórios.
+- [x] **Pré-aprovação** (`PRE_APPROVED`) cria `Conversation`; **chat** cliente↔marceneiro (Realtime) com **mascaramento de contato**, moderação, denúncia/bloqueio e fila de denúncias no admin (§7.8).
 
 ### Fase 5 — Pagamento (Asaas) + escrow + contrato
+> **Metade feita.** Contrato, aceite, obra e marcos estão prontos; tudo que fala com o Asaas depende de chave + deploy (webhooks) e está na Fase 11.
 - [ ] `PaymentProvider` + `AsaasProvider`: recipients (subcontas, KYC), createCharge com **split + escrow**, `releaseEscrow`, `transferToPix`, webhooks idempotentes (assinatura verificada).
 - [ ] Checkout: Pix/boleto/cartão + parcelas → `quotePricing` (diluição) → cobrança → `Transaction` (`IN_ESCROW`).
-- [ ] **Contrato padrão** (§6.5) gerado no aceite; aceite eletrônico das duas partes; PDF.
-- [ ] `WorkOrder` + `Milestone`s (§2.7); evidência → aprovação (com **auto-aprovação em 5 dias**) → liberação da parcela.
+- [x] **Contrato padrão** (§6.5) gerado no aceite; aceite eletrônico das duas partes; PDF. (Revisão jurídica pendente — Fase 11.)
+- [x] `WorkOrder` + `Milestone`s (§2.7) como quadro de etapas; evidência com fotos e comentários → aprovação (com **auto-aprovação em 5 dias**). A liberação financeira da parcela depende do Asaas.
 - [ ] **Carteira + saque Pix**; disputa/mediação; reembolso/cancelamento parcial. (Cobertura de testes de segurança — ver doc Segurança.)
 
 ### Fase 6 — Chat de design + IA (`packages/ai-vision`)
-- [ ] NLU com Gemini 3.1 Flash-Lite (function calling) → DSL de comandos (§8.4), com `echo` e `clarificationNeeded`.
-- [ ] Estado estruturado como fonte de verdade; dimensões via stepper (§8.3).
-- [ ] `ImageEditProvider` + `GeminiProvider` (Nano Banana 2) default, `FluxProvider` fallback; consumer de Cloudflare Queue; versionamento de imagens no R2.
-- [ ] UI do chat guiado: chips, exemplos clicáveis, histórico com miniaturas, overlay de cotas.
-- [ ] Guardrails de custo/cache/moderação (§8.7).
+- [x] NLU com Gemini Flash-Lite (function calling) → DSL de comandos (§8.4), com `echo`, `clarificationNeeded` e **lote** (várias mudanças numa fala).
+- [x] Estado estruturado como fonte de verdade; dimensões via stepper (§8.3). CHANGE_LAYOUT e itens do módulo chegam ao prompt (medida nunca chega).
+- [x] `ImageEditProvider` + `GeminiImageProvider` (Nano Banana 2); prévia ancorada na foto do cliente e consistente entre turnos. Local = síncrono + Supabase Storage; produção = Queue + R2 (**consumer incompleto — Fase 11**).
+- [x] UI do chat guiado (web + mobile): chips, prévia, overlay de cotas (§8.3), propostas do marceneiro (§8.6).
+- [x] Guardrails (§8.7): limite de regeneração por pedido, **cache de geração**, moderação da foto de entrada (fail-open sem chave).
 
 ### Fase 7 — Pipeline/agenda do marceneiro + identidade
-- [ ] Orçamento aceito → `CarpenterProject`; cadastro manual de projeto ativo; **calendário**.
-- [ ] `maxParallelProjects` + alerta de sobrecarga; previsão de término (§7.7).
-- [ ] Logo do marceneiro / logo da plataforma.
+- [x] Orçamento aceito → obra no pipeline; obra externa (avulso aceito) entra na mesma agenda; **calendário** com prazos editáveis.
+- [x] `maxParallelProjects` + alerta de sobrecarga; previsão de término (§7.7).
+- [x] Logo do marceneiro / logo da plataforma / logo do arquiteto.
 
 ### Fase 8 — Site institucional, arquitetos, admin, notificações
-- [ ] **Site institucional** (`/`, §7.0): proposta de valor, segurança dos dois lados, CTAs de cadastro/login, link pro blog. SEO aplicado.
-- [ ] Vitrine de arquitetos + comissão configurável + repasse no split.
-- [ ] Notificações (Supabase Realtime + e-mail/push): pedido, orçamento, pagamento, marco, saldo.
-- [ ] Dashboards admin; observabilidade (Workers Analytics/Logpush); produção em Cloudflare Workers (Git integration) + Supabase + R2.
+- [x] **Site institucional** (`/`, §7.0) + `sitemap.xml`/`robots.txt`. (JSON-LD/OG por página: Fase 10.)
+- [x] Vitrine de arquitetos + vínculo por código de indicação + comissão configurável no admin. (O **repasse no split** depende do Asaas — Fase 11.)
+- [x] Notificações **in-app** (Supabase Realtime) em toda a jornada. (E-mail precisa de provedor; push precisa de dev build — Fase 11.)
+- [x] Dashboards admin (incl. financeiro). (Observabilidade e deploy em produção: Fase 11.)
 
 ### Fase 9 — Mobile (Expo), push, áudio e coach de foto
-- [ ] App Expo (iOS/Android) consumindo a API; navegação por papel; design tokens compartilhados (ver `ABILAR-MOBILE-EXPO.md`).
+- [x] App Expo (SDK 54, roda no Expo Go) com paridade da web; navegação por papel; design tokens compartilhados (ver `ABILAR-MOBILE-EXPO.md`). Lê o Supabase via RLS e escreve por `/api/mobile/*`.
 - [ ] **Push** (Expo Notifications) em todos os eventos (§10); `PushToken`/`NotificationPref`.
 - [ ] **Entrada por áudio** (cliente: brief; marceneiro: rascunho de orçamento) → Gemini multimodal → estrutura (ver `ABILAR-CIENCIA-DE-DADOS.md`).
 - [ ] Câmera in-app com **coach de foto** (luminosidade, nível, enquadramento) + checagem de qualidade pós-captura.
-- [ ] `workType` (obra nova vs substituição) no fluxo de pedido e no pipeline de imagem.
+- [x] `workType` (obra nova vs substituição) no fluxo de pedido e no pipeline de imagem.
 - [ ] EAS Build/Submit + **checklist de aprovação das lojas** (ver doc mobile). CI no GitHub.
 
 ### Fase 10 — Keep-alive, Blog automático e SEO (§11, §12)
@@ -676,7 +677,12 @@ O marceneiro acessa o mesmo motor: pode (a) **editar** o estado estruturado e ge
 **Dependem de chave/conta/deploy externo:**
 - [ ] **Asaas/escrow (Fase 5):** `PaymentProvider`+`AsaasProvider`, checkout (Pix/cartão/boleto), split + escrow, `releaseEscrow`, `transferToPix`, carteira/saque, disputa/reembolso, webhooks idempotentes. **Requer chaves Asaas + deploy p/ webhooks.**
 - [ ] **Repasse da comissão do arquiteto no split** (depende do Asaas). A comissão já é **configurável** no `/admin/arquitetos`.
-- [ ] **IA do chat de design (Fase 6):** NLU (Gemini Flash-Lite) + edição de imagem (Nano Banana) + Queue/R2. **Requer `GEMINI_API_KEY` + deploy.**
+- [ ] **Prévia de imagem em PRODUÇÃO (Fase 6):** o caminho local (síncrono + Supabase) está completo; o caminho da fila **não entrega a imagem ainda**. Falta, em `workers/image-gen.ts` e volta:
+  - entrypoint próprio do consumer no wrangler (hoje `[[queues.consumers]]` aponta para o worker do OpenNext, que não tem handler `queue()` → tudo vai pra DLQ);
+  - gravar em `project_photos` (`version`/`cache_key` já vêm no job) — sem isso a prévia não aparece e o limite de custo fica travado em zero;
+  - ler a imagem base do R2 e passar ao modelo (senão produção perde o grounding na foto do cliente e a consistência entre turnos);
+  - avisar o cliente quando ficar pronta (Supabase Realtime/push) — a UI já diz "aparece aqui em instantes" e hoje não recebe nada;
+  - rota `/api/media` autorizada para servir os objetos do R2 (o R2 não tem URL assinada como o Supabase; `r2ImageStore.signedUrl` já aponta pra ela).
 - [ ] **Completude por IA (4.3d):** hoje é heurística (`@abilar/shared/completeness`). Versão Gemini quando houver chave.
 - [ ] **PDF real via Browser Rendering → R2:** hoje web usa `window.print` e o app usa `expo-print` (PDF on-device). **Depende de deploy Cloudflare.**
 - [ ] **Notificações por e-mail/push:** in-app pronto. **E-mail** precisa de provedor; **push** precisa de dev build (abaixo).

@@ -57,6 +57,34 @@ describe('buildImagePrompt — §8.5 (a imagem é ilustrativa; medidas NÃO entr
     expect(prompt).not.toMatch(/TV panel/i);
   });
 
+  it('descreve os ITENS do módulo (gavetas/portas aparecem na prévia)', () => {
+    const { prompt } = buildImagePrompt(mod, { roomType: 'cozinha' });
+    const low = prompt.toLowerCase();
+    expect(low).toContain('drawer');
+    expect(low).toMatch(/bottom|lower/);
+  });
+
+  it('sem itens, não inventa nada sobre gavetas/portas', () => {
+    const vazio: DesignModule = { ...mod, items: [] };
+    const low = buildImagePrompt(vazio, { roomType: 'cozinha' }).prompt.toLowerCase();
+    expect(low).not.toContain('drawer');
+    expect(low).not.toContain('door');
+  });
+
+  it('CHANGE_LAYOUT chega na imagem: o arranjo pedido entra no prompt', () => {
+    const comLayout: DesignModule = { ...mod, layout: 'gavetas embaixo e portas de correr em cima' };
+    const { prompt } = buildImagePrompt(comLayout, { roomType: 'cozinha' });
+    expect(prompt).toContain('gavetas embaixo e portas de correr em cima');
+  });
+
+  it('REGRA DE OURO (§8.3): medidas ditas no layout são higienizadas antes do prompt', () => {
+    const comMedida: DesignModule = { ...mod, layout: 'uma gaveta de 40 cm embaixo e 2 prateleiras' };
+    const { prompt } = buildImagePrompt(comMedida, { roomType: 'cozinha' });
+    expect(prompt).not.toMatch(/40\s*cm/i);
+    expect(prompt).not.toContain('40');
+    expect(prompt.toLowerCase()).toContain('gaveta'); // o resto do pedido sobrevive
+  });
+
   it('editScope: cor/material/ferragem = local (inpainting); layout = global', () => {
     expect(editScope(parseDesignCommand({ intent: 'CHANGE_FINISH' }))).toBe('local');
     expect(editScope(parseDesignCommand({ intent: 'CHANGE_MATERIAL' }))).toBe('local');
